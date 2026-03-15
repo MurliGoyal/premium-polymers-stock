@@ -1,0 +1,19 @@
+import { requirePagePermission } from "@/lib/auth";
+import { getCategories } from "../actions";
+import { CategoriesClient } from "./categories-client";
+
+export default async function CategoriesPage() {
+  await requirePagePermission("categories:manage");
+  const categories = await getCategories();
+  return (
+    <CategoriesClient
+      categories={categories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        materialCount: c._count.rawMaterials,
+        createdAt: c.createdAt.toISOString(),
+      }))}
+    />
+  );
+}

@@ -1,0 +1,253 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ──────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  MANAGER
+  OPERATOR
+  VIEWER
+}
+
+enum MaterialStatus {
+  IN_STOCK
+  LOW_STOCK
+  OUT_OF_STOCK
+}
+
+enum ActivityType {
+  CREATED
+  UPDATED
+  STOCK_ADJUSTED
+  TRANSFER_DEDUCTION
+  MINIMUM_STOCK_CHANGED
+  CATEGORY_CHANGED
+  UNIT_CHANGED
+  METADATA_CHANGED
+  DELETED
+}
+
+enum TransactionType {
+  ADDITION
+  DEDUCTION
+  ADJUSTMENT
+  TRANSFER
+  INITIAL
+}
+
+enum NotificationType {
+  LOW_STOCK
+  OUT_OF_STOCK
+  TRANSFER_COMPLETED
+  STOCK_ADJUSTED
+  SYSTEM
+}
+
+// ─── Users ──────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(VIEWER)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  rawMaterialsCreated RawMaterial[]           @relation("CreatedByUser")
+  transfersCreated    Transfer[]              @relation("TransferCreatedBy")
+  activityLogs        RawMaterialActivityLog[] @relation("ActivityPerformedBy")
+  stockTransactions   StockTransaction[]      @relation("TransactionCreatedBy")
+
+  @@map("users")
+}
+
+// ─── Warehouses ─────────────────────────────────────────────
+
+model Warehouse {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  rawMaterials      RawMaterial[]
+  transfers         Transfer[]
+  activityLogs      RawMaterialActivityLog[]
+  stockTransactions StockTransaction[]
+  notifications     Notification[]
+
+  @@map("warehouses")
+}
+
+// ─── Categories ─────────────────────────────────────────────
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  rawMaterials RawMaterial[]
+
+  @@map("categories")
+}
+
+// ─── Recipients ─────────────────────────────────────────────
+
+model Recipient {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  transfers Transfer[]
+
+  @@map("recipients")
+}
+
+// ─── Raw Materials ──────────────────────────────────────────
+
+model RawMaterial {
+  id             String         @id @default(cuid())
+  warehouseId    String         @map("warehouse_id")
+  name           String
+  categoryId     String         @map("category_id")
+  baseUnit       String         @map("base_unit")
+  currentStock   Float          @default(0) @map("current_stock")
+  minimumStock   Float          @default(0) @map("minimum_stock")
+  thicknessValue Float?         @map("thickness_value")
+  thicknessUnit  String?        @map("thickness_unit")
+  sizeValue      String?        @map("size_value")
+  sizeUnit       String?        @map("size_unit")
+  weightValue    Float?         @map("weight_value")
+  weightUnit     String?        @map("weight_unit")
+  gsm            Float?
+  notes          String?
+  status         MaterialStatus @default(IN_STOCK)
+  createdById    String?        @map("created_by")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  warehouse    Warehouse  @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  category     Category   @relation(fields: [categoryId], references: [id])
+  createdBy    User?      @relation("CreatedByUser", fields: [createdById], references: [id])
+  transfers    Transfer[]
+  activityLogs RawMaterialActivityLog[]
+  stockTransactions StockTransaction[]
+  notifications     Notification[]
+
+  @@index([warehouseId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([warehouseId, status])
+  @@index([warehouseId, updatedAt])
+  @@index([warehouseId, categoryId])
+  @@unique([warehouseId, name])
+  @@map("raw_materials")
+}
+
+// ─── Transfers ──────────────────────────────────────────────
+
+model Transfer {
+  id              String   @id @default(cuid())
+  warehouseId     String   @map("warehouse_id")
+  rawMaterialId   String   @map("raw_material_id")
+  quantity        Float
+  recipientId     String   @map("recipient_id")
+  notes           String?
+  referenceNumber String?  @map("reference_number")
+  materialSnapshot Json?   @map("material_snapshot")
+  createdById     String?  @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  warehouse   Warehouse   @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  rawMaterial RawMaterial  @relation(fields: [rawMaterialId], references: [id], onDelete: Cascade)
+  recipient   Recipient   @relation(fields: [recipientId], references: [id])
+  createdBy   User?       @relation("TransferCreatedBy", fields: [createdById], references: [id])
+
+  @@index([warehouseId])
+  @@index([rawMaterialId])
+  @@index([recipientId])
+  @@index([createdAt])
+  @@index([warehouseId, createdAt])
+  @@map("transfers")
+}
+
+// ─── Raw Material Activity Logs ─────────────────────────────
+
+model RawMaterialActivityLog {
+  id             String       @id @default(cuid())
+  rawMaterialId  String       @map("raw_material_id")
+  warehouseId    String       @map("warehouse_id")
+  activityType   ActivityType @map("activity_type")
+  beforeSnapshot Json?        @map("before_snapshot")
+  afterSnapshot  Json?        @map("after_snapshot")
+  quantityChange Float?       @map("quantity_change")
+  sourceType     String?      @map("source_type")
+  sourceId       String?      @map("source_id")
+  performedById  String?      @map("performed_by")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  rawMaterial RawMaterial @relation(fields: [rawMaterialId], references: [id], onDelete: Cascade)
+  warehouse   Warehouse   @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  performedBy User?       @relation("ActivityPerformedBy", fields: [performedById], references: [id])
+
+  @@index([rawMaterialId])
+  @@index([warehouseId])
+  @@index([activityType])
+  @@index([createdAt])
+  @@map("raw_material_activity_logs")
+}
+
+// ─── Stock Transactions ─────────────────────────────────────
+
+model StockTransaction {
+  id              String          @id @default(cuid())
+  warehouseId     String          @map("warehouse_id")
+  rawMaterialId   String          @map("raw_material_id")
+  transactionType TransactionType @map("transaction_type")
+  quantity        Float
+  previousStock   Float           @map("previous_stock")
+  newStock        Float           @map("new_stock")
+  sourceType      String?         @map("source_type")
+  sourceId        String?         @map("source_id")
+  createdById     String?         @map("created_by")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  warehouse   Warehouse   @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  rawMaterial RawMaterial  @relation(fields: [rawMaterialId], references: [id], onDelete: Cascade)
+  createdBy   User?        @relation("TransactionCreatedBy", fields: [createdById], references: [id])
+
+  @@index([warehouseId])
+  @@index([rawMaterialId])
+  @@index([createdAt])
+  @@map("stock_transactions")
+}
+
+// ─── Notifications ──────────────────────────────────────────
+
+model Notification {
+  id            String           @id @default(cuid())
+  type          NotificationType
+  warehouseId   String?          @map("warehouse_id")
+  rawMaterialId String?          @map("raw_material_id")
+  message       String
+  isRead        Boolean          @default(false) @map("is_read")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  warehouse   Warehouse?   @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  rawMaterial RawMaterial?  @relation(fields: [rawMaterialId], references: [id], onDelete: Cascade)
+
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
