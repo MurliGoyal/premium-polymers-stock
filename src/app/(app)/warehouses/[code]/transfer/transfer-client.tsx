@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { AlertTriangle, ArrowRightLeft, CalendarClock, Plus } from "lucide-react";
 import { SearchableSelect } from "@/components/forms/searchable-select";
+import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -131,27 +132,12 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
         <span className="font-medium text-foreground">Transfer</span>
       </div>
 
-      <div className="rounded-[28px] border bg-card/95 p-6 shadow-lg shadow-slate-950/5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3">
-            <Badge variant="secondary" className="w-fit rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.18em]">
-              Deduction workflow
-            </Badge>
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight">Transfer stock</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Deduct approved quantities from {warehouse.code} and create a full transfer and audit trail entry.
-              </p>
-            </div>
-          </div>
-          <div className="rounded-2xl border bg-muted/40 px-4 py-3">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Warehouse</p>
-            <p className="mt-1 text-base font-semibold">
-              {warehouse.code} <span className="text-sm font-normal text-muted-foreground">/ {warehouse.name}</span>
-            </p>
-          </div>
-        </div>
-      </div>
+      <ResponsivePageHeader
+        eyebrow="Deduction workflow"
+        title="Transfer stock"
+        description={`Deduct approved quantities from ${warehouse.code} and create a full transfer and audit trail entry.`}
+        badge={<Badge variant="secondary">{warehouse.code}</Badge>}
+      />
 
       <form onSubmit={onSubmit} className="space-y-6">
         <Card className="rounded-[28px] border bg-card/95 shadow-sm shadow-slate-950/5">
@@ -197,7 +183,7 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
             </div>
 
             {selectedMaterial ? (
-              <div className="grid gap-4 rounded-2xl border bg-muted/30 p-4 md:grid-cols-3">
+              <div className="grid gap-4 rounded-[24px] border border-white/8 bg-white/[0.03] p-4 md:grid-cols-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Available stock</p>
                   <p className="mt-2 text-2xl font-semibold">
@@ -293,7 +279,7 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
           </CardContent>
         </Card>
 
-        <div className="sticky bottom-4 z-20 rounded-[24px] border bg-background/92 p-4 shadow-xl shadow-slate-950/10 backdrop-blur">
+        <div className="safe-bottom sticky bottom-4 z-20 rounded-[28px] border border-white/10 bg-background/92 p-4 shadow-xl shadow-slate-950/10 backdrop-blur">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="ghost" asChild>
               <Link href={`/warehouses/${warehouse.slug}`}>Cancel</Link>

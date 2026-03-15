@@ -62,7 +62,7 @@ export function SearchableSelect({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            "h-10 w-full justify-between rounded-xl px-3 font-normal",
+            "h-11 w-full justify-between rounded-2xl px-4 font-normal",
             error && "border-destructive"
           )}
         >
@@ -73,12 +73,12 @@ export function SearchableSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
-        <div className="border-b p-2">
+        <div className="border-b border-white/8 p-2">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               autoFocus
-              className="h-9 border-0 bg-transparent pl-9 shadow-none focus-visible:ring-0"
+              className="h-10 border-0 bg-transparent pl-9 shadow-none focus-visible:ring-0"
               onChange={(event) => setQuery(event.target.value)}
               placeholder={searchPlaceholder}
               value={query}

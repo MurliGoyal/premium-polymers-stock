@@ -2,149 +2,156 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  LayoutDashboard, Warehouse, ArrowRightLeft, ClipboardList,
-  Users, Tag, UserCheck, ChevronLeft, ChevronRight,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { hasPermission, type Permission } from "@/lib/rbac";
+import { motion } from "framer-motion";
+import { ChevronLeft, ChevronRight, Shield } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { getRoleLabel, hasPermission } from "@/lib/rbac";
+import { NAV_SECTIONS } from "./nav-config";
+import type { AppShellUser } from "./types";
 
-interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  permission?: Permission;
-}
+type SidebarProps = {
+  collapsed: boolean;
+  onToggle: () => void;
+  user: AppShellUser;
+};
 
-const mainNav: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: "dashboard:view" },
-  { label: "Warehouses", href: "/warehouses", icon: Warehouse, permission: "warehouses:view" },
-];
+type SidebarNavigationProps = {
+  collapsed?: boolean;
+  onItemClick?: () => void;
+  role: string;
+};
 
-const activityNav: NavItem[] = [
-  { label: "Transfer History", href: "/transfer-history", icon: ArrowRightLeft, permission: "transfer_history:view" },
-  { label: "Material History", href: "/raw-materials-history", icon: ClipboardList, permission: "raw_materials_history:view" },
-];
-
-const settingsNav: NavItem[] = [
-  { label: "Categories", href: "/settings/categories", icon: Tag, permission: "categories:manage" },
-  { label: "Recipients", href: "/settings/recipients", icon: UserCheck, permission: "recipients:manage" },
-  { label: "Users", href: "/settings/users", icon: Users, permission: "users:manage" },
-];
-
-export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+export function SidebarNavigation({
+  collapsed = false,
+  onItemClick,
+  role,
+}: SidebarNavigationProps) {
   const pathname = usePathname();
-  const { data: session } = useSession();
-  const role = session?.user?.role || "VIEWER";
-
-  const renderNavItem = (item: NavItem) => {
-    if (item.permission && !hasPermission(role, item.permission)) return null;
-    const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-
-    const link = (
-      <Link
-        href={item.href}
-        className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-          isActive
-            ? "bg-sidebar-accent text-sidebar-primary-foreground"
-            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-        )}
-      >
-        <item.icon className={cn("h-4.5 w-4.5 shrink-0", isActive && "text-sidebar-primary")} />
-        <AnimatePresence>
-          {!collapsed && (
-            <motion.span
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
-              exit={{ opacity: 0, width: 0 }}
-              className="whitespace-nowrap overflow-hidden"
-            >
-              {item.label}
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </Link>
-    );
-
-    if (collapsed) {
-      return (
-        <Tooltip key={item.href}>
-          <TooltipTrigger asChild>{link}</TooltipTrigger>
-          <TooltipContent side="right">{item.label}</TooltipContent>
-        </Tooltip>
-      );
-    }
-
-    return <div key={item.href}>{link}</div>;
-  };
 
   return (
-    <motion.aside
-      animate={{ width: collapsed ? 68 : 256 }}
-      transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] }}
-      className="fixed left-0 top-0 z-40 h-screen bg-sidebar-background border-r border-sidebar-border flex flex-col"
-    >
-      {/* Logo / Brand */}
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold text-sm shrink-0">
-          PP
-        </div>
-        <AnimatePresence>
-          {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
-              exit={{ opacity: 0, width: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="text-sm font-semibold text-sidebar-foreground whitespace-nowrap">Premium Polymers</div>
-              <div className="text-[11px] text-sidebar-foreground/50 whitespace-nowrap">Stock Management</div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+    <nav className="space-y-5">
+      {NAV_SECTIONS.map((section) => {
+        const visibleItems = section.items.filter((item) => !item.permission || hasPermission(role, item.permission));
+        if (visibleItems.length === 0) return null;
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        <div className="space-y-1">
-          {!collapsed && <p className="px-3 text-[10px] uppercase tracking-widest text-sidebar-foreground/40 font-semibold mb-2">Main</p>}
-          {mainNav.map(renderNavItem)}
-        </div>
-
-        <Separator className="!my-4 bg-sidebar-border" />
-
-        <div className="space-y-1">
-          {!collapsed && <p className="px-3 text-[10px] uppercase tracking-widest text-sidebar-foreground/40 font-semibold mb-2">Activity</p>}
-          {activityNav.map(renderNavItem)}
-        </div>
-
-        {settingsNav.some(item => !item.permission || hasPermission(role, item.permission)) && (
-          <>
-            <Separator className="!my-4 bg-sidebar-border" />
+        return (
+          <div key={section.label} className="space-y-2">
+            {!collapsed ? (
+              <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/35">
+                {section.label}
+              </p>
+            ) : null}
             <div className="space-y-1">
-              {!collapsed && <p className="px-3 text-[10px] uppercase tracking-widest text-sidebar-foreground/40 font-semibold mb-2">Settings</p>}
-              {settingsNav.map(renderNavItem)}
-            </div>
-          </>
-        )}
-      </nav>
+              {visibleItems.map((item) => {
+                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const link = (
+                  <Link
+                    href={item.href}
+                    onClick={onItemClick}
+                    className={cn(
+                      "group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all duration-200",
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+                        : "text-sidebar-foreground/64 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-10 w-10 items-center justify-center rounded-2xl border border-transparent transition-all",
+                        isActive
+                          ? "bg-sidebar-primary/16 text-sidebar-primary shadow-[0_14px_28px_rgba(91,102,255,0.2)]"
+                          : "bg-white/[0.02] text-sidebar-foreground/72 group-hover:bg-white/[0.05]"
+                      )}
+                    >
+                      <item.icon className="h-4 w-4" />
+                    </span>
+                    {!collapsed ? (
+                      <span className="truncate">{item.label}</span>
+                    ) : (
+                      <span className="sr-only">{item.label}</span>
+                    )}
+                  </Link>
+                );
 
-      {/* Collapse toggle */}
-      <div className="p-3 border-t border-sidebar-border">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onToggle}
-          className="w-full justify-center text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-        >
-          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </Button>
+                return collapsed ? (
+                  <Tooltip key={item.href}>
+                    <TooltipTrigger asChild>{link}</TooltipTrigger>
+                    <TooltipContent side="right">{item.label}</TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <div key={item.href}>{link}</div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </nav>
+  );
+}
+
+export function Sidebar({ collapsed, onToggle, user }: SidebarProps) {
+  return (
+    <motion.aside
+      animate={{ width: collapsed ? 104 : 296 }}
+      transition={{ duration: 0.28, ease: [0.2, 1, 0.22, 1] as [number, number, number, number] }}
+      className="fixed inset-y-4 left-4 z-40 hidden lg:block"
+    >
+      <div className="flex h-full flex-col rounded-[32px] border border-sidebar-border/80 bg-sidebar-background/90 p-3 text-sidebar-foreground shadow-[0_28px_90px_rgba(2,6,23,0.48)] backdrop-blur-2xl">
+        <div className="flex items-center gap-3 px-2 py-2">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sidebar-primary/16 text-sm font-black tracking-[0.2em] text-sidebar-primary">
+            PP
+          </div>
+          {!collapsed ? (
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-sidebar-foreground">Premium Polymers</p>
+              <p className="text-xs text-sidebar-foreground/48">Premium stock management</p>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-4 flex-1 overflow-y-auto px-1">
+          <SidebarNavigation collapsed={collapsed} role={user.role} />
+        </div>
+
+        <div className="mt-4 px-1">
+          <Separator className="bg-sidebar-border/70" />
+          <div className={cn("mt-4 rounded-[24px] border border-white/6 bg-white/[0.03] p-3", collapsed && "px-2 py-3")}>
+            {!collapsed ? (
+              <>
+                <p className="truncate text-sm font-semibold text-sidebar-foreground">{user.name}</p>
+                <p className="mt-1 truncate text-xs text-sidebar-foreground/48">{user.email}</p>
+                <Badge variant="outline" className="mt-3 border-white/10 text-sidebar-foreground/82">
+                  <Shield className="mr-1 h-3 w-3" />
+                  {getRoleLabel(user.role)}
+                </Badge>
+              </>
+            ) : (
+              <div className="flex items-center justify-center text-xs font-semibold text-sidebar-primary">
+                {user.name
+                  .split(" ")
+                  .map((segment) => segment[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </div>
+            )}
+          </div>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onToggle}
+            className="mt-3 w-full rounded-2xl border border-white/6 text-sidebar-foreground/70 hover:bg-white/[0.06] hover:text-sidebar-foreground"
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
+        </div>
       </div>
     </motion.aside>
   );

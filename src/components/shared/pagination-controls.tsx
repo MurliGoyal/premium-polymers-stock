@@ -22,7 +22,7 @@ export function PaginationControls({
   const end = Math.min(page * pageSize, itemCount);
 
   return (
-    <div className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 border-t border-white/8 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-xs text-muted-foreground">
         Showing {start}-{end} of {itemCount}
       </p>
@@ -37,7 +37,7 @@ export function PaginationControls({
           <ChevronLeft className="h-4 w-4" />
           Previous
         </Button>
-        <div className="rounded-lg border px-3 py-1.5 text-xs font-medium text-muted-foreground">
+        <div className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-medium text-muted-foreground">
           Page {page} of {pageCount}
         </div>
         <Button

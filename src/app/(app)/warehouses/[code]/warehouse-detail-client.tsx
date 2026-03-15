@@ -2,7 +2,6 @@
 
 import { useDeferredValue, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
@@ -19,6 +18,8 @@ import {
   Warehouse,
 } from "lucide-react";
 import { PaginationControls } from "@/components/shared/pagination-controls";
+import { ResponsiveFiltersSheet } from "@/components/shared/responsive-filters-sheet";
+import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -68,11 +69,16 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35 } },
 };
 
-export function WarehouseDetailClient({ data }: { data: WarehouseDetailData }) {
-  const { data: session } = useSession();
+export function WarehouseDetailClient({
+  data,
+  userRole,
+}: {
+  data: WarehouseDetailData;
+  userRole: string;
+}) {
   const { warehouse, materials, stats } = data;
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -84,9 +90,8 @@ export function WarehouseDetailClient({ data }: { data: WarehouseDetailData }) {
   const [page, setPage] = useState(1);
   const deferredSearch = useDeferredValue(search);
 
-  const role = session?.user?.role || "VIEWER";
-  const canCreateMaterials = hasPermission(role, "raw_materials:create");
-  const canCreateTransfers = hasPermission(role, "transfers:create");
+  const canCreateMaterials = hasPermission(userRole, "raw_materials:create");
+  const canCreateTransfers = hasPermission(userRole, "transfers:create");
   const categories = useMemo(() => [...new Set(materials.map((material) => material.category))].sort(), [materials]);
   const units = useMemo(() => [...new Set(materials.map((material) => material.baseUnit))].sort(), [materials]);
 
@@ -132,6 +137,14 @@ export function WarehouseDetailClient({ data }: { data: WarehouseDetailData }) {
     currentPage * WAREHOUSE_MATERIAL_PAGE_SIZE
   );
 
+  const activeFilterCount = [
+    statusFilter !== "all",
+    categoryFilter !== "all",
+    unitFilter !== "all",
+    updatedFilter !== "all",
+    Boolean(deferredSearch),
+  ].filter(Boolean).length;
+
   const toggleSort = (field: string) => {
     if (sortField === field) {
       setSortDir((current) => (current === "asc" ? "desc" : "asc"));
@@ -142,35 +155,122 @@ export function WarehouseDetailClient({ data }: { data: WarehouseDetailData }) {
     setSortDir("desc");
   };
 
+  const filters = (
+    <>
+      <div className="relative xl:col-span-[1.5]">
+        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search materials, categories, units, or notes"
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setPage(1);
+          }}
+          className="pl-11"
+        />
+      </div>
+      <Select
+        value={statusFilter}
+        onValueChange={(value) => {
+          setStatusFilter(value);
+          setPage(1);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All status</SelectItem>
+          <SelectItem value="IN_STOCK">In stock</SelectItem>
+          <SelectItem value="LOW_STOCK">Low stock</SelectItem>
+          <SelectItem value="OUT_OF_STOCK">Out of stock</SelectItem>
+        </SelectContent>
+      </Select>
+      <Select
+        value={categoryFilter}
+        onValueChange={(value) => {
+          setCategoryFilter(value);
+          setPage(1);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Category" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All categories</SelectItem>
+          {categories.map((category) => (
+            <SelectItem key={category} value={category}>
+              {category}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={unitFilter}
+        onValueChange={(value) => {
+          setUnitFilter(value);
+          setPage(1);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Unit" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All units</SelectItem>
+          {units.map((unit) => (
+            <SelectItem key={unit} value={unit}>
+              {unit}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={updatedFilter}
+        onValueChange={(value) => {
+          setUpdatedFilter(value);
+          setPage(1);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Recently updated" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Any time</SelectItem>
+          <SelectItem value="7d">Updated in 7 days</SelectItem>
+          <SelectItem value="30d">Updated in 30 days</SelectItem>
+        </SelectContent>
+      </Select>
+    </>
+  );
+
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6">
+    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-5">
+      <motion.div variants={itemVariants} className="mb-1 flex items-center gap-2 text-sm text-muted-foreground">
+        <Link href="/warehouses" className="flex items-center gap-1 transition-colors hover:text-foreground">
+          <ChevronLeft className="h-3.5 w-3.5" />
+          Warehouses
+        </Link>
+        <span>/</span>
+        <span className="font-medium text-foreground">{warehouse.code}</span>
+      </motion.div>
+
       <motion.div variants={itemVariants}>
-        <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
-          <Link href="/warehouses" className="flex items-center gap-1 transition-colors hover:text-foreground">
-            <ChevronLeft className="h-3.5 w-3.5" /> Warehouses
-          </Link>
-          <span>/</span>
-          <span className="font-medium text-foreground">{warehouse.code}</span>
-        </div>
-        <div className="rounded-[28px] border bg-card/95 p-6 shadow-sm shadow-slate-950/5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="rounded-2xl bg-primary/10 p-3 text-primary">
-                <Warehouse className="h-6 w-6" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-semibold tracking-tight">{warehouse.code}</h1>
-                <p className="mt-1 text-sm text-muted-foreground">{warehouse.name}</p>
-                <p className="mt-3 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  {stats.recentTransfers} transfers in the last 7 days / {stats.recentActivities} logged activities
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
+        <ResponsivePageHeader
+          eyebrow="Warehouse inventory"
+          title={warehouse.code}
+          description={`${warehouse.name}. ${stats.recentTransfers} transfers in the last 7 days and ${stats.recentActivities} logged activities.`}
+          badge={
+            <Badge variant="secondary">
+              <Warehouse className="mr-1 h-3 w-3" />
+              Active stock view
+            </Badge>
+          }
+          actions={
+            <>
               {canCreateTransfers ? (
                 <Button asChild variant="outline">
                   <Link href={`/warehouses/${warehouse.slug}/transfer`}>
-                    <ArrowRightLeft className="mr-1.5 h-4 w-4" />
+                    <ArrowRightLeft className="h-4 w-4" />
                     Transfer
                   </Link>
                 </Button>
@@ -178,17 +278,17 @@ export function WarehouseDetailClient({ data }: { data: WarehouseDetailData }) {
               {canCreateMaterials ? (
                 <Button asChild>
                   <Link href={`/warehouses/${warehouse.slug}/raw-materials/add`}>
-                    <Plus className="mr-1.5 h-4 w-4" />
+                    <Plus className="h-4 w-4" />
                     Add material
                   </Link>
                 </Button>
               ) : null}
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        />
       </motion.div>
 
-      <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
         <MetricCard icon={Package} label="Total materials" value={stats.totalCount} />
         <MetricCard icon={BarChart3} label="Total stock" value={formatNumber(stats.totalStock)} tone="emerald" />
         <MetricCard icon={AlertTriangle} label="Low stock" value={stats.lowStockCount} tone="amber" />
@@ -197,11 +297,19 @@ export function WarehouseDetailClient({ data }: { data: WarehouseDetailData }) {
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <Card className="rounded-[28px] border bg-card/95 shadow-sm shadow-slate-950/5">
-          <CardContent className="space-y-4 p-5">
-            <div className="grid gap-3 xl:grid-cols-[1.5fr_repeat(4,minmax(0,1fr))]">
+        <Card>
+          <CardContent className="space-y-4">
+            <div className="hidden gap-3 xl:grid xl:grid-cols-[1.5fr_repeat(4,minmax(0,1fr))]">{filters}</div>
+            <div className="flex flex-col gap-3 xl:hidden">
+              <ResponsiveFiltersSheet
+                activeCount={activeFilterCount}
+                title="Material filters"
+                description="Refine the material list without collapsing the layout into narrow columns."
+              >
+                {filters}
+              </ResponsiveFiltersSheet>
               <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search materials, categories, units, or notes"
                   value={search}
@@ -209,92 +317,20 @@ export function WarehouseDetailClient({ data }: { data: WarehouseDetailData }) {
                     setSearch(event.target.value);
                     setPage(1);
                   }}
-                  className="pl-9"
+                  className="pl-11"
                 />
               </div>
-              <Select
-                value={statusFilter}
-                onValueChange={(value) => {
-                  setStatusFilter(value);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All status</SelectItem>
-                  <SelectItem value="IN_STOCK">In stock</SelectItem>
-                  <SelectItem value="LOW_STOCK">Low stock</SelectItem>
-                  <SelectItem value="OUT_OF_STOCK">Out of stock</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
-                value={categoryFilter}
-                onValueChange={(value) => {
-                  setCategoryFilter(value);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={unitFilter}
-                onValueChange={(value) => {
-                  setUnitFilter(value);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Unit" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All units</SelectItem>
-                  {units.map((unit) => (
-                    <SelectItem key={unit} value={unit}>
-                      {unit}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={updatedFilter}
-                onValueChange={(value) => {
-                  setUpdatedFilter(value);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Recently updated" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Any time</SelectItem>
-                  <SelectItem value="7d">Updated in 7 days</SelectItem>
-                  <SelectItem value="30d">Updated in 30 days</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
-
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="outline" size="sm">
                 <Link href={`/transfer-history?warehouse=${warehouse.code}`}>
-                  <History className="mr-1.5 h-4 w-4" />
+                  <History className="h-4 w-4" />
                   Transfer history
                 </Link>
               </Button>
               <Button asChild variant="outline" size="sm">
                 <Link href={`/raw-materials-history?warehouse=${warehouse.code}`}>
-                  <ClipboardList className="mr-1.5 h-4 w-4" />
+                  <ClipboardList className="h-4 w-4" />
                   Materials history
                 </Link>
               </Button>
@@ -304,9 +340,9 @@ export function WarehouseDetailClient({ data }: { data: WarehouseDetailData }) {
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <Card className="overflow-hidden rounded-[28px] border bg-card/95 shadow-sm shadow-slate-950/5">
+        <Card className="overflow-hidden">
           {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
               <Package className="mb-4 h-12 w-12 text-muted-foreground/30" />
               <h3 className="text-lg font-semibold">No materials found</h3>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -317,7 +353,61 @@ export function WarehouseDetailClient({ data }: { data: WarehouseDetailData }) {
             </div>
           ) : (
             <>
-              <div className="max-h-[640px] overflow-auto">
+              <div className="space-y-3 p-4 xl:hidden">
+                {paginatedMaterials.map((material) => (
+                  <Card key={material.id} className="rounded-[24px]">
+                    <CardContent className="space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 space-y-2">
+                          <p className="text-base font-semibold">{material.name}</p>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="secondary">{material.category}</Badge>
+                            <Badge variant="outline" className={getStatusColor(material.status)}>
+                              {getStatusLabel(material.status)}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Stock</p>
+                          <p className="mt-1 text-2xl font-semibold">
+                            {formatNumber(material.currentStock)}
+                            <span className="ml-1 text-sm font-medium text-muted-foreground">{material.baseUnit}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <InfoPill label="Minimum" value={`${formatNumber(material.minimumStock)} ${material.baseUnit}`} />
+                        <InfoPill label="Updated" value={formatDate(material.updatedAt)} />
+                      </div>
+
+                      <div className="rounded-[22px] border border-white/8 bg-white/[0.03] p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                          Specifications
+                        </p>
+                        <p className="mt-2 text-sm text-foreground/88">{formatSpecs(material)}</p>
+                      </div>
+
+                      {material.notes ? (
+                        <p className="text-sm leading-6 text-muted-foreground">{material.notes}</p>
+                      ) : null}
+
+                      <div className="grid grid-cols-2 gap-2">
+                        {canCreateTransfers ? (
+                          <Button asChild variant="outline">
+                            <Link href={`/warehouses/${warehouse.slug}/transfer`}>Transfer</Link>
+                          </Button>
+                        ) : null}
+                        <Button asChild variant="ghost" className={canCreateTransfers ? "" : "col-span-2"}>
+                          <Link href={`/raw-materials-history?warehouse=${warehouse.code}`}>History</Link>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <div className="hidden max-h-[680px] overflow-auto xl:block">
                 <Table>
                   <TableHeader className="sticky top-0 z-10 bg-card">
                     <TableRow className="hover:bg-card">
@@ -358,18 +448,16 @@ export function WarehouseDetailClient({ data }: { data: WarehouseDetailData }) {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="text-[11px]">
-                            {material.category}
-                          </Badge>
+                          <Badge variant="secondary">{material.category}</Badge>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{material.baseUnit}</TableCell>
                         <TableCell>
                           <span
                             className={
                               material.status === "OUT_OF_STOCK"
-                                ? "font-semibold text-red-600"
+                                ? "font-semibold text-red-300"
                                 : material.status === "LOW_STOCK"
-                                  ? "font-semibold text-amber-600"
+                                  ? "font-semibold text-amber-300"
                                   : "font-semibold"
                             }
                           >
@@ -379,34 +467,11 @@ export function WarehouseDetailClient({ data }: { data: WarehouseDetailData }) {
                         <TableCell className="text-sm text-muted-foreground">
                           {formatNumber(material.minimumStock)}
                         </TableCell>
-                        <TableCell>
-                          <div className="space-y-1 text-xs text-muted-foreground">
-                            {material.thicknessValue ? (
-                              <span className="block">
-                                Thickness: {material.thicknessValue}
-                                {material.thicknessUnit}
-                              </span>
-                            ) : null}
-                            {material.sizeValue ? (
-                              <span className="block">
-                                Size: {material.sizeValue}
-                                {material.sizeUnit ? ` ${material.sizeUnit}` : ""}
-                              </span>
-                            ) : null}
-                            {material.weightValue ? (
-                              <span className="block">
-                                Weight: {material.weightValue}
-                                {material.weightUnit}
-                              </span>
-                            ) : null}
-                            {material.gsm ? <span className="block">GSM: {material.gsm}</span> : null}
-                            {!material.thicknessValue && !material.sizeValue && !material.weightValue && !material.gsm ? (
-                              <span className="text-muted-foreground/50">-</span>
-                            ) : null}
-                          </div>
+                        <TableCell className="max-w-[220px] text-sm text-muted-foreground">
+                          {formatSpecs(material)}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={`text-[10px] ${getStatusColor(material.status)}`}>
+                          <Badge variant="outline" className={getStatusColor(material.status)}>
                             {getStatusLabel(material.status)}
                           </Badge>
                         </TableCell>
@@ -428,6 +493,7 @@ export function WarehouseDetailClient({ data }: { data: WarehouseDetailData }) {
                   </TableBody>
                 </Table>
               </div>
+
               <PaginationControls
                 page={currentPage}
                 pageCount={pageCount}
@@ -443,6 +509,15 @@ export function WarehouseDetailClient({ data }: { data: WarehouseDetailData }) {
   );
 }
 
+function InfoPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
+      <p className="mt-2 text-sm font-medium">{value}</p>
+    </div>
+  );
+}
+
 function MetricCard({
   icon: Icon,
   label,
@@ -455,24 +530,35 @@ function MetricCard({
   tone?: "default" | "emerald" | "amber" | "red" | "blue";
 }) {
   const toneClasses: Record<string, string> = {
-    default: "bg-primary/10 text-primary",
-    emerald: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400",
-    amber: "bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400",
-    red: "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400",
-    blue: "bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400",
+    default: "bg-primary/16 text-primary",
+    emerald: "bg-emerald-500/14 text-emerald-300",
+    amber: "bg-amber-500/14 text-amber-300",
+    red: "bg-red-500/14 text-red-300",
+    blue: "bg-sky-500/14 text-sky-300",
   };
 
   return (
-    <Card className="rounded-[24px] border bg-card/95 shadow-sm shadow-slate-950/5">
-      <CardContent className="flex items-center gap-3 p-4">
-        <div className={`rounded-xl p-2 ${toneClasses[tone]}`}>
-          <Icon className="h-4 w-4" />
+    <Card className="rounded-[24px]">
+      <CardContent className="flex min-h-[132px] items-center gap-3">
+        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${toneClasses[tone]}`}>
+          <Icon className="h-5 w-5" />
         </div>
-        <div>
-          <p className="text-2xl font-semibold">{value}</p>
-          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{label}</p>
+          <p className="mt-2 truncate text-2xl font-semibold">{value}</p>
         </div>
       </CardContent>
     </Card>
   );
+}
+
+function formatSpecs(material: WarehouseDetailData["materials"][number]) {
+  const specs = [
+    material.thicknessValue ? `Thickness ${material.thicknessValue}${material.thicknessUnit ?? ""}` : null,
+    material.sizeValue ? `Size ${material.sizeValue}${material.sizeUnit ? ` ${material.sizeUnit}` : ""}` : null,
+    material.weightValue ? `Weight ${material.weightValue}${material.weightUnit ?? ""}` : null,
+    material.gsm ? `GSM ${material.gsm}` : null,
+  ].filter(Boolean);
+
+  return specs.length > 0 ? specs.join(" • ") : "No dimensional metadata";
 }

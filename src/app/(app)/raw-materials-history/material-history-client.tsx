@@ -2,8 +2,10 @@
 
 import { useDeferredValue, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Activity, ClipboardList, Search } from "lucide-react";
+import { Activity, Search } from "lucide-react";
 import { PaginationControls } from "@/components/shared/pagination-controls";
+import { ResponsiveFiltersSheet } from "@/components/shared/responsive-filters-sheet";
+import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -103,31 +105,172 @@ export function MaterialHistoryClient({
   const pageCount = Math.max(1, Math.ceil(filtered.length / HISTORY_PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   const paginatedActivities = filtered.slice((currentPage - 1) * HISTORY_PAGE_SIZE, currentPage * HISTORY_PAGE_SIZE);
+  const activeFilters = [
+    warehouseFilter !== "all" ? `Warehouse: ${warehouseFilter}` : null,
+    typeFilter !== "all" ? `Activity: ${getActivityLabel(typeFilter)}` : null,
+    categoryFilter !== "all" ? `Category: ${categoryFilter}` : null,
+    materialFilter !== "all" ? `Material: ${materialFilter}` : null,
+    userFilter !== "all" ? `User: ${userFilter}` : null,
+    fromDate ? `From: ${fromDate}` : null,
+    toDate ? `To: ${toDate}` : null,
+  ].filter(Boolean) as string[];
 
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <div className="rounded-[28px] border bg-card/95 p-6 shadow-sm shadow-slate-950/5">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight">
-              <ClipboardList className="h-7 w-7 text-violet-500" />
-              Raw materials history
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Premium audit ledger for material creation, stock adjustments, transfers, and metadata changes.
-            </p>
-          </div>
-          <Badge variant="secondary" className="w-fit rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.18em]">
-            {filtered.length} matching activities
-          </Badge>
+  const filters = (
+    <>
+      <div className="relative xl:col-span-[1.5]">
+        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search by material, category, activity, warehouse, or user"
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setPage(1);
+          }}
+          className="pl-11"
+        />
+      </div>
+      <Select
+        value={warehouseFilter}
+        onValueChange={(value) => {
+          setWarehouseFilter(value);
+          setPage(1);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Warehouse" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All warehouses</SelectItem>
+          {warehouses.map((warehouse) => (
+            <SelectItem key={warehouse} value={warehouse}>
+              {warehouse}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={materialFilter}
+        onValueChange={(value) => {
+          setMaterialFilter(value);
+          setPage(1);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Material" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All materials</SelectItem>
+          {materials.map((material) => (
+            <SelectItem key={material} value={material}>
+              {material}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={typeFilter}
+        onValueChange={(value) => {
+          setTypeFilter(value);
+          setPage(1);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Activity type" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All activity types</SelectItem>
+          {activityTypes.map((type) => (
+            <SelectItem key={type} value={type}>
+              {getActivityLabel(type)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={categoryFilter}
+        onValueChange={(value) => {
+          setCategoryFilter(value);
+          setPage(1);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Category" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All categories</SelectItem>
+          {categories.map((category) => (
+            <SelectItem key={category} value={category}>
+              {category}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={userFilter}
+        onValueChange={(value) => {
+          setUserFilter(value);
+          setPage(1);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="User" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All users</SelectItem>
+          {users.map((user) => (
+            <SelectItem key={user} value={user}>
+              {user}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <div className="grid gap-3 sm:grid-cols-2 xl:col-span-2">
+        <div className="space-y-1.5">
+          <LabelText>From date</LabelText>
+          <Input
+            type="date"
+            value={fromDate}
+            onChange={(event) => {
+              setFromDate(event.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <LabelText>To date</LabelText>
+          <Input
+            type="date"
+            value={toDate}
+            onChange={(event) => {
+              setToDate(event.target.value);
+              setPage(1);
+            }}
+          />
         </div>
       </div>
+    </>
+  );
 
-      <Card className="rounded-[28px] border bg-card/95 shadow-sm shadow-slate-950/5">
-        <CardContent className="space-y-4 p-5">
-          <div className="grid gap-3 xl:grid-cols-[1.4fr_repeat(5,minmax(0,1fr))]">
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+      <ResponsivePageHeader
+        eyebrow="Audit ledger"
+        title="Raw materials history"
+        description="Premium audit ledger for material creation, stock adjustments, transfers, and metadata changes."
+        badge={<Badge variant="secondary">{filtered.length} matching activities</Badge>}
+      />
+
+      <Card>
+        <CardContent className="space-y-4">
+          <div className="hidden gap-3 xl:grid xl:grid-cols-[1.5fr_repeat(5,minmax(0,1fr))_minmax(0,1fr)_minmax(0,1fr)]">
+            {filters}
+          </div>
+          <div className="space-y-3 xl:hidden">
+            <ResponsiveFiltersSheet activeCount={activeFilters.length} title="Activity filters">
+              {filters}
+            </ResponsiveFiltersSheet>
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search by material, category, activity, warehouse, or user"
                 value={search}
@@ -135,134 +278,23 @@ export function MaterialHistoryClient({
                   setSearch(event.target.value);
                   setPage(1);
                 }}
-                className="pl-9"
-              />
-            </div>
-            <Select
-              value={warehouseFilter}
-              onValueChange={(value) => {
-                setWarehouseFilter(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Warehouse" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All warehouses</SelectItem>
-                {warehouses.map((warehouse) => (
-                  <SelectItem key={warehouse} value={warehouse}>
-                    {warehouse}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={materialFilter}
-              onValueChange={(value) => {
-                setMaterialFilter(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Material" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All materials</SelectItem>
-                {materials.map((material) => (
-                  <SelectItem key={material} value={material}>
-                    {material}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={typeFilter}
-              onValueChange={(value) => {
-                setTypeFilter(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Activity type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All activity types</SelectItem>
-                {activityTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {getActivityLabel(type)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={categoryFilter}
-              onValueChange={(value) => {
-                setCategoryFilter(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={userFilter}
-              onValueChange={(value) => {
-                setUserFilter(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="User" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All users</SelectItem>
-                {users.map((user) => (
-                  <SelectItem key={user} value={user}>
-                    {user}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:max-w-md lg:grid-cols-2">
-            <div className="space-y-1.5">
-              <LabelText>From date</LabelText>
-              <Input
-                type="date"
-                value={fromDate}
-                onChange={(event) => {
-                  setFromDate(event.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <LabelText>To date</LabelText>
-              <Input
-                type="date"
-                value={toDate}
-                onChange={(event) => {
-                  setToDate(event.target.value);
-                  setPage(1);
-                }}
+                className="pl-11"
               />
             </div>
           </div>
+          {activeFilters.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {activeFilters.map((filter) => (
+                <Badge key={filter} variant="outline">
+                  {filter}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden rounded-[28px] border bg-card/95 shadow-sm shadow-slate-950/5">
+      <Card className="overflow-hidden">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
             <Activity className="mb-4 h-12 w-12 text-muted-foreground/30" />
@@ -271,7 +303,53 @@ export function MaterialHistoryClient({
           </div>
         ) : (
           <>
-            <div className="max-h-[640px] overflow-auto">
+            <div className="space-y-3 p-4 xl:hidden">
+              {paginatedActivities.map((activity) => (
+                <Card key={activity.id} className="cursor-pointer rounded-[24px]" onClick={() => setSelectedActivity(activity)}>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="secondary">{activity.warehouseCode}</Badge>
+                          <Badge variant="outline" className={getActivityColor(activity.activityType)}>
+                            {getActivityLabel(activity.activityType)}
+                          </Badge>
+                        </div>
+                        <p className="text-base font-semibold">{activity.materialName}</p>
+                        <p className="text-sm text-muted-foreground">{activity.category}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Change</p>
+                        <p
+                          className={
+                            activity.quantityChange === null
+                              ? "mt-1 text-lg font-semibold"
+                              : activity.quantityChange < 0
+                                ? "mt-1 text-lg font-semibold text-red-300"
+                                : "mt-1 text-lg font-semibold text-emerald-300"
+                          }
+                        >
+                          {activity.quantityChange !== null
+                            ? `${activity.quantityChange > 0 ? "+" : ""}${formatNumber(activity.quantityChange)}`
+                            : "-"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <DetailBlock label="Performed by" value={activity.performedBy} compact />
+                      <DetailBlock label="Source" value={activity.sourceType || "-"} compact />
+                    </div>
+
+                    <div className="rounded-[22px] border border-white/8 bg-white/[0.03] p-3 text-sm text-muted-foreground">
+                      {formatDateTime(activity.createdAt)}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="hidden max-h-[680px] overflow-auto xl:block">
               <Table>
                 <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow className="hover:bg-card">
@@ -294,9 +372,7 @@ export function MaterialHistoryClient({
                       onClick={() => setSelectedActivity(activity)}
                     >
                       <TableCell>
-                        <Badge variant="secondary" className="text-[10px]">
-                          {activity.warehouseCode}
-                        </Badge>
+                        <Badge variant="secondary">{activity.warehouseCode}</Badge>
                       </TableCell>
                       <TableCell>
                         <div>
@@ -305,7 +381,7 @@ export function MaterialHistoryClient({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={`text-[10px] ${getActivityColor(activity.activityType)}`}>
+                        <Badge variant="outline" className={getActivityColor(activity.activityType)}>
                           {getActivityLabel(activity.activityType)}
                         </Badge>
                       </TableCell>
@@ -317,7 +393,7 @@ export function MaterialHistoryClient({
                       </TableCell>
                       <TableCell>
                         {activity.quantityChange !== null ? (
-                          <span className={activity.quantityChange < 0 ? "font-semibold text-red-600" : "font-semibold text-emerald-600"}>
+                          <span className={activity.quantityChange < 0 ? "font-semibold text-red-300" : "font-semibold text-emerald-300"}>
                             {activity.quantityChange > 0 ? "+" : ""}
                             {formatNumber(activity.quantityChange)}
                           </span>
@@ -335,6 +411,7 @@ export function MaterialHistoryClient({
                 </TableBody>
               </Table>
             </div>
+
             <PaginationControls
               page={currentPage}
               pageCount={pageCount}
@@ -354,7 +431,7 @@ export function MaterialHistoryClient({
           </SheetHeader>
           {selectedActivity ? (
             <div className="mt-6 space-y-5">
-              <div className="grid gap-4 rounded-2xl border bg-muted/30 p-4 sm:grid-cols-2">
+              <div className="grid gap-4 rounded-[24px] border border-white/8 bg-white/[0.03] p-4 sm:grid-cols-2">
                 <DetailBlock label="Warehouse" value={selectedActivity.warehouseCode} />
                 <DetailBlock label="Material" value={selectedActivity.materialName} />
                 <DetailBlock label="Category" value={selectedActivity.category} />
@@ -386,9 +463,19 @@ export function MaterialHistoryClient({
   );
 }
 
-function DetailBlock({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function DetailBlock({
+  accent,
+  compact,
+  label,
+  value,
+}: {
+  accent?: boolean;
+  compact?: boolean;
+  label: string;
+  value: string;
+}) {
   return (
-    <div>
+    <div className={compact ? "rounded-[20px] border border-white/8 bg-white/[0.03] p-3" : undefined}>
       <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
       <p className={accent ? "mt-2 font-semibold text-primary" : "mt-2 font-medium"}>{value}</p>
     </div>
@@ -397,9 +484,9 @@ function DetailBlock({ label, value, accent }: { label: string; value: string; a
 
 function JsonCard({ title, payload }: { title: string; payload: Record<string, unknown> | null }) {
   return (
-    <div className="rounded-2xl border p-4">
+    <div className="rounded-[24px] border border-white/8 p-4">
       <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
-      <pre className="mt-3 overflow-auto rounded-xl bg-muted/30 p-3 text-xs text-muted-foreground">
+      <pre className="mt-3 overflow-auto rounded-[20px] border border-white/6 bg-white/[0.03] p-3 text-xs text-muted-foreground">
         {payload ? JSON.stringify(payload, null, 2) : "-"}
       </pre>
     </div>

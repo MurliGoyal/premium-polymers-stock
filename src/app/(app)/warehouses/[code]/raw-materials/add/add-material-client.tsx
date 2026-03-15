@@ -11,6 +11,7 @@ import { z } from "zod";
 import { Plus, RotateCcw, Save, X } from "lucide-react";
 import { MATERIAL_UNITS, SIZE_UNITS, THICKNESS_UNITS, WEIGHT_UNITS } from "@/lib/constants";
 import { rawMaterialFormSchema } from "@/lib/validation";
+import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -128,28 +129,15 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
         <span className="font-medium text-foreground">Add Raw Material</span>
       </div>
 
-      <div className="flex flex-col gap-4 rounded-[28px] border bg-card/90 p-6 shadow-sm shadow-slate-950/5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-3">
-          <Badge variant="secondary" className="w-fit rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.18em]">
-            Warehouse Context
-          </Badge>
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Add raw material</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Create a warehouse-bound material record with stock controls, optional dimensions, and audit logging.
-            </p>
-          </div>
-        </div>
-        <div className="rounded-2xl border bg-muted/40 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Selected warehouse</p>
-          <p className="mt-1 text-base font-semibold">
-            {warehouse.code} <span className="text-sm font-normal text-muted-foreground">/ {warehouse.name}</span>
-          </p>
-        </div>
-      </div>
+      <ResponsivePageHeader
+        eyebrow="Warehouse context"
+        title="Add raw material"
+        description="Create a warehouse-bound material record with stock controls, optional dimensions, and audit logging."
+        badge={<Badge variant="secondary">{warehouse.code}</Badge>}
+      />
 
       <form onSubmit={onSubmit} className="space-y-6">
-        <Card className="rounded-[28px] border-0 bg-gradient-to-br from-white to-slate-50/70 shadow-xl shadow-slate-950/5">
+        <Card className="rounded-[28px] border-0 bg-gradient-to-br from-white/10 to-white/[0.02] shadow-xl shadow-slate-950/5">
           <CardHeader>
             <CardTitle>Core stock definition</CardTitle>
             <CardDescription>
@@ -410,7 +398,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
           </CardContent>
         </Card>
 
-        <div className="sticky bottom-4 z-20 rounded-[24px] border bg-background/92 p-4 shadow-xl shadow-slate-950/10 backdrop-blur">
+        <div className="safe-bottom sticky bottom-4 z-20 rounded-[28px] border border-white/10 bg-background/92 p-4 shadow-xl shadow-slate-950/10 backdrop-blur">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="ghost" asChild>
               <Link href={`/warehouses/${warehouse.slug}`}>

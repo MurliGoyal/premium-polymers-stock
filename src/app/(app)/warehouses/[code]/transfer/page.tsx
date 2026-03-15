@@ -6,7 +6,11 @@ import { TransferClient } from "./transfer-client";
 export default async function TransferPage({ params }: { params: Promise<{ code: string }> }) {
   await requirePagePermission("transfers:create");
   const { code } = await params;
-  const warehouse = await prisma.warehouse.findUnique({ where: { slug: code } });
+  const warehouse = await prisma.warehouse.findFirst({
+    where: {
+      OR: [{ slug: code }, { code: { equals: code, mode: "insensitive" } }],
+    },
+  });
   if (!warehouse) notFound();
 
   const [materials, recipients] = await Promise.all([

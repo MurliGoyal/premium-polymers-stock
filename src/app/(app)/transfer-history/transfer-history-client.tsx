@@ -4,6 +4,8 @@ import { useDeferredValue, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRightLeft, CalendarRange, Search } from "lucide-react";
 import { PaginationControls } from "@/components/shared/pagination-controls";
+import { ResponsiveFiltersSheet } from "@/components/shared/responsive-filters-sheet";
+import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -101,30 +103,143 @@ export function TransferHistoryClient({
 
   const snapshot = selectedTransfer?.materialSnapshot;
 
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <div className="rounded-[28px] border bg-card/95 p-6 shadow-sm shadow-slate-950/5">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight">
-              <ArrowRightLeft className="h-7 w-7 text-blue-500" />
-              Transfer history
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Searchable audit log of all stock deductions, recipients, and reference records.
-            </p>
-          </div>
-          <Badge variant="secondary" className="w-fit rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.18em]">
-            {filtered.length} matching transfers
-          </Badge>
+  const filters = (
+    <>
+      <div className="relative xl:col-span-[1.5]">
+        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search by material, recipient, reference, category, or user"
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setPage(1);
+          }}
+          className="pl-11"
+        />
+      </div>
+      <Select
+        value={warehouseFilter}
+        onValueChange={(value) => {
+          setWarehouseFilter(value);
+          setPage(1);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Warehouse" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All warehouses</SelectItem>
+          {warehouses.map((warehouse) => (
+            <SelectItem key={warehouse} value={warehouse}>
+              {warehouse}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={materialFilter}
+        onValueChange={(value) => {
+          setMaterialFilter(value);
+          setPage(1);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Material" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All materials</SelectItem>
+          {materials.map((material) => (
+            <SelectItem key={material} value={material}>
+              {material}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={recipientFilter}
+        onValueChange={(value) => {
+          setRecipientFilter(value);
+          setPage(1);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Recipient" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All recipients</SelectItem>
+          {recipients.map((recipient) => (
+            <SelectItem key={recipient} value={recipient}>
+              {recipient}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={categoryFilter}
+        onValueChange={(value) => {
+          setCategoryFilter(value);
+          setPage(1);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Category" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All categories</SelectItem>
+          {categories.map((category) => (
+            <SelectItem key={category} value={category}>
+              {category}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <div className="grid gap-3 sm:grid-cols-2 xl:col-span-2">
+        <div className="space-y-1.5">
+          <LabelText>From date</LabelText>
+          <Input
+            type="date"
+            value={fromDate}
+            onChange={(event) => {
+              setFromDate(event.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <LabelText>To date</LabelText>
+          <Input
+            type="date"
+            value={toDate}
+            onChange={(event) => {
+              setToDate(event.target.value);
+              setPage(1);
+            }}
+          />
         </div>
       </div>
+    </>
+  );
 
-      <Card className="rounded-[28px] border bg-card/95 shadow-sm shadow-slate-950/5">
-        <CardContent className="space-y-4 p-5">
-          <div className="grid gap-3 xl:grid-cols-[1.5fr_repeat(4,minmax(0,1fr))]">
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+      <ResponsivePageHeader
+        eyebrow="Audit trail"
+        title="Transfer history"
+        description="Searchable log of stock deductions, recipients, and reference records that stays readable on phones."
+        badge={<Badge variant="secondary">{filtered.length} matching transfers</Badge>}
+      />
+
+      <Card>
+        <CardContent className="space-y-4">
+          <div className="hidden gap-3 xl:grid xl:grid-cols-[1.5fr_repeat(4,minmax(0,1fr))_minmax(0,1fr)_minmax(0,1fr)]">
+            {filters}
+          </div>
+          <div className="space-y-3 xl:hidden">
+            <ResponsiveFiltersSheet activeCount={activeFilters.length} title="Transfer filters">
+              {filters}
+            </ResponsiveFiltersSheet>
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search by material, recipient, reference, category, or user"
                 value={search}
@@ -132,108 +247,7 @@ export function TransferHistoryClient({
                   setSearch(event.target.value);
                   setPage(1);
                 }}
-                className="pl-9"
-              />
-            </div>
-            <Select
-              value={warehouseFilter}
-              onValueChange={(value) => {
-                setWarehouseFilter(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Warehouse" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All warehouses</SelectItem>
-                {warehouses.map((warehouse) => (
-                  <SelectItem key={warehouse} value={warehouse}>
-                    {warehouse}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={materialFilter}
-              onValueChange={(value) => {
-                setMaterialFilter(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Material" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All materials</SelectItem>
-                {materials.map((material) => (
-                  <SelectItem key={material} value={material}>
-                    {material}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={recipientFilter}
-              onValueChange={(value) => {
-                setRecipientFilter(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Recipient" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All recipients</SelectItem>
-                {recipients.map((recipient) => (
-                  <SelectItem key={recipient} value={recipient}>
-                    {recipient}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={categoryFilter}
-              onValueChange={(value) => {
-                setCategoryFilter(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:max-w-md lg:grid-cols-2">
-            <div className="space-y-1.5">
-              <LabelText>From date</LabelText>
-              <Input
-                type="date"
-                value={fromDate}
-                onChange={(event) => {
-                  setFromDate(event.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <LabelText>To date</LabelText>
-              <Input
-                type="date"
-                value={toDate}
-                onChange={(event) => {
-                  setToDate(event.target.value);
-                  setPage(1);
-                }}
+                className="pl-11"
               />
             </div>
           </div>
@@ -241,7 +255,7 @@ export function TransferHistoryClient({
           {activeFilters.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {activeFilters.map((filter) => (
-                <Badge key={filter} variant="outline" className="rounded-full px-3 py-1 text-[11px]">
+                <Badge key={filter} variant="outline">
                   <CalendarRange className="mr-1 h-3 w-3" />
                   {filter}
                 </Badge>
@@ -251,7 +265,7 @@ export function TransferHistoryClient({
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden rounded-[28px] border bg-card/95 shadow-sm shadow-slate-950/5">
+      <Card className="overflow-hidden">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
             <ArrowRightLeft className="mb-4 h-12 w-12 text-muted-foreground/30" />
@@ -260,7 +274,42 @@ export function TransferHistoryClient({
           </div>
         ) : (
           <>
-            <div className="max-h-[640px] overflow-auto">
+            <div className="space-y-3 p-4 xl:hidden">
+              {paginatedTransfers.map((transfer) => (
+                <Card key={transfer.id} className="cursor-pointer rounded-[24px]" onClick={() => setSelectedTransfer(transfer)}>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="secondary">{transfer.warehouseCode}</Badge>
+                          <Badge variant="outline">{transfer.category}</Badge>
+                        </div>
+                        <p className="text-base font-semibold">{transfer.materialName}</p>
+                        <p className="text-sm text-muted-foreground">{transfer.recipientName}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Quantity</p>
+                        <p className="mt-1 text-2xl font-semibold text-amber-300">
+                          -{formatNumber(transfer.quantity)}
+                          <span className="ml-1 text-sm font-medium text-muted-foreground">{transfer.unit}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <DetailBlock label="Reference" value={transfer.referenceNumber || transfer.id.slice(0, 8)} compact />
+                      <DetailBlock label="Created by" value={transfer.createdBy} compact />
+                    </div>
+
+                    <div className="rounded-[22px] border border-white/8 bg-white/[0.03] p-3 text-sm text-muted-foreground">
+                      {formatDateTime(transfer.createdAt)}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="hidden max-h-[680px] overflow-auto xl:block">
               <Table>
                 <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow className="hover:bg-card">
@@ -285,14 +334,12 @@ export function TransferHistoryClient({
                         {transfer.referenceNumber || transfer.id.slice(0, 8)}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="text-[10px]">
-                          {transfer.warehouseCode}
-                        </Badge>
+                        <Badge variant="secondary">{transfer.warehouseCode}</Badge>
                       </TableCell>
                       <TableCell className="font-medium">{transfer.materialName}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{transfer.category}</TableCell>
                       <TableCell>
-                        <span className="font-semibold text-orange-600">-{formatNumber(transfer.quantity)}</span>
+                        <span className="font-semibold text-amber-300">-{formatNumber(transfer.quantity)}</span>
                         <span className="ml-1 text-xs text-muted-foreground">{transfer.unit}</span>
                       </TableCell>
                       <TableCell>{transfer.recipientName}</TableCell>
@@ -305,6 +352,7 @@ export function TransferHistoryClient({
                 </TableBody>
               </Table>
             </div>
+
             <PaginationControls
               page={currentPage}
               pageCount={pageCount}
@@ -324,7 +372,7 @@ export function TransferHistoryClient({
           </SheetHeader>
           {selectedTransfer ? (
             <div className="mt-6 space-y-5">
-              <div className="grid gap-4 rounded-2xl border bg-muted/30 p-4 sm:grid-cols-2">
+              <div className="grid gap-4 rounded-[24px] border border-white/8 bg-white/[0.03] p-4 sm:grid-cols-2">
                 <DetailBlock label="Warehouse" value={selectedTransfer.warehouseCode} />
                 <DetailBlock label="Recipient" value={selectedTransfer.recipientName} />
                 <DetailBlock label="Quantity" value={`${formatNumber(selectedTransfer.quantity)} ${selectedTransfer.unit}`} accent />
@@ -378,9 +426,19 @@ export function TransferHistoryClient({
   );
 }
 
-function DetailBlock({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function DetailBlock({
+  accent,
+  compact,
+  label,
+  value,
+}: {
+  accent?: boolean;
+  compact?: boolean;
+  label: string;
+  value: string;
+}) {
   return (
-    <div>
+    <div className={compact ? "rounded-[20px] border border-white/8 bg-white/[0.03] p-3" : undefined}>
       <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
       <p className={accent ? "mt-2 font-semibold text-primary" : "mt-2 font-medium"}>{value}</p>
     </div>

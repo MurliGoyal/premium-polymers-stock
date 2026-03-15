@@ -3,17 +3,17 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-[0.01em] transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background",
   {
     variants: {
       variant: {
-        default: "border-transparent bg-primary text-primary-foreground shadow",
-        secondary: "border-transparent bg-secondary text-secondary-foreground",
-        destructive: "border-transparent bg-destructive text-destructive-foreground shadow",
-        outline: "text-foreground",
-        success: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400",
-        warning: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400",
-        danger: "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400",
+        default: "border-transparent bg-primary text-primary-foreground shadow-[0_12px_24px_rgba(91,102,255,0.24)]",
+        secondary: "border-white/10 bg-secondary/85 text-secondary-foreground",
+        destructive: "border-transparent bg-destructive text-destructive-foreground shadow-[0_12px_26px_rgba(220,38,38,0.24)]",
+        outline: "border-white/12 bg-transparent text-foreground/88",
+        success: "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
+        warning: "border-amber-500/25 bg-amber-500/10 text-amber-300",
+        danger: "border-red-500/25 bg-red-500/10 text-red-300",
       },
     },
     defaultVariants: {

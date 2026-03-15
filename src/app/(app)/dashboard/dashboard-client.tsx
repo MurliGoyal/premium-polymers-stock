@@ -3,43 +3,49 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
-  Package, Layers, BarChart3, AlertTriangle, ArrowRightLeft,
-  Warehouse, TrendingUp, Plus, Clock, Activity, ArrowRight, OctagonAlert,
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  ArrowRightLeft,
+  BarChart3,
+  Clock,
+  Layers,
+  OctagonAlert,
+  Package,
+  Plus,
+  TrendingUp,
+  Warehouse,
 } from "lucide-react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
-  ResponsiveContainer, Cell, Area, AreaChart,
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatNumber, formatDateTime, getActivityLabel, getActivityColor } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDateTime, formatNumber, getActivityColor, getActivityLabel } from "@/lib/utils";
 
 type DashboardData = Awaited<ReturnType<typeof import("./actions").getDashboardData>>;
 
 const CHART_COLORS = [
-  "hsl(252, 60%, 55%)", "hsl(172, 55%, 45%)", "hsl(33, 80%, 55%)",
-  "hsl(210, 60%, 50%)", "hsl(340, 60%, 55%)", "hsl(142, 50%, 45%)",
-  "hsl(280, 50%, 55%)", "hsl(200, 60%, 50%)",
+  "hsl(250 95% 70%)",
+  "hsl(190 92% 56%)",
+  "hsl(36 96% 62%)",
+  "hsl(206 93% 62%)",
+  "hsl(340 82% 66%)",
+  "hsl(146 76% 52%)",
+  "hsl(283 82% 72%)",
+  "hsl(205 88% 64%)",
 ];
-
-function CountUp({ value }: { value: number }) {
-  return (
-    <motion.span
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <motion.span
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        {formatNumber(value)}
-      </motion.span>
-    </motion.span>
-  );
-}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -48,102 +54,104 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.2, 1, 0.22, 1] as [number, number, number, number] } },
 };
 
 export function DashboardClient({ data }: { data: DashboardData }) {
-  const { kpis, warehouseOverview, recentTransfers, recentActivities, categoryChartData, warehouseStockChart, transferTrendData, lowStockMaterials } = data;
+  const {
+    kpis,
+    warehouseOverview,
+    recentTransfers,
+    recentActivities,
+    categoryChartData,
+    warehouseStockChart,
+    transferTrendData,
+    lowStockMaterials,
+  } = data;
 
   const kpiCards = [
-    { label: "Total Materials", value: kpis.totalMaterials, icon: Package, color: "text-indigo-600 bg-indigo-50 dark:bg-indigo-950 dark:text-indigo-400" },
-    { label: "Categories", value: kpis.totalCategories, icon: Layers, color: "text-violet-600 bg-violet-50 dark:bg-violet-950 dark:text-violet-400" },
-    { label: "Total Stock", value: kpis.totalStock, icon: BarChart3, color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400" },
-    { label: "Low Stock", value: kpis.lowStockItems, icon: AlertTriangle, color: "text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-400" },
-    { label: "Transfers Today", value: kpis.transfersToday, icon: ArrowRightLeft, color: "text-blue-600 bg-blue-50 dark:bg-blue-950 dark:text-blue-400" },
-    { label: "Transfers (7d)", value: kpis.transfersThisWeek, icon: TrendingUp, color: "text-cyan-600 bg-cyan-50 dark:bg-cyan-950 dark:text-cyan-400" },
-    { label: "Warehouses", value: kpis.warehouseCount, icon: Warehouse, color: "text-slate-600 bg-slate-50 dark:bg-slate-800 dark:text-slate-400" },
-    { label: "Out of Stock", value: kpis.outOfStockItems, icon: OctagonAlert, color: "text-red-600 bg-red-50 dark:bg-red-950 dark:text-red-400" },
+    { label: "Total materials", value: kpis.totalMaterials, icon: Package, tone: "indigo" },
+    { label: "Categories", value: kpis.totalCategories, icon: Layers, tone: "violet" },
+    { label: "Total stock", value: kpis.totalStock, icon: BarChart3, tone: "emerald" },
+    { label: "Low stock", value: kpis.lowStockItems, icon: AlertTriangle, tone: "amber" },
+    { label: "Transfers today", value: kpis.transfersToday, icon: ArrowRightLeft, tone: "blue" },
+    { label: "Transfers (7d)", value: kpis.transfersThisWeek, icon: TrendingUp, tone: "cyan" },
+    { label: "Warehouses", value: kpis.warehouseCount, icon: Warehouse, tone: "slate" },
+    { label: "Out of stock", value: kpis.outOfStockItems, icon: OctagonAlert, tone: "red" },
   ];
 
+  const categorySummary = categoryChartData.slice(0, 4);
+
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6">
-      {/* Page header */}
-      <motion.div variants={itemVariants} className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">Overview of your stock management system</p>
-        </div>
-        <div className="flex gap-2">
-          <Button asChild size="sm" variant="outline">
-            <Link href="/warehouses"><Warehouse className="mr-1.5 h-4 w-4" />Warehouses</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/warehouses"><Plus className="mr-1.5 h-4 w-4" />Add Material</Link>
-          </Button>
-        </div>
+    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-5">
+      <motion.div variants={itemVariants}>
+        <ResponsivePageHeader
+          eyebrow="Operations overview"
+          title="Dashboard"
+          description="High-contrast warehouse health, transfer movement, and stock risk with mobile-friendly summaries first."
+          badge={<Badge variant="secondary">Live seeded metrics</Badge>}
+          actions={
+            <>
+              <Button asChild variant="outline">
+                <Link href="/warehouses">
+                  <Warehouse className="h-4 w-4" />
+                  Warehouses
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link href="/warehouses">
+                  <Plus className="h-4 w-4" />
+                  Add material
+                </Link>
+              </Button>
+            </>
+          }
+        />
       </motion.div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpiCards.map((kpi) => (
-          <motion.div key={kpi.label} variants={itemVariants}>
-            <Card className="hover:shadow-md transition-shadow duration-200">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{kpi.label}</span>
-                  <div className={`p-2 rounded-lg ${kpi.color}`}>
-                    <kpi.icon className="h-4 w-4" />
-                  </div>
-                </div>
-                <div className="text-2xl font-bold">
-                  <CountUp value={kpi.value} />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <MetricCard key={kpi.label} label={kpi.label} tone={kpi.tone} value={kpi.value} icon={kpi.icon} />
         ))}
-      </div>
+      </motion.div>
 
-      {/* Warehouse Overview Cards */}
       <motion.div variants={itemVariants}>
-        <h2 className="text-lg font-semibold mb-3">Warehouse Overview</h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          {warehouseOverview.map((w) => (
-            <Card key={w.id} className="hover:shadow-md transition-all duration-200 group">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold tracking-[-0.03em]">Warehouse overview</h2>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/warehouses">
+              Open warehouses
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {warehouseOverview.map((warehouse) => (
+            <Card key={warehouse.id} className="group overflow-hidden">
+              <CardContent className="space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/14 text-primary">
                       <Warehouse className="h-5 w-5" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-base">{w.code}</h3>
-                      <p className="text-xs text-muted-foreground">{w.name}</p>
+                      <h3 className="text-lg font-semibold">{warehouse.code}</h3>
+                      <p className="text-sm text-muted-foreground">{warehouse.name}</p>
                     </div>
                   </div>
-                  <Button asChild size="sm" variant="ghost" className="opacity-60 group-hover:opacity-100 transition-opacity">
-                    <Link href={`/warehouses/${w.slug}`}>
-                      Open <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/warehouses/${warehouse.slug}`}>
+                      Open
+                      <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
                 </div>
-                <div className="grid grid-cols-4 gap-3 text-center">
-                  <div className="p-2 rounded-lg bg-muted/50">
-                    <p className="text-lg font-bold">{w.totalMaterials}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase">Materials</p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-muted/50">
-                    <p className="text-lg font-bold text-emerald-600">{formatNumber(Math.round(w.totalStock))}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase">Stock</p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-muted/50">
-                    <p className="text-lg font-bold text-amber-600">{w.lowStockCount}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase">Low Stock</p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-muted/50">
-                    <p className="text-lg font-bold text-blue-600">{w.recentTransfers}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase">Transfers</p>
-                  </div>
+
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <MetricPill label="Materials" value={warehouse.totalMaterials} />
+                  <MetricPill label="Stock" value={formatNumber(Math.round(warehouse.totalStock))} tone="emerald" />
+                  <MetricPill label="Low stock" value={warehouse.lowStockCount} tone="amber" />
+                  <MetricPill label="Transfers" value={warehouse.recentTransfers} tone="blue" />
                 </div>
               </CardContent>
             </Card>
@@ -151,255 +159,326 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         </div>
       </motion.div>
 
-      {/* Charts Row */}
-      <div className="grid lg:grid-cols-2 gap-4">
-        {/* Transfer Trend */}
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold">Transfer Activity (Last 7 Days)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={240}>
-                <AreaChart data={transferTrendData}>
-                  <defs>
-                    <linearGradient id="colorTransfers" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(252, 60%, 55%)" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="hsl(252, 60%, 55%)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <RechartsTooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                    }}
-                  />
-                  <Area type="monotone" dataKey="count" stroke="hsl(252, 60%, 55%)" fill="url(#colorTransfers)" strokeWidth={2} name="Transfers" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Category Distribution */}
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold">Materials by Category</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={categoryChartData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={100} stroke="hsl(var(--muted-foreground))" />
-                  <RechartsTooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                    }}
-                  />
-                  <Bar dataKey="count" radius={[0, 4, 4, 0]} name="Materials">
-                    {categoryChartData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Warehouse Stock Chart + Low Stock Alerts */}
-      <div className="grid lg:grid-cols-2 gap-4">
-        {/* Warehouse Stock */}
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold">Stock by Warehouse</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={warehouseStockChart}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <RechartsTooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                    }}
-                  />
-                  <Bar dataKey="totalMaterials" fill="hsl(252, 60%, 55%)" radius={[4, 4, 0, 0]} name="Materials" />
-                  <Bar dataKey="lowStock" fill="hsl(33, 80%, 55%)" radius={[4, 4, 0, 0]} name="Low Stock" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Low Stock Alerts */}
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  Low Stock Alerts
-                </CardTitle>
-                <Badge variant="warning" className="text-[10px]">{lowStockMaterials.length} items</Badge>
+      <motion.div variants={itemVariants} className="grid gap-4 lg:grid-cols-2">
+        <Card className="md:hidden">
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold">Transfer activity snapshot</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {transferTrendData.map((point) => (
+              <div key={point.label} className="flex items-center justify-between rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-3">
+                <span className="text-sm text-muted-foreground">{point.label}</span>
+                <span className="text-base font-semibold">{point.count}</span>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
-                {lowStockMaterials.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">All stock levels are healthy</p>
-                ) : (
-                  lowStockMaterials.map((m) => (
-                    <div key={m.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{m.name}</p>
-                        <p className="text-[11px] text-muted-foreground">{m.warehouseCode} · {m.category}</p>
-                      </div>
-                      <div className="text-right ml-3 shrink-0">
-                        <Badge variant={m.status === "OUT_OF_STOCK" ? "danger" : "warning"} className="text-[10px]">
-                          {m.currentStock} / {m.minimumStock} {m.baseUnit}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+            ))}
+          </CardContent>
+        </Card>
 
-      {/* Recent Activity + Recent Transfers + Quick Actions */}
-      <div className="grid lg:grid-cols-3 gap-4">
-        {/* Recent Activity */}
-        <motion.div variants={itemVariants} className="lg:col-span-1">
-          <Card className="h-full">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Activity className="h-4 w-4 text-primary" />
-                Recent Activity
+        <Card className="hidden md:block">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">Transfer activity (last 7 days)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={transferTrendData}>
+                <defs>
+                  <linearGradient id="colorTransfers" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(250 95% 70%)" stopOpacity={0.45} />
+                    <stop offset="95%" stopColor="hsl(250 95% 70%)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="rgba(255,255,255,0.48)" />
+                <YAxis tick={{ fontSize: 11 }} stroke="rgba(255,255,255,0.48)" />
+                <RechartsTooltip
+                  contentStyle={{
+                    backgroundColor: "rgba(12, 17, 31, 0.96)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "18px",
+                    fontSize: "12px",
+                  }}
+                />
+                <Area type="monotone" dataKey="count" stroke="hsl(250 95% 70%)" fill="url(#colorTransfers)" strokeWidth={2.5} name="Transfers" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="md:hidden">
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold">Category mix</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {categorySummary.map((category, index) => (
+              <div key={category.name} className="rounded-[22px] border border-white/8 bg-white/[0.03] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="h-3 w-3 rounded-full"
+                      style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                    />
+                    <p className="text-sm font-medium">{category.name}</p>
+                  </div>
+                  <p className="text-lg font-semibold">{category.count}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card className="hidden md:block">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">Materials by category</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={categoryChartData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                <XAxis type="number" tick={{ fontSize: 11 }} stroke="rgba(255,255,255,0.48)" />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={110} stroke="rgba(255,255,255,0.48)" />
+                <RechartsTooltip
+                  contentStyle={{
+                    backgroundColor: "rgba(12, 17, 31, 0.96)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "18px",
+                    fontSize: "12px",
+                  }}
+                />
+                <Bar dataKey="count" radius={[0, 8, 8, 0]} name="Materials">
+                  {categoryChartData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <motion.div variants={itemVariants} className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">Stock by warehouse</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={warehouseStockChart}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="rgba(255,255,255,0.48)" />
+                <YAxis tick={{ fontSize: 11 }} stroke="rgba(255,255,255,0.48)" />
+                <RechartsTooltip
+                  contentStyle={{
+                    backgroundColor: "rgba(12, 17, 31, 0.96)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "18px",
+                    fontSize: "12px",
+                  }}
+                />
+                <Bar dataKey="totalMaterials" fill="hsl(250 95% 70%)" radius={[8, 8, 0, 0]} name="Materials" />
+                <Bar dataKey="lowStock" fill="hsl(36 96% 62%)" radius={[8, 8, 0, 0]} name="Low stock" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <AlertTriangle className="h-4 w-4 text-amber-300" />
+                Low stock alerts
               </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {recentActivities.map((a) => (
-                  <div key={a.id} className="flex items-start gap-3">
-                    <div className={`p-1.5 rounded-md mt-0.5 shrink-0 ${getActivityColor(a.activityType)}`}>
-                      <Activity className="h-3 w-3" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{a.materialName}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {getActivityLabel(a.activityType)} · {a.warehouseCode}
-                        {a.quantityChange ? ` · ${a.quantityChange > 0 ? "+" : ""}${a.quantityChange}` : ""}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground/60">{a.performedBy} · {formatDateTime(a.createdAt)}</p>
+              <Badge variant="warning">{lowStockMaterials.length} items</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {lowStockMaterials.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">All stock levels are healthy.</p>
+              ) : (
+                lowStockMaterials.map((material) => (
+                  <div key={material.id} className="rounded-[22px] border border-white/8 bg-white/[0.03] p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{material.name}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {material.warehouseCode} • {material.category}
+                        </p>
+                      </div>
+                      <Badge variant={material.status === "OUT_OF_STOCK" ? "danger" : "warning"}>
+                        {material.currentStock} / {material.minimumStock} {material.baseUnit}
+                      </Badge>
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
-        {/* Recent Transfers */}
-        <motion.div variants={itemVariants} className="lg:col-span-1">
-          <Card className="h-full">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <ArrowRightLeft className="h-4 w-4 text-blue-500" />
-                  Recent Transfers
-                </CardTitle>
-                <Button asChild variant="ghost" size="sm" className="text-xs h-7">
-                  <Link href="/transfer-history">View All</Link>
-                </Button>
+      <motion.div variants={itemVariants} className="grid gap-4 xl:grid-cols-3">
+        <Card className="xl:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <Activity className="h-4 w-4 text-primary" />
+              Recent activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {recentActivities.map((activity) => (
+              <div key={activity.id} className="flex items-start gap-3 rounded-[22px] border border-white/8 bg-white/[0.03] p-3">
+                <div className={`mt-0.5 rounded-xl p-2 ${getActivityColor(activity.activityType)}`}>
+                  <Activity className="h-3.5 w-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{activity.materialName}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {getActivityLabel(activity.activityType)} • {activity.warehouseCode}
+                    {activity.quantityChange ? ` • ${activity.quantityChange > 0 ? "+" : ""}${activity.quantityChange}` : ""}
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                    {activity.performedBy} • {formatDateTime(activity.createdAt)}
+                  </p>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {recentTransfers.map((t) => (
-                  <div key={t.id} className="flex items-start gap-3">
-                    <div className="p-1.5 rounded-md mt-0.5 shrink-0 bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
-                      <ArrowRightLeft className="h-3 w-3" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{t.materialName}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {t.quantity} {t.materialUnit} → {t.recipientName}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground/60">{t.warehouseCode} · {t.createdBy} · {formatDateTime(t.createdAt)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+            ))}
+          </CardContent>
+        </Card>
 
-        {/* Quick Actions */}
-        <motion.div variants={itemVariants} className="lg:col-span-1">
-          <Card className="h-full">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button asChild variant="outline" className="w-full justify-start h-11 group">
-                <Link href="/warehouses">
-                  <Warehouse className="mr-3 h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
-                  <div className="text-left">
-                    <p className="text-sm font-medium">Go to Warehouses</p>
-                    <p className="text-[10px] text-muted-foreground">Select a warehouse to manage</p>
-                  </div>
-                </Link>
+        <Card className="xl:col-span-1">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <ArrowRightLeft className="h-4 w-4 text-sky-300" />
+                Recent transfers
+              </CardTitle>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/transfer-history">View all</Link>
               </Button>
-              <Button asChild variant="outline" className="w-full justify-start h-11 group">
-                <Link href="/warehouses">
-                  <Plus className="mr-3 h-4 w-4 text-emerald-600 group-hover:scale-110 transition-transform" />
-                  <div className="text-left">
-                    <p className="text-sm font-medium">Add Raw Material</p>
-                    <p className="text-[10px] text-muted-foreground">Add new stock to a warehouse</p>
-                  </div>
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full justify-start h-11 group">
-                <Link href="/warehouses">
-                  <ArrowRightLeft className="mr-3 h-4 w-4 text-blue-600 group-hover:scale-110 transition-transform" />
-                  <div className="text-left">
-                    <p className="text-sm font-medium">Make Transfer</p>
-                    <p className="text-[10px] text-muted-foreground">Transfer stock to a recipient</p>
-                  </div>
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full justify-start h-11 group">
-                <Link href="/transfer-history">
-                  <Clock className="mr-3 h-4 w-4 text-violet-600 group-hover:scale-110 transition-transform" />
-                  <div className="text-left">
-                    <p className="text-sm font-medium">Transfer History</p>
-                    <p className="text-[10px] text-muted-foreground">View all past transfers</p>
-                  </div>
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {recentTransfers.map((transfer) => (
+              <div key={transfer.id} className="flex items-start gap-3 rounded-[22px] border border-white/8 bg-white/[0.03] p-3">
+                <div className="mt-0.5 rounded-xl bg-sky-500/12 p-2 text-sky-300">
+                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{transfer.materialName}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {transfer.quantity} {transfer.materialUnit} → {transfer.recipientName}
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                    {transfer.warehouseCode} • {transfer.createdBy} • {formatDateTime(transfer.createdAt)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card className="xl:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">Quick actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <QuickAction href="/warehouses" icon={Warehouse} title="Go to warehouses" description="Select a warehouse to manage." />
+            <QuickAction href="/warehouses" icon={Plus} title="Add raw material" description="Add stock into a warehouse record." />
+            <QuickAction href="/warehouses" icon={ArrowRightLeft} title="Make transfer" description="Deduct approved stock and log the movement." />
+            <QuickAction href="/transfer-history" icon={Clock} title="Transfer history" description="Audit every outbound quantity." />
+          </CardContent>
+        </Card>
+      </motion.div>
     </motion.div>
+  );
+}
+
+function MetricCard({
+  icon: Icon,
+  label,
+  tone,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  tone: string;
+  value: number;
+}) {
+  const toneClasses: Record<string, string> = {
+    amber: "bg-amber-500/14 text-amber-300",
+    blue: "bg-sky-500/14 text-sky-300",
+    cyan: "bg-cyan-500/14 text-cyan-300",
+    emerald: "bg-emerald-500/14 text-emerald-300",
+    indigo: "bg-indigo-500/14 text-indigo-300",
+    red: "bg-red-500/14 text-red-300",
+    slate: "bg-slate-500/14 text-slate-200",
+    violet: "bg-violet-500/14 text-violet-300",
+  };
+
+  return (
+    <Card className="overflow-hidden">
+      <CardContent className="flex min-h-[148px] flex-col justify-between">
+        <div className="flex items-start justify-between gap-3">
+          <p className="max-w-[10rem] text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            {label}
+          </p>
+          <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${toneClasses[tone]}`}>
+            <Icon className="h-4 w-4" />
+          </div>
+        </div>
+        <p className="text-3xl font-semibold tracking-[-0.04em]">{formatNumber(value)}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MetricPill({
+  label,
+  tone = "default",
+  value,
+}: {
+  label: string;
+  tone?: "blue" | "default" | "emerald" | "amber";
+  value: number | string;
+}) {
+  const tones: Record<string, string> = {
+    default: "text-foreground",
+    emerald: "text-emerald-300",
+    amber: "text-amber-300",
+    blue: "text-sky-300",
+  };
+
+  return (
+    <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
+      <p className={`mt-2 text-lg font-semibold ${tones[tone]}`}>{value}</p>
+    </div>
+  );
+}
+
+function QuickAction({
+  description,
+  href,
+  icon: Icon,
+  title,
+}: {
+  description: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+}) {
+  return (
+    <Button asChild variant="outline" className="h-auto w-full items-start justify-start whitespace-normal rounded-[22px] px-4 py-4">
+      <Link href={href}>
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/12 text-primary">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="text-left">
+          <p className="text-sm font-semibold normal-case tracking-normal">{title}</p>
+          <p className="mt-1 text-xs normal-case tracking-normal text-muted-foreground">{description}</p>
+        </div>
+      </Link>
+    </Button>
   );
 }

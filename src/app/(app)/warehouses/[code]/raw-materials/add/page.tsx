@@ -6,7 +6,11 @@ import { AddMaterialClient } from "./add-material-client";
 export default async function AddRawMaterialPage({ params }: { params: Promise<{ code: string }> }) {
   await requirePagePermission("raw_materials:create");
   const { code } = await params;
-  const warehouse = await prisma.warehouse.findUnique({ where: { slug: code } });
+  const warehouse = await prisma.warehouse.findFirst({
+    where: {
+      OR: [{ slug: code }, { code: { equals: code, mode: "insensitive" } }],
+    },
+  });
   if (!warehouse) notFound();
 
   const categories = await prisma.category.findMany({ orderBy: { name: "asc" } });
