@@ -1,30 +1,106 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { APP_LOCALE, APP_TIME_ZONE } from "@/lib/constants";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(date: Date | string): string {
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(date));
+const dateKeyFormatter = new Intl.DateTimeFormat("en-CA", {
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: APP_TIME_ZONE,
+  year: "numeric",
+});
+
+const dateFormatter = new Intl.DateTimeFormat(APP_LOCALE, {
+  day: "2-digit",
+  month: "short",
+  timeZone: APP_TIME_ZONE,
+  year: "numeric",
+});
+
+const dateTimeFormatter = new Intl.DateTimeFormat(APP_LOCALE, {
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  month: "short",
+  timeZone: APP_TIME_ZONE,
+  year: "numeric",
+});
+
+const dayLabelFormatter = new Intl.DateTimeFormat(APP_LOCALE, {
+  day: "numeric",
+  timeZone: APP_TIME_ZONE,
+  weekday: "short",
+});
+
+const numberFormatter = new Intl.NumberFormat(APP_LOCALE, {
+  maximumFractionDigits: 3,
+});
+
+export function formatDate(date: Date | number | string): string {
+  return dateFormatter.format(new Date(date));
 }
 
-export function formatDateTime(date: Date | string): string {
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(date));
+export function formatDateTime(date: Date | number | string): string {
+  return dateTimeFormatter.format(new Date(date));
 }
 
-export function formatNumber(num: number): string {
-  return new Intl.NumberFormat("en-IN").format(num);
+export function formatNumber(num: number | string): string {
+  const parsed = typeof num === "string" ? Number(num) : num;
+
+  if (!Number.isFinite(parsed)) {
+    return "-";
+  }
+
+  return numberFormatter.format(parsed);
+}
+
+export function getAppDateKey(date: Date | number | string) {
+  const parts = dateKeyFormatter.formatToParts(new Date(date));
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type === "day" || part.type === "month" || part.type === "year")
+      .map((part) => [part.type, part.value])
+  );
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+export function formatAppDayLabel(date: Date | number | string) {
+  return dayLabelFormatter.format(new Date(date));
+}
+
+export function getAppStartOfDay(date: Date | number | string = new Date()) {
+  const current = new Date(date);
+  const parts = dateKeyFormatter.formatToParts(current);
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type === "day" || part.type === "month" || part.type === "year")
+      .map((part) => [part.type, part.value])
+  );
+
+  const approximateUtcMidnight = new Date(
+    Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day), 0, 0, 0, 0)
+  );
+  const offsetName =
+    new Intl.DateTimeFormat("en-US", {
+      hour: "2-digit",
+      timeZone: APP_TIME_ZONE,
+      timeZoneName: "shortOffset",
+    })
+      .formatToParts(approximateUtcMidnight)
+      .find((part) => part.type === "timeZoneName")?.value || "GMT+0";
+  const offsetMatch = offsetName.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
+
+  if (!offsetMatch) {
+    return approximateUtcMidnight;
+  }
+
+  const [, direction, hours, minutes = "0"] = offsetMatch;
+  const offsetMinutes = (Number(hours) * 60 + Number(minutes)) * (direction === "-" ? -1 : 1);
+  return new Date(approximateUtcMidnight.getTime() - offsetMinutes * 60_000);
 }
 
 export function slugify(text: string): string {

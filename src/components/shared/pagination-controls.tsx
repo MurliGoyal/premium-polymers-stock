@@ -18,6 +18,10 @@ export function PaginationControls({
   pageSize,
   onPageChange,
 }: PaginationControlsProps) {
+  if (itemCount === 0) {
+    return null;
+  }
+
   const start = itemCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, itemCount);
 

@@ -3,6 +3,7 @@ import { requirePagePermission } from "@/lib/auth";
 import { SEEDED_WAREHOUSE_CODES, WAREHOUSE_CATALOG } from "@/lib/constants";
 import { daysAgo } from "@/lib/inventory";
 import { prisma } from "@/lib/prisma";
+import { quantityToNumber, sumQuantities } from "@/lib/quantities";
 import { WarehousesClient } from "./warehouses-client";
 
 function getWarehouseSortIndex(code: string) {
@@ -38,9 +39,9 @@ export default async function WarehousesPage() {
       inStockCount: w.rawMaterials.filter((m) => m.status === MaterialStatus.IN_STOCK).length,
       lowStockCount: w.rawMaterials.filter((m) => m.status === MaterialStatus.LOW_STOCK).length,
       outOfStockCount: w.rawMaterials.filter((m) => m.status === MaterialStatus.OUT_OF_STOCK).length,
-      totalStock: Math.round(w.rawMaterials.reduce((sum, m) => sum + m.currentStock, 0)),
+      totalStock: quantityToNumber(sumQuantities(w.rawMaterials.map((material) => material.currentStock))),
       recentTransfers: w.transfers.length,
-      totalTransferQty: Math.round(w.transfers.reduce((sum, t) => sum + t.quantity, 0)),
+      totalTransferQty: quantityToNumber(sumQuantities(w.transfers.map((transfer) => transfer.quantity))),
     }));
 
   return <WarehousesClient warehouses={data} />;

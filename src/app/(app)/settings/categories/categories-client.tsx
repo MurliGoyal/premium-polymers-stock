@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -12,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDate } from "@/lib/utils";
 import { addCategory, deleteCategory } from "../actions";
 
@@ -28,13 +30,13 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
     if (!newName.trim()) return;
     startTransition(async () => {
       try {
-        await addCategory(newName.trim());
-        toast.success("Category added");
+        const result = await addCategory(newName.trim());
+        toast.success(result.created ? "Category added" : "Category already existed");
         setNewName("");
         setShowAdd(false);
         router.refresh();
-      } catch {
-        toast.error("Failed to add category");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to add category");
       }
     });
   };
@@ -55,6 +57,16 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-5xl space-y-5">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Link href="/dashboard" className="transition-colors hover:text-foreground">
+          Dashboard
+        </Link>
+        <span>/</span>
+        <span>Settings</span>
+        <span>/</span>
+        <span className="font-medium text-foreground">Categories</span>
+      </div>
+
       <ResponsivePageHeader
         eyebrow="Settings"
         title="Categories"
@@ -69,72 +81,75 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
       />
 
       <Card className="overflow-hidden">
-        <div className="grid gap-3 p-4 md:grid-cols-2 xl:hidden">
-          {categories.map((category) => (
-            <Card key={category.id} className="rounded-[24px]">
-              <CardContent className="space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-base font-semibold">{category.name}</p>
-                    <p className="mt-1 font-mono text-xs text-muted-foreground">{category.slug}</p>
-                  </div>
-                  <Badge variant="secondary">{category.materialCount} materials</Badge>
-                </div>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>{formatDate(category.createdAt)}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDeleteId(category.id)}
-                    disabled={category.materialCount > 0}
-                    className="h-10 w-10"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="hidden xl:block">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/20 hover:bg-muted/20">
-                <TableHead>Name</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead>Materials</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="w-[72px]" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        {categories.length === 0 ? (
+          <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+            <Tag className="mb-4 h-12 w-12 text-muted-foreground/30" />
+            <h3 className="text-lg font-semibold">No categories yet</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Create the first shared material category to organize new stock records.</p>
+            <Button type="button" onClick={() => setShowAdd(true)} className="mt-4">
+              <Plus className="h-4 w-4" />
+              Add category
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-3 p-4 md:grid-cols-2 xl:hidden">
               {categories.map((category) => (
-                <TableRow key={category.id}>
-                  <TableCell className="font-medium">{category.name}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{category.slug}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{category.materialCount}</Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{formatDate(category.createdAt)}</TableCell>
-                  <TableCell>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setDeleteId(category.id)}
-                      disabled={category.materialCount > 0}
-                      className="h-9 w-9"
-                    >
-                      <Trash2 className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                <Card key={category.id} className="rounded-[24px]">
+                  <CardContent className="space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-base font-semibold">{category.name}</p>
+                        <p className="mt-1 font-mono text-xs text-muted-foreground">{category.slug}</p>
+                      </div>
+                      <Badge variant="secondary">{category.materialCount} materials</Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>{formatDate(category.createdAt)}</span>
+                      <DeleteCategoryButton
+                        disabled={category.materialCount > 0}
+                        onDelete={() => setDeleteId(category.id)}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
-            </TableBody>
-          </Table>
-        </div>
+            </div>
+
+            <div className="hidden xl:block">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/20 hover:bg-muted/20">
+                    <TableHead>Name</TableHead>
+                    <TableHead>Slug</TableHead>
+                    <TableHead>Materials</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="w-[72px]" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {categories.map((category) => (
+                    <TableRow key={category.id}>
+                      <TableCell className="font-medium">{category.name}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{category.slug}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{category.materialCount}</Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(category.createdAt)}</TableCell>
+                      <TableCell>
+                        <DeleteCategoryButton
+                          compact
+                          disabled={category.materialCount > 0}
+                          onDelete={() => setDeleteId(category.id)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        )}
       </Card>
 
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
@@ -185,5 +200,42 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
         </DialogContent>
       </Dialog>
     </motion.div>
+  );
+}
+
+function DeleteCategoryButton({
+  compact,
+  disabled,
+  onDelete,
+}: {
+  compact?: boolean;
+  disabled: boolean;
+  onDelete: () => void;
+}) {
+  const button = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      onClick={onDelete}
+      disabled={disabled}
+      className={compact ? "h-9 w-9" : "h-10 w-10"}
+      aria-label={disabled ? "Category cannot be deleted while linked materials exist" : "Delete category"}
+    >
+      <Trash2 className="h-4 w-4 text-muted-foreground" />
+    </Button>
+  );
+
+  if (!disabled) {
+    return button;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span>{button}</span>
+      </TooltipTrigger>
+      <TooltipContent>This category cannot be deleted while materials are linked to it.</TooltipContent>
+    </Tooltip>
   );
 }

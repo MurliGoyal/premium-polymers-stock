@@ -145,6 +145,15 @@ export function WarehouseDetailClient({
     Boolean(deferredSearch),
   ].filter(Boolean).length;
 
+  const resetFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setCategoryFilter("all");
+    setUnitFilter("all");
+    setUpdatedFilter("all");
+    setPage(1);
+  };
+
   const toggleSort = (field: string) => {
     if (sortField === field) {
       setSortDir((current) => (current === "asc" ? "desc" : "asc"));
@@ -350,6 +359,11 @@ export function WarehouseDetailClient({
                   ? "Adjust the active filters to widen the result set."
                   : "Add the first raw material to start tracking warehouse stock."}
               </p>
+              {activeFilterCount > 0 ? (
+                <Button type="button" variant="outline" onClick={resetFilters} className="mt-4">
+                  Clear filters
+                </Button>
+              ) : null}
             </div>
           ) : (
             <>

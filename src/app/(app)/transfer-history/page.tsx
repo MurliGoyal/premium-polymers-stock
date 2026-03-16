@@ -1,5 +1,6 @@
 import { requirePagePermission } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { quantityToNumber } from "@/lib/quantities";
 import { TransferHistoryClient } from "./transfer-history-client";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -36,7 +37,7 @@ export default async function TransferHistoryPage({ searchParams }: { searchPara
     warehouseCode: t.warehouse.code,
     materialName: t.rawMaterial.name,
     category: t.rawMaterial.category.name,
-    quantity: t.quantity,
+    quantity: quantityToNumber(t.quantity),
     unit: t.rawMaterial.baseUnit,
     recipientName: t.recipient.name,
     referenceNumber: t.referenceNumber,

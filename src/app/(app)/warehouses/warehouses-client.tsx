@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -11,8 +10,11 @@ import {
   Package,
   Warehouse,
 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatNumber } from "@/lib/utils";
 
@@ -43,6 +45,8 @@ const cardVariants = {
 };
 
 export function WarehousesClient({ warehouses }: { warehouses: WarehouseData[] }) {
+  const router = useRouter();
+
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-5">
       <motion.div variants={cardVariants}>
@@ -54,64 +58,91 @@ export function WarehousesClient({ warehouses }: { warehouses: WarehouseData[] }
         />
       </motion.div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
-        {warehouses.map((warehouse) => (
-          <motion.div key={warehouse.id} variants={cardVariants}>
-            <Link href={`/warehouses/${warehouse.slug}`} className="block">
-              <Card className="group relative overflow-hidden">
-                <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${warehouse.gradient} opacity-70`} />
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_36%)]" />
+      {warehouses.length === 0 ? (
+        <Card className="glass-panel border-white/10">
+          <CardContent className="flex flex-col items-center justify-center px-6 py-20 text-center">
+            <Warehouse className="mb-4 h-12 w-12 text-muted-foreground/30" />
+            <h3 className="text-lg font-semibold">No warehouses found</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Warehouse records are not available right now. Refresh the view or return to the dashboard.</p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <Button type="button" onClick={() => router.refresh()}>
+                Refresh
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/dashboard">Go to dashboard</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
+          {warehouses.map((warehouse) => {
+            const totalMaterials = warehouse.totalMaterials;
+            const healthSummary =
+              totalMaterials === 0
+                ? "No materials yet"
+                : `${Math.round((warehouse.inStockCount / totalMaterials) * 100)}% healthy / ${Math.round((warehouse.lowStockCount / totalMaterials) * 100)}% low / ${Math.round((warehouse.outOfStockCount / totalMaterials) * 100)}% empty`;
 
-                <CardContent className="relative space-y-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-primary/14 text-primary shadow-[0_18px_38px_rgba(91,102,255,0.18)]">
-                        <Warehouse className="h-6 w-6" />
+            return (
+              <motion.div key={warehouse.id} variants={cardVariants}>
+                <Link href={`/warehouses/${warehouse.slug}`} className="block">
+                  <Card className="group relative overflow-hidden border-white/10 glass-panel hover-glow">
+                    <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${warehouse.gradient} opacity-70`} />
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_36%)]" />
+
+                    <CardContent className="relative space-y-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-primary/14 text-primary shadow-[0_18px_38px_rgba(91,102,255,0.18)]">
+                            <Warehouse className="h-6 w-6" />
+                          </div>
+                          <div className="space-y-1">
+                            <h2 className="text-2xl font-semibold tracking-[-0.04em]">{warehouse.code}</h2>
+                            <p className="text-sm text-muted-foreground">{warehouse.subtitle || warehouse.name}</p>
+                            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/80">{healthSummary}</p>
+                          </div>
+                        </div>
+                        <div className="rounded-full border border-white/8 bg-white/[0.05] p-3 text-muted-foreground transition-all duration-200 group-hover:translate-x-1 group-hover:text-foreground">
+                          <ArrowRight className="h-4 w-4" />
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <h2 className="text-2xl font-semibold tracking-[-0.04em]">{warehouse.code}</h2>
-                        <p className="text-sm text-muted-foreground">{warehouse.subtitle || warehouse.name}</p>
+
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <MetricCell label="Healthy" tone="emerald" value={warehouse.inStockCount} />
+                        <MetricCell label="Low" tone="amber" value={warehouse.lowStockCount} />
+                        <MetricCell label="Empty" tone="red" value={warehouse.outOfStockCount} />
+                        <MetricCell label="Moves" tone="blue" value={warehouse.recentTransfers} />
                       </div>
-                    </div>
-                    <div className="rounded-full border border-white/8 bg-white/[0.05] p-3 text-muted-foreground transition-all duration-200 group-hover:translate-x-1 group-hover:text-foreground">
-                      <ArrowRight className="h-4 w-4" />
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <MetricCell label="Healthy" tone="emerald" value={warehouse.inStockCount} />
-                    <MetricCell label="Low" tone="amber" value={warehouse.lowStockCount} />
-                    <MetricCell label="Empty" tone="red" value={warehouse.outOfStockCount} />
-                    <MetricCell label="Moves" tone="blue" value={warehouse.recentTransfers} />
-                  </div>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <DetailStat icon={Package} label="Materials" value={warehouse.totalMaterials} />
+                        <DetailStat icon={BarChart3} label="Total stock" value={formatNumber(warehouse.totalStock)} accent="emerald" />
+                        <DetailStat icon={ArrowRightLeft} label="Transfer qty" value={formatNumber(warehouse.totalTransferQty)} accent="blue" />
+                      </div>
 
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <DetailStat icon={Package} label="Materials" value={warehouse.totalMaterials} />
-                    <DetailStat icon={BarChart3} label="Total stock" value={formatNumber(warehouse.totalStock)} accent="emerald" />
-                    <DetailStat icon={ArrowRightLeft} label="Transfer qty" value={formatNumber(warehouse.totalTransferQty)} accent="blue" />
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="success">
-                      <CheckCircle2 className="mr-1 h-3 w-3" />
-                      {warehouse.inStockCount} in stock
-                    </Badge>
-                    {warehouse.lowStockCount > 0 ? (
-                      <Badge variant="warning">{warehouse.lowStockCount} low stock</Badge>
-                    ) : null}
-                    {warehouse.outOfStockCount > 0 ? (
-                      <Badge variant="danger">
-                        <OctagonAlert className="mr-1 h-3 w-3" />
-                        {warehouse.outOfStockCount} out of stock
-                      </Badge>
-                    ) : null}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          </motion.div>
-        ))}
-      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="success">
+                          <CheckCircle2 className="mr-1 h-3 w-3" />
+                          {warehouse.inStockCount} in stock
+                        </Badge>
+                        {warehouse.lowStockCount > 0 ? (
+                          <Badge variant="warning">{warehouse.lowStockCount} low stock</Badge>
+                        ) : null}
+                        {warehouse.outOfStockCount > 0 ? (
+                          <Badge variant="danger">
+                            <OctagonAlert className="mr-1 h-3 w-3" />
+                            {warehouse.outOfStockCount} out of stock
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -133,7 +164,7 @@ function MetricCell({
   };
 
   return (
-    <div className="rounded-[20px] border border-white/8 bg-white/[0.04] p-3">
+    <div className="rounded-[20px] border border-white/10 bg-white/[0.04] p-3 backdrop-blur-sm transition-all hover:scale-[1.02] hover:bg-white/[0.06]">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xl font-semibold">{value}</p>
         <div className={`h-2.5 w-10 rounded-full ${tones[tone]}`} />
@@ -161,7 +192,7 @@ function DetailStat({
   };
 
   return (
-    <div className="rounded-[22px] border border-white/8 bg-white/[0.04] p-4">
+    <div className="rounded-[22px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm transition-all hover:scale-[1.02] hover:bg-white/[0.06]">
       <Icon className="h-4 w-4 text-muted-foreground" />
       <p className={`mt-3 text-xl font-semibold ${accents[accent]}`}>{value}</p>
       <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>

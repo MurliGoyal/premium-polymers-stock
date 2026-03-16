@@ -2,7 +2,8 @@
 
 import { useDeferredValue, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ArrowRightLeft, Plus, Search, Warehouse } from "lucide-react";
+import { ArrowRight, ArrowRightLeft, Plus, Search, Warehouse, X } from "lucide-react";
+import Fuse from "fuse.js";
 import { getWarehouseActionHref } from "@/components/shared/warehouse-action-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -100,23 +101,35 @@ export function CommandPalette({
   }, [role, warehouses]);
 
   const filteredNavigationCommands = useMemo(() => {
-    const normalizedQuery = deferredQuery.trim().toLowerCase();
+    const normalizedQuery = deferredQuery.trim();
 
     if (!normalizedQuery) {
       return navigationCommands;
     }
 
-    return navigationCommands.filter((item) => item.keywords.toLowerCase().includes(normalizedQuery));
+    const fuse = new Fuse(navigationCommands, {
+      keys: ["title", "keywords", "description"],
+      threshold: 0.3,
+      distance: 100,
+    });
+    
+    return fuse.search(normalizedQuery).map((result) => result.item);
   }, [deferredQuery, navigationCommands]);
 
   const filteredWarehouseCommands = useMemo(() => {
-    const normalizedQuery = deferredQuery.trim().toLowerCase();
+    const normalizedQuery = deferredQuery.trim();
 
     if (!normalizedQuery) {
       return warehouseCommands;
     }
 
-    return warehouseCommands.filter((item) => item.keywords.toLowerCase().includes(normalizedQuery));
+    const fuse = new Fuse(warehouseCommands, {
+      keys: ["title", "keywords", "description", "badge"],
+      threshold: 0.3,
+      distance: 100,
+    });
+    
+    return fuse.search(normalizedQuery).map((result) => result.item);
   }, [deferredQuery, warehouseCommands]);
 
   const hasResults =
@@ -132,27 +145,42 @@ export function CommandPalette({
         }
       }}
     >
-      <DialogContent className="max-w-3xl overflow-hidden p-0">
-        <DialogHeader className="border-b border-white/8 px-6 py-5">
+      <DialogContent className="max-w-3xl overflow-hidden p-0 flex flex-col max-h-[85vh]">
+        <DialogHeader className="border-b border-white/8 px-6 py-5 shrink-0">
           <DialogTitle>Command palette</DialogTitle>
           <DialogDescription>Search pages and warehouse workflows with one shortcut.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5 px-6 py-5">
-          <div className="relative">
+        <div className="px-6 pt-5 shrink-0">
+          <div className="relative flex items-center">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               autoFocus
               placeholder="Search pages and warehouse actions"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="pl-11"
+              className="pl-11 pr-11"
             />
+            {query.length > 0 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 text-muted-foreground hover:bg-transparent hover:text-foreground h-8 w-8 rounded-full"
+                onClick={() => setQuery("")}
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Clear search</span>
+              </Button>
+            )}
           </div>
+        </div>
 
+        <div className="px-6 pb-5 pt-0 overflow-y-auto min-h-0 mt-5">
           {!hasResults ? (
-            <div className="rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] px-4 py-10 text-center text-sm text-muted-foreground">
-              No command matches the current search.
+            <div className="flex flex-col items-center justify-center rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] px-4 py-12 text-center text-sm text-muted-foreground animate-in fade-in duration-300">
+              <Search className="mb-4 h-10 w-10 text-muted-foreground/30" />
+              <p className="font-medium text-foreground">No matches found</p>
+              <p className="mt-1">Try searching for a different keyword or check for typos.</p>
             </div>
           ) : (
             <div className="grid gap-5 md:grid-cols-2">

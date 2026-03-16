@@ -79,7 +79,7 @@ export function AppShell({
         user={user}
       />
 
-      <div className="min-h-screen transition-[padding] duration-300 ease-out md:pl-[var(--shell-tablet-offset)] lg:pl-[var(--shell-sidebar-offset)]">
+      <div className="min-h-screen transition-[padding] duration-500 ease-[cubic-bezier(0.2,1,0.22,1)] md:pl-[var(--shell-tablet-offset)] lg:pl-[var(--shell-sidebar-offset)]">
         <Topbar
           onDesktopSidebarToggle={toggleSidebar}
           onMobileNavOpen={() => setMobileNavOpen(true)}

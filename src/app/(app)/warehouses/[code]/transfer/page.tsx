@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requirePagePermission } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { quantityToNumber } from "@/lib/quantities";
 import { TransferClient } from "./transfer-client";
 
 export default async function TransferPage({ params }: { params: Promise<{ code: string }> }) {
@@ -25,7 +26,13 @@ export default async function TransferPage({ params }: { params: Promise<{ code:
   return (
     <TransferClient
       warehouse={{ id: warehouse.id, code: warehouse.code, name: warehouse.name, slug: warehouse.slug }}
-      materials={materials}
+      materials={materials.map((material) => ({
+        id: material.id,
+        name: material.name,
+        currentStock: quantityToNumber(material.currentStock),
+        baseUnit: material.baseUnit,
+        minimumStock: quantityToNumber(material.minimumStock),
+      }))}
       recipients={recipients.map((r) => ({ id: r.id, name: r.name }))}
     />
   );

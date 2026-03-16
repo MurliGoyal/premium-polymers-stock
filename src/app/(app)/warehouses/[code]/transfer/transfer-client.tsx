@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,7 +8,7 @@ import { Controller, type DefaultValues, useForm, useWatch } from "react-hook-fo
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { z } from "zod";
-import { AlertTriangle, ArrowRightLeft, CalendarClock, Plus } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, CalendarClock, Plus, RefreshCcw } from "lucide-react";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateTime, formatNumber } from "@/lib/utils";
 import { transferFormSchema } from "@/lib/validation";
-import { createRecipient, performTransfer } from "../actions";
+import { createRecipient, getMaterialsForTransfer, performTransfer } from "../actions";
 
 type Props = {
   warehouse: { id: string; code: string; name: string; slug: string };
@@ -39,16 +39,25 @@ const defaultValues = (warehouseId: string): DefaultValues<TransferFormValues> =
   referenceNumber: "",
 });
 
+const STALE_AVAILABILITY_MS = 5 * 60 * 1000;
+
 export function TransferClient({ warehouse, materials, recipients: initialRecipients }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [materialsState, setMaterialsState] = useState(materials);
   const [recipients, setRecipients] = useState(initialRecipients);
   const [showRecipientDialog, setShowRecipientDialog] = useState(false);
   const [newRecipientName, setNewRecipientName] = useState("");
+  const [lastCheckedAt, setLastCheckedAt] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  const [isRefreshingAvailability, setIsRefreshingAvailability] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
 
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(transferFormSchema),
     defaultValues: defaultValues(warehouse.id),
+    mode: "onChange",
+    reValidateMode: "onChange",
   });
 
   const {
@@ -57,20 +66,26 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
     handleSubmit,
     register,
     setValue,
+    trigger,
   } = form;
 
   const selectedMaterialId = useWatch({ control, name: "rawMaterialId" });
   const selectedQuantity = useWatch({ control, name: "quantity" });
-  const selectedMaterial = materials.find((material) => material.id === selectedMaterialId);
+  const selectedMaterial = materialsState.find((material) => material.id === selectedMaterialId);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const materialOptions = useMemo(
     () =>
-      materials.map((material) => ({
+      materialsState.map((material) => ({
         value: material.id,
         label: material.name,
         description: `${formatNumber(material.currentStock)} ${material.baseUnit} available`,
       })),
-    [materials]
+    [materialsState]
   );
 
   const recipientOptions = useMemo(
@@ -82,10 +97,58 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
     [recipients]
   );
 
+  const availabilityExpired = now - lastCheckedAt >= STALE_AVAILABILITY_MS;
+
+  const refreshAvailability = async ({ clearError = true, notify = true } = {}) => {
+    setIsRefreshingAvailability(true);
+
+    try {
+      const refreshedMaterials = await getMaterialsForTransfer(warehouse.id);
+      setMaterialsState(refreshedMaterials);
+      setLastCheckedAt(Date.now());
+      if (clearError) {
+        setAvailabilityError(null);
+      }
+
+      if (selectedMaterialId && !refreshedMaterials.some((material) => material.id === selectedMaterialId)) {
+        setValue("rawMaterialId", "", { shouldValidate: true });
+        toast.warning("The selected material is no longer available for transfer. Please choose another material.");
+      } else if (notify) {
+        toast.success("Availability refreshed");
+      }
+
+      window.setTimeout(() => {
+        void trigger("quantity");
+      }, 0);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Availability could not be refreshed";
+      setAvailabilityError(message);
+      if (notify) {
+        toast.error(message);
+      }
+    } finally {
+      setIsRefreshingAvailability(false);
+    }
+  };
+
   const onSubmit = handleSubmit((values) => {
     startTransition(async () => {
       try {
-        await performTransfer(values);
+        if (Date.now() - lastCheckedAt >= STALE_AVAILABILITY_MS) {
+          await refreshAvailability({ notify: false });
+          toast.info("Availability was refreshed after 5 minutes. Review the latest balance and submit again.");
+          return;
+        }
+
+        const result = await performTransfer(values);
+
+        if (!result.ok) {
+          setAvailabilityError(result.message);
+          await refreshAvailability({ clearError: false, notify: false });
+          toast.error(result.message);
+          return;
+        }
+
         toast.success("Transfer completed successfully");
         router.push(`/warehouses/${warehouse.slug}`);
       } catch (error) {
@@ -98,16 +161,17 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
     if (!newRecipientName.trim()) return;
 
     try {
-      const recipient = await createRecipient(newRecipientName.trim());
-      const nextRecipients = [...recipients, { id: recipient.id, name: recipient.name }].sort((a, b) =>
-        a.name.localeCompare(b.name)
-      );
+      const result = await createRecipient(newRecipientName.trim());
+      const alreadyPresent = recipients.some((recipient) => recipient.id === result.entity.id);
+      const nextRecipients = alreadyPresent
+        ? recipients
+        : [...recipients, { id: result.entity.id, name: result.entity.name }].sort((a, b) => a.name.localeCompare(b.name));
 
       setRecipients(nextRecipients);
-      setValue("recipientId", recipient.id, { shouldValidate: true });
+      setValue("recipientId", result.entity.id, { shouldValidate: true });
       setNewRecipientName("");
       setShowRecipientDialog(false);
-      toast.success("Recipient added");
+      toast.success(result.created ? "Recipient added" : "Recipient already existed and was selected");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to add recipient");
     }
@@ -163,12 +227,17 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
             </div>
 
             <div className="space-y-2">
-              <Label>Raw material *</Label>
+              <Label>
+                Raw material <span aria-hidden="true">*</span>
+                <span className="sr-only">required</span>
+              </Label>
               <Controller
                 control={control}
                 name="rawMaterialId"
                 render={({ field }) => (
                   <SearchableSelect
+                    ariaLabel="Raw material"
+                    ariaRequired
                     error={!!errors.rawMaterialId}
                     options={materialOptions}
                     placeholder="Select a material"
@@ -183,7 +252,28 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
             </div>
 
             {selectedMaterial ? (
-              <div className="grid gap-4 rounded-[24px] border border-white/8 bg-white/[0.03] p-4 md:grid-cols-3">
+              <div className="space-y-4 rounded-[24px] border border-white/8 bg-white/[0.03] p-4">
+                <div className="flex flex-col gap-3 rounded-[20px] border border-white/8 bg-background/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Availability last checked</p>
+                    <p className="text-sm text-foreground">{formatDateTime(lastCheckedAt)}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {availabilityExpired ? <Badge variant="warning">Refresh required</Badge> : <Badge variant="secondary">Current</Badge>}
+                    <Button type="button" variant="outline" size="sm" onClick={() => void refreshAvailability()} disabled={isRefreshingAvailability}>
+                      <RefreshCcw className="h-4 w-4" />
+                      {isRefreshingAvailability ? "Refreshing..." : "Refresh availability"}
+                    </Button>
+                  </div>
+                </div>
+
+                {availabilityError ? (
+                  <div className="rounded-[20px] border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                    {availabilityError}
+                  </div>
+                ) : null}
+
+                <div className="grid gap-4 md:grid-cols-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Available stock</p>
                   <p className="mt-2 text-2xl font-semibold">
@@ -212,12 +302,16 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
                     </Badge>
                   ) : null}
                 </div>
+                </div>
               </div>
             ) : null}
 
             <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity to transfer *</Label>
+                <Label htmlFor="quantity">
+                  Quantity to transfer <span aria-hidden="true">*</span>
+                  <span className="sr-only">required</span>
+                </Label>
                 <Input
                   id="quantity"
                   type="number"
@@ -231,6 +325,8 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
                       return value <= selectedMaterial.currentStock || "Quantity cannot exceed available stock";
                     },
                   })}
+                  required
+                  aria-required="true"
                   className={errors.quantity ? "border-destructive" : ""}
                 />
                 <p className="text-xs text-muted-foreground">Transfers always deduct stock from the selected warehouse material.</p>
@@ -239,7 +335,10 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Recipient *</Label>
+                  <Label>
+                    Recipient <span aria-hidden="true">*</span>
+                    <span className="sr-only">required</span>
+                  </Label>
                   <Button type="button" variant="ghost" size="sm" onClick={() => setShowRecipientDialog(true)}>
                     <Plus className="mr-1 h-3.5 w-3.5" />
                     Add recipient
@@ -250,6 +349,8 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
                   name="recipientId"
                   render={({ field }) => (
                     <SearchableSelect
+                      ariaLabel="Recipient"
+                      ariaRequired
                       error={!!errors.recipientId}
                       options={recipientOptions}
                       placeholder="Select a recipient"

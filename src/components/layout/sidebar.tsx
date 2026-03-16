@@ -148,6 +148,7 @@ export function Sidebar({ collapsed, onToggle, user }: SidebarProps) {
             size="icon"
             onClick={onToggle}
             className="mt-3 w-full rounded-2xl border border-white/6 text-sidebar-foreground/70 hover:bg-white/[0.06] hover:text-sidebar-foreground"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>

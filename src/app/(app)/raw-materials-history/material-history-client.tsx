@@ -7,6 +7,7 @@ import { PaginationControls } from "@/components/shared/pagination-controls";
 import { ResponsiveFiltersSheet } from "@/components/shared/responsive-filters-sheet";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { HISTORY_PAGE_SIZE } from "@/lib/constants";
-import { formatDateTime, formatNumber, getActivityColor, getActivityLabel } from "@/lib/utils";
+import { formatDateTime, formatNumber, getActivityColor, getActivityLabel, getStatusLabel } from "@/lib/utils";
 
 type ActivityRecord = {
   id: string;
@@ -114,6 +115,19 @@ export function MaterialHistoryClient({
     fromDate ? `From: ${fromDate}` : null,
     toDate ? `To: ${toDate}` : null,
   ].filter(Boolean) as string[];
+  const hasActiveFilters = activeFilters.length > 0 || Boolean(deferredSearch);
+
+  const resetFilters = () => {
+    setSearch("");
+    setWarehouseFilter("all");
+    setTypeFilter("all");
+    setCategoryFilter("all");
+    setMaterialFilter("all");
+    setUserFilter("all");
+    setFromDate("");
+    setToDate("");
+    setPage(1);
+  };
 
   const filters = (
     <>
@@ -299,7 +313,14 @@ export function MaterialHistoryClient({
           <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
             <Activity className="mb-4 h-12 w-12 text-muted-foreground/30" />
             <h3 className="text-lg font-semibold">No activity found</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Try adjusting the material, user, or date filters.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {hasActiveFilters ? "No results match your filters right now." : "Material audit events will appear here once activity is recorded."}
+            </p>
+            {hasActiveFilters ? (
+              <Button type="button" variant="outline" onClick={resetFilters} className="mt-4">
+                Clear filters
+              </Button>
+            ) : null}
           </div>
         ) : (
           <>
@@ -444,10 +465,10 @@ export function MaterialHistoryClient({
 
               <Separator />
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <JsonCard title="Before snapshot" payload={selectedActivity.beforeSnapshot} />
-                <JsonCard title="After snapshot" payload={selectedActivity.afterSnapshot} />
-              </div>
+              <SnapshotComparisonCard
+                afterSnapshot={selectedActivity.afterSnapshot}
+                beforeSnapshot={selectedActivity.beforeSnapshot}
+              />
 
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Quantity affected</p>
@@ -482,13 +503,62 @@ function DetailBlock({
   );
 }
 
-function JsonCard({ title, payload }: { title: string; payload: Record<string, unknown> | null }) {
+function SnapshotComparisonCard({
+  afterSnapshot,
+  beforeSnapshot,
+}: {
+  afterSnapshot: Record<string, unknown> | null;
+  beforeSnapshot: Record<string, unknown> | null;
+}) {
+  const fields = buildSnapshotFields(beforeSnapshot, afterSnapshot);
+
   return (
-    <div className="rounded-[24px] border border-white/8 p-4">
-      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
-      <pre className="mt-3 overflow-auto rounded-[20px] border border-white/6 bg-white/[0.03] p-3 text-xs text-muted-foreground">
-        {payload ? JSON.stringify(payload, null, 2) : "-"}
-      </pre>
+    <div className="space-y-4">
+      <div>
+        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Snapshot comparison</p>
+        <p className="mt-2 text-sm text-muted-foreground">Before and after values captured for this activity.</p>
+      </div>
+
+      {fields.length === 0 ? (
+        <div className="rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] p-6 text-sm text-muted-foreground">
+          No structured snapshot was captured for this activity.
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          {fields.map((field) => (
+            <div
+              key={field.label}
+              className={`rounded-[24px] border p-4 ${field.changed ? "border-primary/25 bg-primary/[0.06]" : "border-white/8 bg-white/[0.03]"}`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{field.label}</p>
+                {field.changed ? <Badge variant="outline">Changed</Badge> : null}
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <SnapshotValue label="Before" value={field.before} />
+                <SnapshotValue label="After" value={field.after} changed={field.changed} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SnapshotValue({
+  changed = false,
+  label,
+  value,
+}: {
+  changed?: boolean;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-[20px] border border-white/8 bg-black/10 p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+      <p className={`mt-2 text-sm ${changed && label === "After" ? "font-semibold text-primary" : "font-medium"}`}>{value}</p>
     </div>
   );
 }
@@ -499,5 +569,94 @@ function LabelText({ children }: { children: React.ReactNode }) {
 
 function extractStock(snapshot: Record<string, unknown> | null) {
   const value = snapshot?.currentStock ?? snapshot?.stock;
-  return value === undefined || value === null ? "-" : formatNumber(Number(value));
+  return formatSnapshotQuantity(value);
+}
+
+function buildSnapshotFields(
+  beforeSnapshot: Record<string, unknown> | null,
+  afterSnapshot: Record<string, unknown> | null
+) {
+  const fieldDefinitions = [
+    { label: "Material name", getValue: (snapshot: Record<string, unknown> | null) => formatSnapshotText(snapshot?.name) },
+    { label: "Warehouse", getValue: (snapshot: Record<string, unknown> | null) => formatNestedSnapshotValue(snapshot?.warehouse, ["code", "name"]) },
+    { label: "Category", getValue: (snapshot: Record<string, unknown> | null) => formatNestedSnapshotValue(snapshot?.category, ["name"]) },
+    { label: "Status", getValue: (snapshot: Record<string, unknown> | null) => formatSnapshotStatus(snapshot?.status) },
+    { label: "Base unit", getValue: (snapshot: Record<string, unknown> | null) => formatSnapshotText(snapshot?.baseUnit ?? snapshot?.unit) },
+    { label: "Current stock", getValue: (snapshot: Record<string, unknown> | null) => formatSnapshotQuantity(snapshot?.currentStock ?? snapshot?.stock) },
+    { label: "Minimum stock", getValue: (snapshot: Record<string, unknown> | null) => formatSnapshotQuantity(snapshot?.minimumStock) },
+    { label: "Stock before transfer", getValue: (snapshot: Record<string, unknown> | null) => formatSnapshotQuantity(snapshot?.stockBeforeTransfer) },
+    { label: "Stock after transfer", getValue: (snapshot: Record<string, unknown> | null) => formatSnapshotQuantity(snapshot?.stockAfterTransfer) },
+    { label: "Thickness", getValue: (snapshot: Record<string, unknown> | null) => formatOptionalMeasurement(snapshot?.thicknessValue, snapshot?.thicknessUnit) },
+    { label: "Size", getValue: (snapshot: Record<string, unknown> | null) => formatOptionalMeasurement(snapshot?.sizeValue, snapshot?.sizeUnit) },
+    { label: "Weight", getValue: (snapshot: Record<string, unknown> | null) => formatOptionalMeasurement(snapshot?.weightValue, snapshot?.weightUnit) },
+    { label: "GSM", getValue: (snapshot: Record<string, unknown> | null) => formatSnapshotText(snapshot?.gsm) },
+    { label: "Notes", getValue: (snapshot: Record<string, unknown> | null) => formatSnapshotText(snapshot?.notes) },
+  ];
+
+  return fieldDefinitions
+    .map((field) => {
+      const before = field.getValue(beforeSnapshot);
+      const after = field.getValue(afterSnapshot);
+
+      return {
+        after,
+        before,
+        changed: before !== after,
+        label: field.label,
+      };
+    })
+    .filter((field) => field.before !== "-" || field.after !== "-");
+}
+
+function formatNestedSnapshotValue(value: unknown, keys: string[]) {
+  if (!isRecord(value)) {
+    return "-";
+  }
+
+  for (const key of keys) {
+    const current = value[key];
+    if (current !== undefined && current !== null && String(current).trim().length > 0) {
+      return String(current);
+    }
+  }
+
+  return "-";
+}
+
+function formatOptionalMeasurement(value: unknown, unit: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+
+  return `${String(value)}${unit ? ` ${String(unit)}` : ""}`;
+}
+
+function formatSnapshotQuantity(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? formatNumber(parsed) : String(value);
+}
+
+function formatSnapshotStatus(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+
+  return getStatusLabel(String(value));
+}
+
+function formatSnapshotText(value: unknown) {
+  if (value === null || value === undefined) {
+    return "-";
+  }
+
+  const text = String(value).trim();
+  return text.length > 0 ? text : "-";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

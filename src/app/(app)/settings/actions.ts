@@ -1,10 +1,21 @@
 "use server";
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { assertServerPermission } from "@/lib/auth";
+import { normalizeRecordName } from "@/lib/naming";
 import { categoryNameSchema, recipientNameSchema } from "@/lib/validation";
 import { slugify } from "@/lib/utils";
+
+type CreatedEntityResult<T> = {
+  created: boolean;
+  entity: T;
+};
+
+function isUniqueConstraintError(error: unknown) {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
 
 // Categories
 export async function getCategories() {
@@ -15,22 +26,52 @@ export async function getCategories() {
   });
 }
 
-export async function addCategory(name: string) {
+export async function addCategory(name: string): Promise<CreatedEntityResult<{ id: string; name: string; slug: string }>> {
   await assertServerPermission("categories:manage");
   const parsedName = categoryNameSchema.parse(name);
+  const normalizedName = normalizeRecordName(parsedName);
   const slug = slugify(parsedName);
   const existing = await prisma.category.findFirst({
     where: {
-      OR: [{ slug }, { name: { equals: parsedName, mode: "insensitive" } }],
+      OR: [{ normalizedName }, { slug }, { name: { equals: parsedName, mode: "insensitive" } }],
     },
   });
 
-  if (existing) return existing;
+  if (existing) {
+    return {
+      created: false,
+      entity: { id: existing.id, name: existing.name, slug: existing.slug },
+    };
+  }
 
-  const category = await prisma.category.create({ data: { name: parsedName, slug } });
-  revalidatePath("/settings/categories");
-  revalidatePath("/warehouses");
-  return category;
+  try {
+    const category = await prisma.category.create({ data: { name: parsedName, normalizedName, slug } });
+    revalidatePath("/settings/categories");
+    revalidatePath("/warehouses");
+    return {
+      created: true,
+      entity: { id: category.id, name: category.name, slug: category.slug },
+    };
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) {
+      throw error;
+    }
+
+    const concurrentCategory = await prisma.category.findFirst({
+      where: {
+        OR: [{ normalizedName }, { slug }],
+      },
+    });
+
+    if (!concurrentCategory) {
+      throw error;
+    }
+
+    return {
+      created: false,
+      entity: { id: concurrentCategory.id, name: concurrentCategory.name, slug: concurrentCategory.slug },
+    };
+  }
 }
 
 export async function deleteCategory(id: string) {
@@ -50,17 +91,49 @@ export async function getRecipientsWithCount() {
   });
 }
 
-export async function addRecipient(name: string) {
+export async function addRecipient(name: string): Promise<CreatedEntityResult<{ id: string; name: string }>> {
   await assertServerPermission("recipients:manage");
   const parsedName = recipientNameSchema.parse(name);
+  const normalizedName = normalizeRecordName(parsedName);
   const existing = await prisma.recipient.findFirst({
-    where: { name: { equals: parsedName, mode: "insensitive" } },
+    where: {
+      OR: [{ normalizedName }, { name: { equals: parsedName, mode: "insensitive" } }],
+    },
   });
-  if (existing) return existing;
+  if (existing) {
+    return {
+      created: false,
+      entity: { id: existing.id, name: existing.name },
+    };
+  }
 
-  const recipient = await prisma.recipient.create({ data: { name: parsedName } });
-  revalidatePath("/settings/recipients");
-  return recipient;
+  try {
+    const recipient = await prisma.recipient.create({ data: { name: parsedName, normalizedName } });
+    revalidatePath("/settings/recipients");
+    return {
+      created: true,
+      entity: { id: recipient.id, name: recipient.name },
+    };
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) {
+      throw error;
+    }
+
+    const concurrentRecipient = await prisma.recipient.findFirst({
+      where: {
+        OR: [{ normalizedName }, { name: { equals: parsedName, mode: "insensitive" } }],
+      },
+    });
+
+    if (!concurrentRecipient) {
+      throw error;
+    }
+
+    return {
+      created: false,
+      entity: { id: concurrentRecipient.id, name: concurrentRecipient.name },
+    };
+  }
 }
 
 export async function deleteRecipient(id: string) {

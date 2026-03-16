@@ -14,6 +14,8 @@ export type SearchableOption = {
 };
 
 type SearchableSelectProps = {
+  ariaLabel?: string;
+  ariaRequired?: boolean;
   disabled?: boolean;
   emptyState?: string;
   error?: boolean;
@@ -25,6 +27,8 @@ type SearchableSelectProps = {
 };
 
 export function SearchableSelect({
+  ariaLabel,
+  ariaRequired,
   disabled,
   emptyState = "No options found",
   error,
@@ -60,6 +64,9 @@ export function SearchableSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-invalid={error}
+          aria-label={ariaLabel}
+          aria-required={ariaRequired}
           disabled={disabled}
           className={cn(
             "h-11 w-full justify-between rounded-2xl px-4 font-normal",

@@ -1,6 +1,8 @@
 export const APP_NAME = "Premium Polymers";
 export const APP_DESCRIPTION =
   "Enterprise-grade stock and raw material management for warehouse-led operations.";
+export const APP_LOCALE = process.env.NEXT_PUBLIC_APP_LOCALE || "en-IN";
+export const APP_TIME_ZONE = process.env.NEXT_PUBLIC_APP_TIME_ZONE || "Asia/Kolkata";
 
 export const WAREHOUSE_CATALOG = [
   {

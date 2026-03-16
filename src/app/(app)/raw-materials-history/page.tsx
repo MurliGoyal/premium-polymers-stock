@@ -1,5 +1,6 @@
 import { requirePagePermission } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { quantityToNumber } from "@/lib/quantities";
 import { MaterialHistoryClient } from "./material-history-client";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -39,7 +40,7 @@ export default async function RawMaterialsHistoryPage({ searchParams }: { search
     activityType: a.activityType,
     beforeSnapshot: a.beforeSnapshot as Record<string, unknown> | null,
     afterSnapshot: a.afterSnapshot as Record<string, unknown> | null,
-    quantityChange: a.quantityChange,
+    quantityChange: a.quantityChange === null ? null : quantityToNumber(a.quantityChange),
     sourceType: a.sourceType,
     performedBy: a.performedBy?.name || "System",
     createdAt: a.createdAt.toISOString(),

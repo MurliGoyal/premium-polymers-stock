@@ -7,6 +7,7 @@ import { PaginationControls } from "@/components/shared/pagination-controls";
 import { ResponsiveFiltersSheet } from "@/components/shared/responsive-filters-sheet";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -102,6 +103,18 @@ export function TransferHistoryClient({
   ].filter(Boolean) as string[];
 
   const snapshot = selectedTransfer?.materialSnapshot;
+  const hasActiveFilters = activeFilters.length > 0 || Boolean(deferredSearch);
+
+  const resetFilters = () => {
+    setSearch("");
+    setWarehouseFilter("all");
+    setRecipientFilter("all");
+    setCategoryFilter("all");
+    setMaterialFilter("all");
+    setFromDate("");
+    setToDate("");
+    setPage(1);
+  };
 
   const filters = (
     <>
@@ -229,7 +242,7 @@ export function TransferHistoryClient({
         badge={<Badge variant="secondary">{filtered.length} matching transfers</Badge>}
       />
 
-      <Card>
+      <Card className="glass-panel border-white/10">
         <CardContent className="space-y-4">
           <div className="hidden gap-3 md:grid md:grid-cols-2 xl:grid-cols-4">
             {filters}
@@ -265,47 +278,56 @@ export function TransferHistoryClient({
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden glass-panel border-white/10">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
             <ArrowRightLeft className="mb-4 h-12 w-12 text-muted-foreground/30" />
             <h3 className="text-lg font-semibold">No transfers found</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Adjust your filters or broaden the date range.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {hasActiveFilters ? "No results match your filters right now." : "Transfer records will appear here once stock movement starts."}
+            </p>
+            {hasActiveFilters ? (
+              <Button type="button" variant="outline" onClick={resetFilters} className="mt-4">
+                Clear filters
+              </Button>
+            ) : null}
           </div>
         ) : (
           <>
             <div className="grid gap-3 p-4 md:grid-cols-2 xl:hidden">
               {paginatedTransfers.map((transfer) => (
-                <Card key={transfer.id} className="cursor-pointer rounded-[24px]" onClick={() => setSelectedTransfer(transfer)}>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="secondary">{transfer.warehouseCode}</Badge>
-                          <Badge variant="outline">{transfer.category}</Badge>
+                <motion.div key={transfer.id} whileHover={{ y: -2, scale: 1.01 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
+                  <Card className="cursor-pointer rounded-[24px] glass-panel hover-glow border-white/10 h-full" onClick={() => setSelectedTransfer(transfer)}>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="secondary">{transfer.warehouseCode}</Badge>
+                            <Badge variant="outline">{transfer.category}</Badge>
+                          </div>
+                          <p className="text-base font-semibold">{transfer.materialName}</p>
+                          <p className="text-sm text-muted-foreground">{transfer.recipientName}</p>
                         </div>
-                        <p className="text-base font-semibold">{transfer.materialName}</p>
-                        <p className="text-sm text-muted-foreground">{transfer.recipientName}</p>
+                        <div className="text-right">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Quantity</p>
+                          <p className="mt-1 text-2xl font-semibold text-amber-300">
+                            -{formatNumber(transfer.quantity)}
+                            <span className="ml-1 text-sm font-medium text-muted-foreground">{transfer.unit}</span>
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Quantity</p>
-                        <p className="mt-1 text-2xl font-semibold text-amber-300">
-                          -{formatNumber(transfer.quantity)}
-                          <span className="ml-1 text-sm font-medium text-muted-foreground">{transfer.unit}</span>
-                        </p>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <DetailBlock label="Reference" value={transfer.referenceNumber || transfer.id.slice(0, 8)} compact />
+                        <DetailBlock label="Created by" value={transfer.createdBy} compact />
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <DetailBlock label="Reference" value={transfer.referenceNumber || transfer.id.slice(0, 8)} compact />
-                      <DetailBlock label="Created by" value={transfer.createdBy} compact />
-                    </div>
-
-                    <div className="rounded-[22px] border border-white/8 bg-white/[0.03] p-3 text-sm text-muted-foreground">
-                      {formatDateTime(transfer.createdAt)}
-                    </div>
-                  </CardContent>
-                </Card>
+                      <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-3 text-sm text-muted-foreground backdrop-blur-sm transition-all hover:bg-white/[0.05]">
+                        {formatDateTime(transfer.createdAt)}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               ))}
             </div>
 
@@ -401,9 +423,9 @@ export function TransferHistoryClient({
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <DetailBlock label="Base unit" value={String(snapshot.baseUnit ?? selectedTransfer.unit)} />
-                      <DetailBlock label="Minimum stock" value={String(snapshot.minimumStock ?? "-")} />
-                      <DetailBlock label="Stock before transfer" value={String(snapshot.stockBeforeTransfer ?? "-")} />
-                      <DetailBlock label="Stock after transfer" value={String(snapshot.stockAfterTransfer ?? "-")} accent />
+                      <DetailBlock label="Minimum stock" value={formatSnapshotQuantity(snapshot.minimumStock)} />
+                      <DetailBlock label="Stock before transfer" value={formatSnapshotQuantity(snapshot.stockBeforeTransfer)} />
+                      <DetailBlock label="Stock after transfer" value={formatSnapshotQuantity(snapshot.stockAfterTransfer)} accent />
                       <DetailBlock label="Thickness" value={formatOptionalMeasurement(snapshot.thicknessValue, snapshot.thicknessUnit)} />
                       <DetailBlock label="Size" value={formatOptionalMeasurement(snapshot.sizeValue, snapshot.sizeUnit)} />
                       <DetailBlock label="Weight" value={formatOptionalMeasurement(snapshot.weightValue, snapshot.weightUnit)} />
@@ -455,4 +477,12 @@ function formatOptionalMeasurement(value: unknown, unit: unknown) {
   }
 
   return `${String(value)}${unit ? ` ${String(unit)}` : ""}`;
+}
+
+function formatSnapshotQuantity(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+
+  return formatNumber(String(value));
 }

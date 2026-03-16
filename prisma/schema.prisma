@@ -90,11 +90,12 @@ model Warehouse {
 // ─── Categories ─────────────────────────────────────────────
 
 model Category {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  slug      String   @unique
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(cuid())
+  name           String
+  normalizedName String?  @unique @map("normalized_name")
+  slug           String   @unique
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   rawMaterials RawMaterial[]
 
@@ -104,10 +105,11 @@ model Category {
 // ─── Recipients ─────────────────────────────────────────────
 
 model Recipient {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(cuid())
+  name           String
+  normalizedName String?  @unique @map("normalized_name")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   transfers Transfer[]
 
@@ -120,10 +122,11 @@ model RawMaterial {
   id             String         @id @default(cuid())
   warehouseId    String         @map("warehouse_id")
   name           String
+  normalizedName String?        @map("normalized_name")
   categoryId     String         @map("category_id")
   baseUnit       String         @map("base_unit")
-  currentStock   Float          @default(0) @map("current_stock")
-  minimumStock   Float          @default(0) @map("minimum_stock")
+  currentStock   Decimal        @default(0) @db.Decimal(18, 3) @map("current_stock")
+  minimumStock   Decimal        @default(0) @db.Decimal(18, 3) @map("minimum_stock")
   thicknessValue Float?         @map("thickness_value")
   thicknessUnit  String?        @map("thickness_unit")
   sizeValue      String?        @map("size_value")
@@ -151,7 +154,8 @@ model RawMaterial {
   @@index([warehouseId, status])
   @@index([warehouseId, updatedAt])
   @@index([warehouseId, categoryId])
-  @@unique([warehouseId, name])
+  @@index([warehouseId, normalizedName])
+  @@unique([warehouseId, normalizedName])
   @@map("raw_materials")
 }
 
@@ -161,7 +165,7 @@ model Transfer {
   id              String   @id @default(cuid())
   warehouseId     String   @map("warehouse_id")
   rawMaterialId   String   @map("raw_material_id")
-  quantity        Float
+  quantity        Decimal  @db.Decimal(18, 3)
   recipientId     String   @map("recipient_id")
   notes           String?
   referenceNumber String?  @map("reference_number")
@@ -191,7 +195,7 @@ model RawMaterialActivityLog {
   activityType   ActivityType @map("activity_type")
   beforeSnapshot Json?        @map("before_snapshot")
   afterSnapshot  Json?        @map("after_snapshot")
-  quantityChange Float?       @map("quantity_change")
+  quantityChange Decimal?     @db.Decimal(18, 3) @map("quantity_change")
   sourceType     String?      @map("source_type")
   sourceId       String?      @map("source_id")
   performedById  String?      @map("performed_by")
@@ -215,9 +219,9 @@ model StockTransaction {
   warehouseId     String          @map("warehouse_id")
   rawMaterialId   String          @map("raw_material_id")
   transactionType TransactionType @map("transaction_type")
-  quantity        Float
-  previousStock   Float           @map("previous_stock")
-  newStock        Float           @map("new_stock")
+  quantity        Decimal         @db.Decimal(18, 3)
+  previousStock   Decimal         @db.Decimal(18, 3) @map("previous_stock")
+  newStock        Decimal         @db.Decimal(18, 3) @map("new_stock")
   sourceType      String?         @map("source_type")
   sourceId        String?         @map("source_id")
   createdById     String?         @map("created_by")

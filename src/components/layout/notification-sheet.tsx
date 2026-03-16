@@ -8,21 +8,27 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { formatDateTime } from "@/lib/utils";
 
 type NotificationSheetProps = {
+  errorMessage: string | null;
+  isActionPending: boolean;
   isLoading: boolean;
   notifications: AppShellNotification[];
   onMarkAllRead: () => void;
   onMarkRead: (id: string) => void;
   onOpenChange: (open: boolean) => void;
+  onRetry: () => void;
   open: boolean;
   unreadCount: number;
 };
 
 export function NotificationSheet({
+  errorMessage,
+  isActionPending,
   isLoading,
   notifications,
   onMarkAllRead,
   onMarkRead,
   onOpenChange,
+  onRetry,
   open,
   unreadCount,
 }: NotificationSheetProps) {
@@ -51,12 +57,21 @@ export function NotificationSheet({
               variant="outline"
               size="sm"
               onClick={onMarkAllRead}
-              disabled={unreadCount === 0 || isLoading}
+              disabled={unreadCount === 0 || isLoading || isActionPending}
             >
               <CheckCheck className="h-4 w-4" />
               Mark all read
             </Button>
           </div>
+
+          {errorMessage ? (
+            <div className="flex items-center justify-between gap-3 rounded-[24px] border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <p>{errorMessage}</p>
+              <Button type="button" variant="outline" size="sm" onClick={onRetry} disabled={isLoading}>
+                Retry
+              </Button>
+            </div>
+          ) : null}
 
           {isLoading ? (
             <div className="rounded-[24px] border border-white/8 bg-white/[0.03] px-4 py-10 text-center text-sm text-muted-foreground">
@@ -99,6 +114,7 @@ export function NotificationSheet({
                         size="sm"
                         onClick={() => onMarkRead(notification.id)}
                         className="shrink-0"
+                        disabled={isActionPending}
                       >
                         <CircleAlert className="h-4 w-4" />
                         Mark read

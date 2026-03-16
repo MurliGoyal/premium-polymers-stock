@@ -1,4 +1,6 @@
 import { MaterialStatus } from "@prisma/client";
+import type { QuantityValue } from "@/lib/quantities";
+import { quantityToString, toDecimal } from "@/lib/quantities";
 
 type MaterialSnapshotInput = {
   id: string;
@@ -6,8 +8,8 @@ type MaterialSnapshotInput = {
   warehouse: { code: string; name: string };
   category: { id: string; name: string };
   baseUnit: string;
-  currentStock: number;
-  minimumStock: number;
+  currentStock: QuantityValue;
+  minimumStock: QuantityValue;
   thicknessValue?: number | null;
   thicknessUnit?: string | null;
   sizeValue?: string | null;
@@ -19,12 +21,15 @@ type MaterialSnapshotInput = {
   status: MaterialStatus;
 };
 
-export function resolveMaterialStatus(currentStock: number, minimumStock: number): MaterialStatus {
-  if (currentStock <= 0) {
+export function resolveMaterialStatus(currentStock: QuantityValue, minimumStock: QuantityValue): MaterialStatus {
+  const current = toDecimal(currentStock);
+  const minimum = toDecimal(minimumStock);
+
+  if (current.lte(0)) {
     return MaterialStatus.OUT_OF_STOCK;
   }
 
-  if (currentStock <= minimumStock) {
+  if (current.lte(minimum)) {
     return MaterialStatus.LOW_STOCK;
   }
 
@@ -50,8 +55,8 @@ export function createMaterialSnapshot(material: MaterialSnapshotInput) {
     warehouse: material.warehouse,
     category: material.category,
     baseUnit: material.baseUnit,
-    currentStock: material.currentStock,
-    minimumStock: material.minimumStock,
+    currentStock: quantityToString(material.currentStock),
+    minimumStock: quantityToString(material.minimumStock),
     thicknessValue: material.thicknessValue ?? null,
     thicknessUnit: material.thicknessUnit ?? null,
     sizeValue: material.sizeValue ?? null,

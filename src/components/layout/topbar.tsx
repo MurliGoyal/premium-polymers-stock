@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { signOut } from "next-auth/react";
-import { Bell, LogOut, Menu, Moon, PanelLeft, Search, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
+import { Bell, LogOut, Menu, PanelLeft, Search } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { ApiResponse } from "@/lib/api-response";
 import { getRoleColor, getRoleLabel } from "@/lib/rbac";
 import { CommandPalette } from "./command-palette";
 import { NotificationSheet } from "./notification-sheet";
@@ -27,17 +27,28 @@ type TopbarProps = {
   warehouses: AppShellWarehouse[];
 };
 
+type NotificationsPayload = {
+  notifications: AppShellNotification[];
+  unreadCount: number;
+};
+
+type MarkReadPayload = {
+  markedIds: string[];
+  unreadCount: number;
+};
+
 export function Topbar({
   onDesktopSidebarToggle,
   onMobileNavOpen,
   user,
   warehouses,
 }: TopbarProps) {
-  const { resolvedTheme, setTheme } = useTheme();
   const [commandOpen, setCommandOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppShellNotification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [notificationsError, setNotificationsError] = useState<string | null>(null);
+  const [notificationActionPending, setNotificationActionPending] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const loadNotifications = useCallback(async () => {
@@ -45,15 +56,17 @@ export function Topbar({
 
     try {
       const response = await fetch("/api/notifications", { cache: "no-store" });
-      const data = response.ok
-        ? ((await response.json()) as { notifications: AppShellNotification[]; unreadCount: number })
-        : { notifications: [], unreadCount: 0 };
+      const payload = (await response.json()) as ApiResponse<NotificationsPayload>;
 
-      setNotifications(data.notifications);
-      setNotificationCount(data.unreadCount);
-    } catch {
-      setNotifications([]);
-      setNotificationCount(0);
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.ok ? "Notifications could not be loaded right now." : payload.error.message);
+      }
+
+      setNotifications(payload.data.notifications);
+      setNotificationCount(payload.data.unreadCount);
+      setNotificationsError(null);
+    } catch (error) {
+      setNotificationsError(error instanceof Error ? error.message : "Notifications could not be loaded right now.");
     } finally {
       setNotificationsLoading(false);
     }
@@ -61,15 +74,36 @@ export function Topbar({
 
   const markNotificationsRead = useCallback(
     async (payload: { ids?: string[]; markAll?: boolean }) => {
-      await fetch("/api/notifications/mark-read", {
-        body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      });
+      setNotificationActionPending(true);
 
-      await loadNotifications();
+      try {
+        const response = await fetch("/api/notifications/mark-read", {
+          body: JSON.stringify(payload),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        const result = (await response.json()) as ApiResponse<MarkReadPayload>;
+
+        if (!response.ok || !result.ok) {
+          throw new Error(result.ok ? "Notifications could not be updated right now." : result.error.message);
+        }
+
+        setNotifications((current) =>
+          current.map((notification) =>
+            payload.markAll || result.data.markedIds.includes(notification.id)
+              ? { ...notification, isRead: true }
+              : notification
+          )
+        );
+        setNotificationCount(result.data.unreadCount);
+        setNotificationsError(null);
+      } catch (error) {
+        setNotificationsError(error instanceof Error ? error.message : "Notifications could not be updated right now.");
+      } finally {
+        setNotificationActionPending(false);
+      }
     },
-    [loadNotifications]
+    []
   );
 
   useEffect(() => {
@@ -152,18 +186,9 @@ export function Topbar({
           </Button>
 
           <div className="ml-auto flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-              className="relative text-muted-foreground"
-            >
-              <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-              <span className="sr-only">Toggle theme</span>
-            </Button>
-
+            <p className="sr-only" aria-live="polite">
+              {notificationCount} unread notifications
+            </p>
             <Button
               type="button"
               variant="ghost"
@@ -215,12 +240,15 @@ export function Topbar({
 
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} role={user.role} warehouses={warehouses} />
       <NotificationSheet
+        errorMessage={notificationsError}
+        isActionPending={notificationActionPending}
         isLoading={notificationsLoading}
         notifications={notifications}
         onMarkAllRead={() => void markNotificationsRead({ markAll: true })}
         onMarkRead={(id) => void markNotificationsRead({ ids: [id] })}
         onOpenChange={setNotificationsOpen}
         open={notificationsOpen}
+        onRetry={() => void loadNotifications()}
         unreadCount={notificationCount}
       />
     </>

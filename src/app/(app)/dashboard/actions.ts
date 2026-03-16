@@ -3,7 +3,8 @@
 import { MaterialStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { SEEDED_WAREHOUSE_CODES } from "@/lib/constants";
-import { daysAgo, startOfDay } from "@/lib/inventory";
+import { quantityToNumber, sumQuantities } from "@/lib/quantities";
+import { formatAppDayLabel, getAppDateKey, getAppStartOfDay } from "@/lib/utils";
 
 function getWarehouseSortIndex(code: string) {
   return SEEDED_WAREHOUSE_CODES.indexOf(code as (typeof SEEDED_WAREHOUSE_CODES)[number]);
@@ -11,8 +12,9 @@ function getWarehouseSortIndex(code: string) {
 
 export async function getDashboardData() {
   const now = new Date();
-  const startToday = startOfDay(now);
-  const sevenDaysAgo = daysAgo(6, now);
+  const startToday = getAppStartOfDay(now);
+  const sevenDaysAgo = new Date(startToday);
+  sevenDaysAgo.setUTCDate(sevenDaysAgo.getUTCDate() - 6);
 
   const [
     totalMaterials,
@@ -124,24 +126,34 @@ export async function getDashboardData() {
   ]);
 
   // Process transfer trend by day
-  const trendMap: Record<string, { count: number; quantity: number }> = {};
-  for (let i = 6; i >= 0; i--) {
-    const d = daysAgo(i, now);
-    const key = d.toISOString().split("T")[0];
-    trendMap[key] = { count: 0, quantity: 0 };
-  }
+  const trendBuckets = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(sevenDaysAgo);
+    date.setUTCDate(date.getUTCDate() + index);
+
+    return {
+      count: 0,
+      date,
+      key: getAppDateKey(date),
+      label: formatAppDayLabel(date),
+      quantity: 0,
+    };
+  });
+  const trendMap = new Map(trendBuckets.map((bucket) => [bucket.key, bucket]));
+
   for (const t of transferTrend) {
-    const key = new Date(t.createdAt).toISOString().split("T")[0];
-    if (trendMap[key]) {
-      trendMap[key].count++;
-      trendMap[key].quantity += t.quantity;
+    const key = getAppDateKey(t.createdAt);
+    const bucket = trendMap.get(key);
+
+    if (bucket) {
+      bucket.count += 1;
+      bucket.quantity += quantityToNumber(t.quantity);
     }
   }
-  const transferTrendData = Object.entries(trendMap).map(([date, val]) => ({
-    date,
-    label: new Date(date).toLocaleDateString("en-IN", { weekday: "short", day: "numeric" }),
-    count: val.count,
-    quantity: Math.round(val.quantity),
+  const transferTrendData = trendBuckets.map((bucket) => ({
+    date: bucket.key,
+    label: bucket.label,
+    count: bucket.count,
+    quantity: bucket.quantity,
   }));
 
   // Warehouse overview
@@ -155,7 +167,7 @@ export async function getDashboardData() {
       totalMaterials: w.rawMaterials.length,
       lowStockCount: w.rawMaterials.filter((m) => m.status === MaterialStatus.LOW_STOCK).length,
       outOfStockCount: w.rawMaterials.filter((m) => m.status === MaterialStatus.OUT_OF_STOCK).length,
-      totalStock: w.rawMaterials.reduce((sum, m) => sum + m.currentStock, 0),
+      totalStock: quantityToNumber(sumQuantities(w.rawMaterials.map((material) => material.currentStock))),
       recentTransfers: w.transfers.length,
     }));
 
@@ -169,7 +181,7 @@ export async function getDashboardData() {
   const warehouseStockChart = warehouseOverview.map((w) => ({
     name: w.code,
     totalMaterials: w.totalMaterials,
-    totalStock: Math.round(w.totalStock),
+    totalStock: w.totalStock,
     lowStock: w.lowStockCount,
   }));
 
@@ -177,7 +189,7 @@ export async function getDashboardData() {
     kpis: {
       totalMaterials,
       totalCategories,
-      totalStock: Math.round(totalStock._sum.currentStock || 0),
+      totalStock: quantityToNumber(totalStock._sum.currentStock),
       lowStockItems,
       outOfStockItems,
       transfersToday,
@@ -192,7 +204,7 @@ export async function getDashboardData() {
       materialUnit: t.rawMaterial.baseUnit,
       warehouseCode: t.warehouse.code,
       recipientName: t.recipient.name,
-      quantity: t.quantity,
+      quantity: quantityToNumber(t.quantity),
       createdBy: t.createdBy?.name || "System",
       createdAt: t.createdAt.toISOString(),
     })),
@@ -201,7 +213,7 @@ export async function getDashboardData() {
       materialName: a.rawMaterial.name,
       warehouseCode: a.warehouse.code,
       activityType: a.activityType,
-      quantityChange: a.quantityChange,
+      quantityChange: a.quantityChange === null ? null : quantityToNumber(a.quantityChange),
       performedBy: a.performedBy?.name || "System",
       createdAt: a.createdAt.toISOString(),
     })),
@@ -213,8 +225,8 @@ export async function getDashboardData() {
       name: m.name,
       warehouseCode: m.warehouse.code,
       category: m.category.name,
-      currentStock: m.currentStock,
-      minimumStock: m.minimumStock,
+      currentStock: quantityToNumber(m.currentStock),
+      minimumStock: quantityToNumber(m.minimumStock),
       baseUnit: m.baseUnit,
       status: m.status,
     })),

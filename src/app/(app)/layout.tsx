@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
+import { PageTransition } from "@/components/layout/page-transition";
 import { getServerAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -24,7 +25,7 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
       }}
       warehouses={warehouses}
     >
-      {children}
+      <PageTransition>{children}</PageTransition>
     </AppShell>
   );
 }

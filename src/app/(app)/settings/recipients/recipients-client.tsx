@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -12,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDate } from "@/lib/utils";
 import { addRecipient, deleteRecipient } from "../actions";
 
@@ -28,13 +30,13 @@ export function RecipientsClient({ recipients }: { recipients: RecipientData[] }
     if (!newName.trim()) return;
     startTransition(async () => {
       try {
-        await addRecipient(newName.trim());
-        toast.success("Recipient added");
+        const result = await addRecipient(newName.trim());
+        toast.success(result.created ? "Recipient added" : "Recipient already existed");
         setNewName("");
         setShowAdd(false);
         router.refresh();
-      } catch {
-        toast.error("Failed to add recipient");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to add recipient");
       }
     });
   };
@@ -55,6 +57,16 @@ export function RecipientsClient({ recipients }: { recipients: RecipientData[] }
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-5xl space-y-5">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Link href="/dashboard" className="transition-colors hover:text-foreground">
+          Dashboard
+        </Link>
+        <span>/</span>
+        <span>Settings</span>
+        <span>/</span>
+        <span className="font-medium text-foreground">Recipients</span>
+      </div>
+
       <ResponsivePageHeader
         eyebrow="Settings"
         title="Recipients"
@@ -69,69 +81,72 @@ export function RecipientsClient({ recipients }: { recipients: RecipientData[] }
       />
 
       <Card className="overflow-hidden">
-        <div className="grid gap-3 p-4 md:grid-cols-2 xl:hidden">
-          {recipients.map((recipient) => (
-            <Card key={recipient.id} className="rounded-[24px]">
-              <CardContent className="space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-base font-semibold">{recipient.name}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{formatDate(recipient.createdAt)}</p>
-                  </div>
-                  <Badge variant="secondary">{recipient.transferCount} transfers</Badge>
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDeleteId(recipient.id)}
-                    disabled={recipient.transferCount > 0}
-                    className="h-10 w-10"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="hidden xl:block">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/20 hover:bg-muted/20">
-                <TableHead>Name</TableHead>
-                <TableHead>Transfers</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="w-[72px]" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        {recipients.length === 0 ? (
+          <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+            <UserCheck className="mb-4 h-12 w-12 text-muted-foreground/30" />
+            <h3 className="text-lg font-semibold">No recipients yet</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Create reusable destinations for transfer and delivery workflows.</p>
+            <Button type="button" onClick={() => setShowAdd(true)} className="mt-4">
+              <Plus className="h-4 w-4" />
+              Add recipient
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-3 p-4 md:grid-cols-2 xl:hidden">
               {recipients.map((recipient) => (
-                <TableRow key={recipient.id}>
-                  <TableCell className="font-medium">{recipient.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{recipient.transferCount}</Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{formatDate(recipient.createdAt)}</TableCell>
-                  <TableCell>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setDeleteId(recipient.id)}
-                      disabled={recipient.transferCount > 0}
-                      className="h-9 w-9"
-                    >
-                      <Trash2 className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                <Card key={recipient.id} className="rounded-[24px]">
+                  <CardContent className="space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-base font-semibold">{recipient.name}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{formatDate(recipient.createdAt)}</p>
+                      </div>
+                      <Badge variant="secondary">{recipient.transferCount} transfers</Badge>
+                    </div>
+                    <div className="flex justify-end">
+                      <DeleteRecipientButton
+                        disabled={recipient.transferCount > 0}
+                        onDelete={() => setDeleteId(recipient.id)}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
-            </TableBody>
-          </Table>
-        </div>
+            </div>
+
+            <div className="hidden xl:block">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/20 hover:bg-muted/20">
+                    <TableHead>Name</TableHead>
+                    <TableHead>Transfers</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="w-[72px]" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recipients.map((recipient) => (
+                    <TableRow key={recipient.id}>
+                      <TableCell className="font-medium">{recipient.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{recipient.transferCount}</Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(recipient.createdAt)}</TableCell>
+                      <TableCell>
+                        <DeleteRecipientButton
+                          compact
+                          disabled={recipient.transferCount > 0}
+                          onDelete={() => setDeleteId(recipient.id)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        )}
       </Card>
 
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
@@ -182,5 +197,42 @@ export function RecipientsClient({ recipients }: { recipients: RecipientData[] }
         </DialogContent>
       </Dialog>
     </motion.div>
+  );
+}
+
+function DeleteRecipientButton({
+  compact,
+  disabled,
+  onDelete,
+}: {
+  compact?: boolean;
+  disabled: boolean;
+  onDelete: () => void;
+}) {
+  const button = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      onClick={onDelete}
+      disabled={disabled}
+      className={compact ? "h-9 w-9" : "h-10 w-10"}
+      aria-label={disabled ? "Recipient cannot be deleted while transfers exist" : "Delete recipient"}
+    >
+      <Trash2 className="h-4 w-4 text-muted-foreground" />
+    </Button>
+  );
+
+  if (!disabled) {
+    return button;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span>{button}</span>
+      </TooltipTrigger>
+      <TooltipContent>This recipient cannot be deleted while transfers still reference it.</TooltipContent>
+    </Tooltip>
   );
 }

@@ -1,12 +1,15 @@
-import { NextResponse } from "next/server";
 import { getServerAuthSession } from "@/lib/auth";
+import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
   const session = await getServerAuthSession();
 
   if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError(
+      { code: "UNAUTHORIZED", message: "Unauthorized", retryable: false },
+      { status: 401 }
+    );
   }
 
   let payload: { ids?: string[]; markAll?: boolean } = {};
@@ -22,15 +25,38 @@ export async function POST(request: Request) {
     : [];
 
   if (!payload.markAll && ids.length === 0) {
-    return NextResponse.json({ error: "No notifications selected" }, { status: 400 });
+    return jsonError(
+      {
+        code: "NO_NOTIFICATIONS_SELECTED",
+        message: "Select at least one notification to mark as read.",
+        retryable: false,
+      },
+      { status: 400 }
+    );
   }
 
-  await prisma.notification.updateMany({
-    data: { isRead: true },
-    where: payload.markAll ? { isRead: false } : { id: { in: ids } },
-  });
+  try {
+    const where = payload.markAll ? { isRead: false } : { id: { in: ids } };
 
-  const unreadCount = await prisma.notification.count({ where: { isRead: false } });
+    await prisma.notification.updateMany({
+      data: { isRead: true },
+      where,
+    });
 
-  return NextResponse.json({ success: true, unreadCount });
+    const unreadCount = await prisma.notification.count({ where: { isRead: false } });
+
+    return jsonSuccess({
+      markedIds: payload.markAll ? [] : ids,
+      unreadCount,
+    });
+  } catch {
+    return jsonError(
+      {
+        code: "MARK_READ_FAILED",
+        message: "Notifications could not be updated right now.",
+        retryable: true,
+      },
+      { status: 500 }
+    );
+  }
 }

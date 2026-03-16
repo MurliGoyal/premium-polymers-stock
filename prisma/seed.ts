@@ -1,6 +1,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, Role, MaterialStatus, ActivityType, TransactionType, NotificationType } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
+import { normalizeRecordName } from "../src/lib/naming";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -76,10 +77,17 @@ async function main() {
 
   const categories: Record<string, { id: string }> = {};
   for (const cat of categoryData) {
+    const normalizedName = normalizeRecordName(cat.name);
     const c = await prisma.category.upsert({
       where: { slug: cat.slug },
-      update: {},
-      create: cat,
+      update: {
+        name: cat.name,
+        normalizedName,
+      },
+      create: {
+        ...cat,
+        normalizedName,
+      },
     });
     categories[cat.slug] = c;
   }
@@ -99,10 +107,14 @@ async function main() {
 
   const recipients: Record<string, { id: string }> = {};
   for (const name of recipientNames) {
+    const normalizedName = normalizeRecordName(name);
     const r = await prisma.recipient.upsert({
-      where: { name },
-      update: {},
-      create: { name },
+      where: { normalizedName },
+      update: {
+        name,
+        normalizedName,
+      },
+      create: { name, normalizedName },
     });
     recipients[name] = r;
   }
@@ -146,6 +158,7 @@ async function main() {
       data: {
         warehouseId: mat.wh,
         name: mat.name,
+        normalizedName: normalizeRecordName(mat.name),
         categoryId: categories[mat.cat].id,
         baseUnit: mat.unit,
         currentStock: mat.stock,

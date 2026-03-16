@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { MATERIAL_UNITS, SIZE_UNITS, THICKNESS_UNITS, WEIGHT_UNITS } from "@/lib/constants";
+import { collapseWhitespace } from "@/lib/naming";
+
+const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F]/;
 
 const trimmedString = (label: string, max = 120) =>
   z
@@ -17,19 +20,25 @@ const optionalText = (max: number) =>
     .nullable()
     .optional();
 
+const normalizedName = (label: string, max = 120) =>
+  trimmedString(label, max)
+    .transform(collapseWhitespace)
+    .refine((value) => !CONTROL_CHARACTER_PATTERN.test(value), `${label} contains unsupported control characters`);
+
 const positiveNumber = (label: string) =>
   z
     .number({ error: `${label} must be a number` })
     .finite(`${label} must be a valid number`)
     .min(0, `${label} cannot be negative`);
 
-export const categoryNameSchema = trimmedString("Category name");
-export const recipientNameSchema = trimmedString("Recipient name");
+export const categoryNameSchema = normalizedName("Category name");
+export const recipientNameSchema = normalizedName("Recipient name");
+export const rawMaterialNameSchema = normalizedName("Raw material name");
 
 export const rawMaterialFormSchema = z
   .object({
     warehouseId: trimmedString("Warehouse"),
-    name: trimmedString("Raw material name"),
+    name: rawMaterialNameSchema,
     categoryId: trimmedString("Category"),
     baseUnit: z
       .string({ error: "Unit is required" })
