@@ -54,7 +54,7 @@ export function WarehousesClient({ warehouses }: { warehouses: WarehouseData[] }
         />
       </motion.div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
         {warehouses.map((warehouse) => (
           <motion.div key={warehouse.id} variants={cardVariants}>
             <Link href={`/warehouses/${warehouse.slug}`} className="block">

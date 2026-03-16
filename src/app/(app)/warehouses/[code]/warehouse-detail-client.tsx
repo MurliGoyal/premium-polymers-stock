@@ -157,7 +157,7 @@ export function WarehouseDetailClient({
 
   const filters = (
     <>
-      <div className="relative xl:col-span-[1.5]">
+      <div className="relative md:col-span-2 xl:col-span-2">
         <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search materials, categories, units, or notes"
@@ -288,7 +288,7 @@ export function WarehouseDetailClient({
         />
       </motion.div>
 
-      <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         <MetricCard icon={Package} label="Total materials" value={stats.totalCount} />
         <MetricCard icon={BarChart3} label="Total stock" value={formatNumber(stats.totalStock)} tone="emerald" />
         <MetricCard icon={AlertTriangle} label="Low stock" value={stats.lowStockCount} tone="amber" />
@@ -299,8 +299,8 @@ export function WarehouseDetailClient({
       <motion.div variants={itemVariants}>
         <Card>
           <CardContent className="space-y-4">
-            <div className="hidden gap-3 xl:grid xl:grid-cols-[1.5fr_repeat(4,minmax(0,1fr))]">{filters}</div>
-            <div className="flex flex-col gap-3 xl:hidden">
+            <div className="hidden gap-3 md:grid md:grid-cols-2 xl:grid-cols-5">{filters}</div>
+            <div className="flex flex-col gap-3 md:hidden">
               <ResponsiveFiltersSheet
                 activeCount={activeFilterCount}
                 title="Material filters"
@@ -353,7 +353,7 @@ export function WarehouseDetailClient({
             </div>
           ) : (
             <>
-              <div className="space-y-3 p-4 xl:hidden">
+              <div className="grid gap-3 p-4 md:grid-cols-2 xl:hidden">
                 {paginatedMaterials.map((material) => (
                   <Card key={material.id} className="rounded-[24px]">
                     <CardContent className="space-y-4">
@@ -560,5 +560,5 @@ function formatSpecs(material: WarehouseDetailData["materials"][number]) {
     material.gsm ? `GSM ${material.gsm}` : null,
   ].filter(Boolean);
 
-  return specs.length > 0 ? specs.join(" • ") : "No dimensional metadata";
+  return specs.length > 0 ? specs.join(" / ") : "No dimensional metadata";
 }

@@ -28,10 +28,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import type { AppShellWarehouse } from "@/components/layout/types";
+import { WarehouseActionPicker } from "@/components/shared/warehouse-action-picker";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { hasPermission } from "@/lib/rbac";
 import { formatDateTime, formatNumber, getActivityColor, getActivityLabel } from "@/lib/utils";
 
 type DashboardData = Awaited<ReturnType<typeof import("./actions").getDashboardData>>;
@@ -54,10 +57,20 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.2, 1, 0.22, 1] as [number, number, number, number] } },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: [0.2, 1, 0.22, 1] as [number, number, number, number] },
+  },
 };
 
-export function DashboardClient({ data }: { data: DashboardData }) {
+export function DashboardClient({
+  data,
+  userRole,
+}: {
+  data: DashboardData;
+  userRole: string;
+}) {
   const {
     kpis,
     warehouseOverview,
@@ -68,6 +81,14 @@ export function DashboardClient({ data }: { data: DashboardData }) {
     transferTrendData,
     lowStockMaterials,
   } = data;
+
+  const canCreateMaterials = hasPermission(userRole, "raw_materials:create");
+  const canCreateTransfers = hasPermission(userRole, "transfers:create");
+  const warehouseOptions: AppShellWarehouse[] = warehouseOverview.map((warehouse) => ({
+    code: warehouse.code,
+    name: warehouse.name,
+    slug: warehouse.slug,
+  }));
 
   const kpiCards = [
     { label: "Total materials", value: kpis.totalMaterials, icon: Package, tone: "indigo" },
@@ -98,18 +119,24 @@ export function DashboardClient({ data }: { data: DashboardData }) {
                   Warehouses
                 </Link>
               </Button>
-              <Button asChild>
-                <Link href="/warehouses">
-                  <Plus className="h-4 w-4" />
-                  Add material
-                </Link>
-              </Button>
+              {canCreateMaterials ? (
+                <WarehouseActionPicker
+                  action="add-material"
+                  warehouses={warehouseOptions}
+                  trigger={
+                    <Button type="button">
+                      <Plus className="h-4 w-4" />
+                      Add material
+                    </Button>
+                  }
+                />
+              ) : null}
             </>
           }
         />
       </motion.div>
 
-      <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {kpiCards.map((kpi) => (
           <MetricCard key={kpi.label} label={kpi.label} tone={kpi.tone} value={kpi.value} icon={kpi.icon} />
         ))}
@@ -125,7 +152,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
             </Link>
           </Button>
         </div>
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           {warehouseOverview.map((warehouse) => (
             <Card key={warehouse.id} className="group overflow-hidden">
               <CardContent className="space-y-4">
@@ -159,14 +186,17 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         </div>
       </motion.div>
 
-      <motion.div variants={itemVariants} className="grid gap-4 lg:grid-cols-2">
+      <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2">
         <Card className="md:hidden">
           <CardHeader>
             <CardTitle className="text-sm font-semibold">Transfer activity snapshot</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {transferTrendData.map((point) => (
-              <div key={point.label} className="flex items-center justify-between rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-3">
+              <div
+                key={point.label}
+                className="flex items-center justify-between rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-3"
+              >
                 <span className="text-sm text-muted-foreground">{point.label}</span>
                 <span className="text-base font-semibold">{point.count}</span>
               </div>
@@ -198,7 +228,14 @@ export function DashboardClient({ data }: { data: DashboardData }) {
                     fontSize: "12px",
                   }}
                 />
-                <Area type="monotone" dataKey="count" stroke="hsl(250 95% 70%)" fill="url(#colorTransfers)" strokeWidth={2.5} name="Transfers" />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke="hsl(250 95% 70%)"
+                  fill="url(#colorTransfers)"
+                  strokeWidth={2.5}
+                  name="Transfers"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
@@ -255,7 +292,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         </Card>
       </motion.div>
 
-      <motion.div variants={itemVariants} className="grid gap-4 lg:grid-cols-2">
+      <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Stock by warehouse</CardTitle>
@@ -292,9 +329,11 @@ export function DashboardClient({ data }: { data: DashboardData }) {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="grid gap-2 md:grid-cols-2">
               {lowStockMaterials.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">All stock levels are healthy.</p>
+                <p className="py-6 text-center text-sm text-muted-foreground md:col-span-2">
+                  All stock levels are healthy.
+                </p>
               ) : (
                 lowStockMaterials.map((material) => (
                   <div key={material.id} className="rounded-[22px] border border-white/8 bg-white/[0.03] p-3">
@@ -302,7 +341,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{material.name}</p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {material.warehouseCode} • {material.category}
+                          {material.warehouseCode} / {material.category}
                         </p>
                       </div>
                       <Badge variant={material.status === "OUT_OF_STOCK" ? "danger" : "warning"}>
@@ -317,7 +356,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         </Card>
       </motion.div>
 
-      <motion.div variants={itemVariants} className="grid gap-4 xl:grid-cols-3">
+      <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Card className="xl:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">
@@ -327,18 +366,21 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           </CardHeader>
           <CardContent className="space-y-3">
             {recentActivities.map((activity) => (
-              <div key={activity.id} className="flex items-start gap-3 rounded-[22px] border border-white/8 bg-white/[0.03] p-3">
+              <div
+                key={activity.id}
+                className="flex items-start gap-3 rounded-[22px] border border-white/8 bg-white/[0.03] p-3"
+              >
                 <div className={`mt-0.5 rounded-xl p-2 ${getActivityColor(activity.activityType)}`}>
                   <Activity className="h-3.5 w-3.5" />
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{activity.materialName}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {getActivityLabel(activity.activityType)} • {activity.warehouseCode}
-                    {activity.quantityChange ? ` • ${activity.quantityChange > 0 ? "+" : ""}${activity.quantityChange}` : ""}
+                    {getActivityLabel(activity.activityType)} / {activity.warehouseCode}
+                    {activity.quantityChange ? ` / ${activity.quantityChange > 0 ? "+" : ""}${activity.quantityChange}` : ""}
                   </p>
                   <p className="mt-1 text-[11px] text-muted-foreground/70">
-                    {activity.performedBy} • {formatDateTime(activity.createdAt)}
+                    {activity.performedBy} / {formatDateTime(activity.createdAt)}
                   </p>
                 </div>
               </div>
@@ -360,17 +402,20 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           </CardHeader>
           <CardContent className="space-y-3">
             {recentTransfers.map((transfer) => (
-              <div key={transfer.id} className="flex items-start gap-3 rounded-[22px] border border-white/8 bg-white/[0.03] p-3">
+              <div
+                key={transfer.id}
+                className="flex items-start gap-3 rounded-[22px] border border-white/8 bg-white/[0.03] p-3"
+              >
                 <div className="mt-0.5 rounded-xl bg-sky-500/12 p-2 text-sky-300">
                   <ArrowRightLeft className="h-3.5 w-3.5" />
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{transfer.materialName}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {transfer.quantity} {transfer.materialUnit} → {transfer.recipientName}
+                    {transfer.quantity} {transfer.materialUnit} {"->"} {transfer.recipientName}
                   </p>
                   <p className="mt-1 text-[11px] text-muted-foreground/70">
-                    {transfer.warehouseCode} • {transfer.createdBy} • {formatDateTime(transfer.createdAt)}
+                    {transfer.warehouseCode} / {transfer.createdBy} / {formatDateTime(transfer.createdAt)}
                   </p>
                 </div>
               </div>
@@ -378,15 +423,59 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           </CardContent>
         </Card>
 
-        <Card className="xl:col-span-1">
+        <Card className="md:col-span-2 xl:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Quick actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <QuickAction href="/warehouses" icon={Warehouse} title="Go to warehouses" description="Select a warehouse to manage." />
-            <QuickAction href="/warehouses" icon={Plus} title="Add raw material" description="Add stock into a warehouse record." />
-            <QuickAction href="/warehouses" icon={ArrowRightLeft} title="Make transfer" description="Deduct approved stock and log the movement." />
-            <QuickAction href="/transfer-history" icon={Clock} title="Transfer history" description="Audit every outbound quantity." />
+            <Button asChild variant="outline" className="h-auto w-full items-start justify-start whitespace-normal rounded-[22px] px-4 py-4">
+              <Link href="/warehouses">
+                <QuickActionContent
+                  description="Select a warehouse to manage."
+                  icon={Warehouse}
+                  title="Go to warehouses"
+                />
+              </Link>
+            </Button>
+            {canCreateMaterials ? (
+              <WarehouseActionPicker
+                action="add-material"
+                warehouses={warehouseOptions}
+                trigger={
+                  <Button variant="outline" className="h-auto w-full items-start justify-start whitespace-normal rounded-[22px] px-4 py-4">
+                    <QuickActionContent
+                      description="Add stock into a warehouse record."
+                      icon={Plus}
+                      title="Add raw material"
+                    />
+                  </Button>
+                }
+              />
+            ) : null}
+            {canCreateTransfers ? (
+              <WarehouseActionPicker
+                action="transfer"
+                warehouses={warehouseOptions}
+                trigger={
+                  <Button variant="outline" className="h-auto w-full items-start justify-start whitespace-normal rounded-[22px] px-4 py-4">
+                    <QuickActionContent
+                      description="Deduct approved stock and log the movement."
+                      icon={ArrowRightLeft}
+                      title="Make transfer"
+                    />
+                  </Button>
+                }
+              />
+            ) : null}
+            <Button asChild variant="outline" className="h-auto w-full items-start justify-start whitespace-normal rounded-[22px] px-4 py-4">
+              <Link href="/transfer-history">
+                <QuickActionContent
+                  description="Audit every outbound quantity."
+                  icon={Clock}
+                  title="Transfer history"
+                />
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       </motion.div>
@@ -457,28 +546,24 @@ function MetricPill({
   );
 }
 
-function QuickAction({
+function QuickActionContent({
   description,
-  href,
   icon: Icon,
   title,
 }: {
   description: string;
-  href: string;
   icon: React.ComponentType<{ className?: string }>;
   title: string;
 }) {
   return (
-    <Button asChild variant="outline" className="h-auto w-full items-start justify-start whitespace-normal rounded-[22px] px-4 py-4">
-      <Link href={href}>
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/12 text-primary">
-          <Icon className="h-4 w-4" />
-        </div>
-        <div className="text-left">
-          <p className="text-sm font-semibold normal-case tracking-normal">{title}</p>
-          <p className="mt-1 text-xs normal-case tracking-normal text-muted-foreground">{description}</p>
-        </div>
-      </Link>
-    </Button>
+    <>
+      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/12 text-primary">
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="text-left">
+        <p className="text-sm font-semibold normal-case tracking-normal">{title}</p>
+        <p className="mt-1 text-xs normal-case tracking-normal text-muted-foreground">{description}</p>
+      </div>
+    </>
   );
 }

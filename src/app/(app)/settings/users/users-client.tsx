@@ -22,7 +22,7 @@ export function UsersClient({ users }: { users: UserData[] }) {
       />
 
       <Card className="overflow-hidden">
-        <div className="space-y-3 p-4 lg:hidden">
+        <div className="grid gap-3 p-4 md:grid-cols-2 xl:hidden">
           {users.map((user) => (
             <Card key={user.id} className="rounded-[24px]">
               <CardContent className="space-y-3">
@@ -47,7 +47,7 @@ export function UsersClient({ users }: { users: UserData[] }) {
           ))}
         </div>
 
-        <div className="hidden lg:block">
+        <div className="hidden xl:block">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/20 hover:bg-muted/20">

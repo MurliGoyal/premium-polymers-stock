@@ -3,7 +3,7 @@ import { getDashboardData } from "./actions";
 import { DashboardClient } from "./dashboard-client";
 
 export default async function DashboardPage() {
-  await requirePagePermission("dashboard:view");
+  const user = await requirePagePermission("dashboard:view");
   const data = await getDashboardData();
-  return <DashboardClient data={data} />;
+  return <DashboardClient data={data} userRole={user.role} />;
 }

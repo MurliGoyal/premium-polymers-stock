@@ -4,10 +4,12 @@ import type { CSSProperties } from "react";
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { MobileNavSheet } from "./mobile-nav-sheet";
 import { Sidebar } from "./sidebar";
+import { TabletRail } from "./tablet-rail";
 import { Topbar } from "./topbar";
-import type { AppShellUser } from "./types";
+import type { AppShellUser, AppShellWarehouse } from "./types";
 
 const SIDEBAR_STORAGE_KEY = "premium-polymers.sidebar-collapsed";
+const TABLET_RAIL_WIDTH = 104;
 const COLLAPSED_WIDTH = 104;
 const EXPANDED_WIDTH = 296;
 const SHELL_GUTTER = 32;
@@ -39,12 +41,15 @@ function getSidebarSnapshot() {
 export function AppShell({
   children,
   user,
+  warehouses,
 }: {
   children: React.ReactNode;
   user: AppShellUser;
+  warehouses: AppShellWarehouse[];
 }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const sidebarCollapsed = useSyncExternalStore(subscribe, getSidebarSnapshot, () => false);
+  const tabletOffset = useMemo(() => `${TABLET_RAIL_WIDTH + SHELL_GUTTER}px`, []);
 
   const desktopOffset = useMemo(
     () => `${(sidebarCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH) + SHELL_GUTTER}px`,
@@ -60,9 +65,13 @@ export function AppShell({
   return (
     <div
       className="relative min-h-screen"
-      style={{ "--shell-sidebar-offset": desktopOffset } as CSSProperties}
+      style={{
+        "--shell-sidebar-offset": desktopOffset,
+        "--shell-tablet-offset": tabletOffset,
+      } as CSSProperties}
     >
       <MobileNavSheet open={mobileNavOpen} onOpenChange={setMobileNavOpen} user={user} />
+      <TabletRail user={user} />
 
       <Sidebar
         collapsed={sidebarCollapsed}
@@ -70,11 +79,12 @@ export function AppShell({
         user={user}
       />
 
-      <div className="min-h-screen transition-[padding] duration-300 ease-out lg:pl-[var(--shell-sidebar-offset)]">
+      <div className="min-h-screen transition-[padding] duration-300 ease-out md:pl-[var(--shell-tablet-offset)] lg:pl-[var(--shell-sidebar-offset)]">
         <Topbar
           onDesktopSidebarToggle={toggleSidebar}
           onMobileNavOpen={() => setMobileNavOpen(true)}
           user={user}
+          warehouses={warehouses}
         />
         <main className="px-4 pb-10 pt-5 sm:px-6 lg:px-8 xl:px-10">{children}</main>
       </div>

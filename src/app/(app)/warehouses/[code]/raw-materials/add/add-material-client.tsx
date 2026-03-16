@@ -15,7 +15,7 @@ import { ResponsivePageHeader } from "@/components/shared/responsive-page-header
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -145,7 +145,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="grid gap-5 lg:grid-cols-[1.4fr,1fr]">
+            <div className="grid gap-5 md:grid-cols-[1.4fr,1fr]">
               <div className="space-y-2">
                 <Label htmlFor="name">Raw material name *</Label>
                 <Input
@@ -189,7 +189,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
               </div>
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-3">
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               <div className="space-y-2">
                 <Label>Unit *</Label>
                 <Controller
@@ -257,7 +257,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
             <CardDescription>Optional dimensional metadata improves traceability for sheets, rolls, resins, and additives.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2">
               <div className="grid gap-5 sm:grid-cols-[1fr,180px]">
                 <div className="space-y-2">
                   <Label htmlFor="thicknessValue">Thickness</Label>
@@ -328,7 +328,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
               </div>
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-[1fr,200px,1fr]">
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-[1fr,200px,1fr]">
               <div className="space-y-2">
                 <Label htmlFor="weightValue">Weight</Label>
                 <Input
@@ -429,6 +429,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add new category</DialogTitle>
+            <DialogDescription>Create a reusable category and attach it to this material without leaving the form.</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
             <Label htmlFor="newCategory">Category name</Label>

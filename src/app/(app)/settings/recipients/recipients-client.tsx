@@ -69,7 +69,7 @@ export function RecipientsClient({ recipients }: { recipients: RecipientData[] }
       />
 
       <Card className="overflow-hidden">
-        <div className="space-y-3 p-4 md:hidden">
+        <div className="grid gap-3 p-4 md:grid-cols-2 xl:hidden">
           {recipients.map((recipient) => (
             <Card key={recipient.id} className="rounded-[24px]">
               <CardContent className="space-y-4">
@@ -97,7 +97,7 @@ export function RecipientsClient({ recipients }: { recipients: RecipientData[] }
           ))}
         </div>
 
-        <div className="hidden md:block">
+        <div className="hidden xl:block">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/20 hover:bg-muted/20">
@@ -138,6 +138,7 @@ export function RecipientsClient({ recipients }: { recipients: RecipientData[] }
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add recipient</DialogTitle>
+            <DialogDescription>Create a reusable destination for transfer and delivery workflows.</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             <label htmlFor="new-recipient" className="text-sm font-medium text-foreground">

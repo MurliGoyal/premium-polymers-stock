@@ -69,7 +69,7 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
       />
 
       <Card className="overflow-hidden">
-        <div className="space-y-3 p-4 md:hidden">
+        <div className="grid gap-3 p-4 md:grid-cols-2 xl:hidden">
           {categories.map((category) => (
             <Card key={category.id} className="rounded-[24px]">
               <CardContent className="space-y-4">
@@ -98,7 +98,7 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
           ))}
         </div>
 
-        <div className="hidden md:block">
+        <div className="hidden xl:block">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/20 hover:bg-muted/20">
@@ -141,6 +141,7 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add category</DialogTitle>
+            <DialogDescription>Create a reusable category for future raw material records.</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             <label htmlFor="new-category" className="text-sm font-medium text-foreground">

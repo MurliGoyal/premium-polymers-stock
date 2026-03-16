@@ -14,7 +14,7 @@ import { ResponsivePageHeader } from "@/components/shared/responsive-page-header
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -148,7 +148,7 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Warehouse</Label>
                 <Input value={`${warehouse.code} / ${warehouse.name}`} readOnly className="bg-muted/50" />
@@ -215,7 +215,7 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
               </div>
             ) : null}
 
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="quantity">Quantity to transfer *</Label>
                 <Input
@@ -264,7 +264,7 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
               </div>
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="referenceNumber">Reference / slip number</Label>
                 <Input id="referenceNumber" placeholder="e.g. TRF-2026-041" {...register("referenceNumber")} />
@@ -296,6 +296,7 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add new recipient</DialogTitle>
+            <DialogDescription>Create a reusable recipient and continue the transfer without leaving this workflow.</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
             <Label htmlFor="recipientName">Recipient name</Label>

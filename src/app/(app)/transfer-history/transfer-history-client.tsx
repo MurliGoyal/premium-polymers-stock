@@ -105,7 +105,7 @@ export function TransferHistoryClient({
 
   const filters = (
     <>
-      <div className="relative xl:col-span-[1.5]">
+      <div className="relative md:col-span-2 xl:col-span-2">
         <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search by material, recipient, reference, category, or user"
@@ -193,7 +193,7 @@ export function TransferHistoryClient({
           ))}
         </SelectContent>
       </Select>
-      <div className="grid gap-3 sm:grid-cols-2 xl:col-span-2">
+      <div className="grid gap-3 sm:grid-cols-2 md:col-span-2 xl:col-span-2">
         <div className="space-y-1.5">
           <LabelText>From date</LabelText>
           <Input
@@ -231,10 +231,10 @@ export function TransferHistoryClient({
 
       <Card>
         <CardContent className="space-y-4">
-          <div className="hidden gap-3 xl:grid xl:grid-cols-[1.5fr_repeat(4,minmax(0,1fr))_minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="hidden gap-3 md:grid md:grid-cols-2 xl:grid-cols-4">
             {filters}
           </div>
-          <div className="space-y-3 xl:hidden">
+          <div className="space-y-3 md:hidden">
             <ResponsiveFiltersSheet activeCount={activeFilters.length} title="Transfer filters">
               {filters}
             </ResponsiveFiltersSheet>
@@ -274,7 +274,7 @@ export function TransferHistoryClient({
           </div>
         ) : (
           <>
-            <div className="space-y-3 p-4 xl:hidden">
+            <div className="grid gap-3 p-4 md:grid-cols-2 xl:hidden">
               {paginatedTransfers.map((transfer) => (
                 <Card key={transfer.id} className="cursor-pointer rounded-[24px]" onClick={() => setSelectedTransfer(transfer)}>
                   <CardContent className="space-y-4">
