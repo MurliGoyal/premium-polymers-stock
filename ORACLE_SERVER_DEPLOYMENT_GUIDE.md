@@ -1,757 +1,509 @@
-# Premium Polymers Deployment Guide for an Existing Oracle Server
+# Premium Polymers — Oracle Server Deployment Guide
 
-This guide explains how to deploy this app on an Oracle Cloud VM that already hosts another project.
-
-The guide is written for beginners and assumes:
-
-- your Oracle server is a Linux VM, usually Ubuntu
-- you can SSH into the server
-- you use WinSCP on Windows to access the server files
-- you already host at least one other app on the same server
-- you want the safest and simplest deployment path
-
-The recommended approach in this repo is:
-
-1. run this app with Docker Compose
-2. keep PostgreSQL private
-3. expose the app through Nginx on a separate subdomain
-4. use HTTPS with Let's Encrypt
-5. use Git as the main way to deploy and update code
-6. use WinSCP to view and edit server files when needed
-
-This is the best fit for an existing server because it keeps this project isolated from the other hosted app.
+> **Port:** `3001` · **Method:** GitHub Clone + SSH terminal · **Stack:** Docker Compose (Next.js + PostgreSQL)
 
 ---
 
-## 1. What You Are Deploying
+## Table of Contents
 
-This project is:
-
-- a Next.js 16 app
-- using Prisma
-- using PostgreSQL
-- using NextAuth credentials login
-- expecting these required environment variables:
-  - `DATABASE_URL`
-  - `NEXTAUTH_SECRET`
-  - `NEXTAUTH_URL`
-
-Important repo facts:
-
-- the app starts with `pnpm start`
-- the database schema is applied with `pnpm db:push`
-- demo data is inserted with `pnpm db:seed`
-- this repo does **not** currently use Prisma migrations for deployment
-
-That last point matters:
-
-- on a fresh database, `pnpm db:push` is fine
-- on a database with real data, always back up first before schema changes
+1. [What You Need Before Starting](#1-what-you-need-before-starting)
+2. [Architecture Overview](#2-architecture-overview)
+3. [Step 1 — Connect to Your Oracle Server](#3-step-1--connect-to-your-oracle-server)
+4. [Step 2 — Install Docker and Git on the Server](#4-step-2--install-docker-and-git-on-the-server)
+5. [Step 3 — Clone the Repository from GitHub](#5-step-3--clone-the-repository-from-github)
+6. [Step 4 — Create the Production Environment File](#6-step-4--create-the-production-environment-file)
+7. [Step 5 — Create docker-compose.yml](#7-step-5--create-docker-composeyml)
+8. [Step 6 — Build the Docker Image](#8-step-6--build-the-docker-image)
+9. [Step 7 — Start PostgreSQL](#9-step-7--start-postgresql)
+10. [Step 8 — Set Up the Database](#10-step-8--set-up-the-database)
+11. [Step 9 — Start the App](#11-step-9--start-the-app)
+12. [Step 10 — Test It](#12-step-10--test-it)
+13. [Step 11 — Open Port 3001 in Oracle Cloud](#13-step-11--open-port-3001-in-oracle-cloud)
+14. [Step 12 — Open Linux Firewall](#14-step-12--open-linux-firewall)
+15. [Step 13 — Access from Your Browser](#15-step-13--access-from-your-browser)
+16. [How to Update the App Later Using GitHub](#16-how-to-update-the-app-later-using-github)
+17. [How to Back Up the Database](#17-how-to-back-up-the-database)
+18. [Useful Docker Commands](#18-useful-docker-commands)
+19. [Troubleshooting](#19-troubleshooting)
+20. [Optional — Nginx Reverse Proxy + HTTPS](#20-optional--nginx-reverse-proxy--https)
+21. [Production Security Checklist](#21-production-security-checklist)
 
 ---
 
-## 2. Recommended Architecture
+## 1. What You Need Before Starting
 
-Use this layout:
+| Item | Details |
+|------|---------|
+| **Oracle Cloud VM** | A running Linux instance (Ubuntu recommended) |
+| **SSH access** | Your server's public IP + SSH key or password (using PuTTY or Windows Terminal) |
+| **GitHub Repo URL** | e.g., `https://github.com/yourusername/premiumpolymers.git` |
+| **GitHub Token** | A GitHub Personal Access Token (classic or fine-grained) with `repo` access |
+| **Oracle security rule** | Port `3001` open for inbound TCP (you said this is already done ✅) |
 
-```text
-Internet
-  ->
-DNS for stocks.yourdomain.com
-  ->
-Nginx on Oracle server
-  ->
-127.0.0.1:3001
-  ->
-Docker container running this Next.js app
-  ->
-PostgreSQL container or existing PostgreSQL server
+---
+
+## 2. Architecture Overview
+
+```
+GitHub Repository                  Oracle Cloud Server
+┌─────────────┐                   ┌──────────────────────────────────┐
+│             │                   │  /opt/premium-polymers/app/      │
+│ Source Code │───── Clone ──────▶│                                  │
+│             │    & Pull         │  ┌────────────────────────────┐  │
+└─────────────┘                   │  │ Docker Compose             │  │
+                                  │  │  ┌──────────┐ ┌─────────┐ │  │
+Your Browser                      │  │  │ Next.js  │ │Postgres │ │  │
+┌─────────────┐                   │  │  │ App:3001 │─│ DB:5432 │ │  │
+│  Browser    │◀──── Port 3001 ──│  │  └──────────┘ └─────────┘ │  │
+└─────────────┘                   │  └────────────────────────────┘  │
+                                  └──────────────────────────────────┘
 ```
 
-Why this is recommended:
-
-- your existing hosted project stays separate
-- this app gets its own container and its own database
-- Nginx can route traffic by domain name
-- the app port does not need to be public
-
-Recommended domain style:
-
-- `stocks.yourdomain.com`
-
-Avoid path-based deployment like:
-
-- `yourdomain.com/stocks`
-
-A separate subdomain is much easier with Next.js and NextAuth.
+- Target deployment directory: `/opt/premium-polymers/app`
+- The app runs on port **3001** inside Docker
+- You access the app from your browser at `http://YOUR_SERVER_IP:3001`
 
 ---
 
-## 3. Before You Start
+## 3. Step 1 — Connect to Your Oracle Server
 
-Prepare these things first:
+Open Windows Terminal, PowerShell, or PuTTY on your PC and SSH into your server:
 
-- your server public IP
-- SSH access to the Oracle server
-- a domain or subdomain you control
-- `sudo` access on the server
-- a decision about database location:
-  - easier: dedicated PostgreSQL container for this app
-  - alternative: reuse an existing PostgreSQL server, but create a separate database and user
-
-Also decide where the code will come from:
-
-- best: clone from GitHub with Git
-- avoid manual zip uploads for normal deployment
-
-Also prepare these Windows-side tools:
-
-- WinSCP
-- Git installed on your computer
-- either built-in Windows SSH or PuTTY
-
-Why this guide is Git-first:
-
-- future updates become much easier
-- you can run `git pull` instead of uploading files every time
-- the server stays cleaner and more predictable
-- you reduce the chance of missing a file during updates
-
----
-
-## 4. Important Production Warnings for This Repo
-
-Read this before deploying.
-
-### 4.1 Demo seed users
-
-The current seed script creates demo users such as:
-
-- `admin@premiumpolymers.com`
-- password: `admin123`
-
-Do **not** expose that to the internet as-is.
-
-Recommended production-safe options:
-
-1. edit `prisma/seed.ts` before seeding and replace the demo users with your real users and strong passwords
-2. or seed once in a private environment, then immediately change all seeded credentials before public access
-
-If you skip seeding entirely, you must still create at least one admin user manually in PostgreSQL, otherwise you cannot log in.
-
-### 4.2 Fresh database vs existing database
-
-If this is a brand new deployment with a new empty database:
-
-- `pnpm db:push` is the correct first step
-
-If this app will point to a database that already contains data:
-
-- back it up before every schema change
-- do not treat `db:push` casually
-
-### 4.3 This app now requires production env vars
-
-In production, the app will fail early if these are missing:
-
-- `DATABASE_URL`
-- `NEXTAUTH_SECRET`
-- `NEXTAUTH_URL`
-
-That is intentional and good for production.
-
----
-
-## 5. Check What Is Already Running on the Server
-
-SSH into the server:
-
-```bash
+```powershell
 ssh ubuntu@YOUR_SERVER_IP
 ```
 
-If your server user is not `ubuntu`, replace it with the correct username.
-
-Now inspect the current server state:
-
-```bash
-whoami
-pwd
-uname -m
-docker ps
-sudo ss -tulpn
-```
-
-What to look for:
-
-- `uname -m`
-  - `x86_64` means AMD/Intel
-  - `aarch64` means ARM, common on Oracle Ampere
-- `docker ps`
-  - shows whether Docker is already being used for your other app
-- `sudo ss -tulpn`
-  - shows which ports are already in use
-
-Pay special attention to:
-
-- `80` for HTTP
-- `443` for HTTPS
-- `3000`, `3001`, `3002` or similar app ports
-- `5432` for PostgreSQL
-
-If another app already uses port `3001`, choose a different port for this app such as `3002`.
-
-### 5.1 How to use WinSCP in this deployment
-
-In this guide:
-
-- Git is used to deploy and update the application code
-- Docker Compose is used to run the app
-- WinSCP is used to access files on the server in a visual way
-
-Use WinSCP for:
-
-- connecting to the server with SFTP
-- browsing folders like `/opt/premium-polymers/app`
-- editing files like:
-  - `.env.production`
-  - `docker-compose.yml`
-  - `Dockerfile`
-- downloading backups from `/opt/premium-polymers/backups`
-
-Do **not** use WinSCP as your normal code deployment method.
-
-For code, use Git:
-
-- first deploy: `git clone`
-- later deploys: `git pull`
-
-### 5.2 Suggested Windows workflow
-
-Use your tools like this:
-
-1. WinSCP
-   - for file access and editing deployment files
-2. Terminal
-   - for Git, Docker, Nginx, and Certbot commands
-
-If WinSCP offers an integrated terminal or `Open in PuTTY`, that is fine to use. Otherwise use PowerShell, Windows Terminal, or PuTTY separately.
-
-### 5.3 WinSCP connection settings
-
-In WinSCP, use:
-
-- File protocol: `SFTP`
-- Host name: `YOUR_SERVER_IP` or your hostname
-- Port number: `22`
-- User name: your Linux user, often `ubuntu`
-- Password or private key: whichever your server uses
-
-After login, bookmark this folder:
-
-- `/opt/premium-polymers`
+> 💡 **Throughout this guide**, every command starting with `$` should be typed in this **SSH terminal** on the server. Do not type the `$` character itself.
 
 ---
 
-## 6. Decide Your Final URL
+## 4. Step 2 — Install Docker and Git on the Server
 
-Use a dedicated subdomain for this app.
-
-Example:
-
-- app: `stocks.example.com`
-- existing app: `erp.example.com`
-
-Set the DNS record first:
-
-- create an `A` record for `stocks.example.com`
-- point it to your Oracle server public IP
-
-You can verify DNS later with:
-
-```bash
-nslookup stocks.example.com
-```
-
-The result should point to your Oracle server IP.
-
----
-
-## 7. Install Docker and Docker Compose
-
-If Docker is already installed, verify it:
+First, check if Docker and Git are already installed:
 
 ```bash
 docker --version
 docker compose version
+git --version
 ```
 
-If Docker is **not** installed, use these commands on Ubuntu:
+If everything shows a version number, **skip to Step 3**.
+
+If **Git** is missing:
+```bash
+sudo apt update
+sudo apt install -y git
+```
+
+If **Docker** is missing, run these commands:
 
 ```bash
 sudo apt update
 sudo apt install -y ca-certificates curl gnupg
+
 sudo install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" | \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
 sudo apt update
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
 sudo usermod -aG docker $USER
 newgrp docker
-docker --version
-docker compose version
 ```
-
-What this does:
-
-- installs Docker Engine
-- installs the Docker Compose plugin
-- allows your current user to run Docker without `sudo`
 
 ---
 
-## 8. Create a Folder for This Project
+## 5. Step 3 — Clone the Repository from GitHub
 
-Keep every app on the server in its own folder.
+Instead of uploading files manually, we will pull them securely from GitHub.
 
-Create a deployment directory:
+First, create the deployment root folder:
 
 ```bash
 sudo mkdir -p /opt/premium-polymers
+sudo mkdir -p /opt/premium-polymers/backups
 sudo chown -R $USER:$USER /opt/premium-polymers
 cd /opt/premium-polymers
 ```
 
-Recommended structure:
+Now clone your repository into a folder called `app`.
 
-```text
-/opt/premium-polymers/
-  app/
-  backups/
-```
-
-Create the parent folder and the backup folder:
+Replace `yourusername` and `yourrepo` below. When prompted for a password, **paste your GitHub Personal Access Token (PAT)**, not your regular GitHub account password.
 
 ```bash
-mkdir -p /opt/premium-polymers/backups
+git clone https://github.com/yourusername/yourrepo.git app
 ```
 
-Do not manually create `/opt/premium-polymers/app` yet.
+If you want to bake the token into the URL so Git remembers it for future pulls (convenient but slightly less secure on shared servers), you can do:
 
-Git will create that folder during `git clone`.
+```bash
+git clone https://yourusername:YOUR_GITHUB_TOKEN@github.com/yourusername/yourrepo.git app
+```
+
+Verify the files are there:
+```bash
+cd /opt/premium-polymers/app
+ls -la
+```
 
 ---
 
-## 9. Clone the Code with Git
+## 6. Step 4 — Create the Production Environment File
 
-This guide uses Git as the official deployment method.
-
-That means:
-
-- first deployment uses `git clone`
-- future deployments use `git pull`
-
-Avoid using WinSCP to upload the whole source code every time. That makes future updates messy and increases the chance of missing files.
-
-### 9.1 Install Git on the server
-
-If Git is already installed:
-
-```bash
-git --version
-```
-
-If it is not installed:
-
-```bash
-sudo apt update
-sudo apt install -y git
-git --version
-```
-
-### 9.2 If your repository is public
-
-Use HTTPS clone:
-
-```bash
-cd /opt/premium-polymers
-git clone YOUR_REPOSITORY_URL app
-cd app
-```
-
-Example:
-
-```bash
-git clone https://github.com/your-user/premium-polymers.git app
-cd app
-```
-
-### 9.3 If your repository is private
-
-The best long-term option is an SSH deploy key.
-
-Generate a key on the server:
-
-```bash
-ssh-keygen -t ed25519 -C "premium-polymers-deploy"
-```
-
-Press Enter through the prompts. For a deployment key, leaving the passphrase empty is common.
-
-Show the public key:
-
-```bash
-cat ~/.ssh/id_ed25519.pub
-```
-
-Copy the output and add it to GitHub:
-
-1. open your repository on GitHub
-2. go to `Settings`
-3. go to `Deploy keys`
-4. click `Add deploy key`
-5. paste the public key
-
-Then test the SSH connection:
-
-```bash
-ssh -T git@github.com
-```
-
-Then clone the repo:
-
-```bash
-cd /opt/premium-polymers
-git clone git@github.com:your-user/premium-polymers.git app
-cd app
-```
-
-### 9.4 Verify the clone
-
-Run:
-
-```bash
-pwd
-git remote -v
-git branch
-ls
-```
-
-You should see:
-
-- the repo in `/opt/premium-polymers/app`
-- a valid Git remote
-- files like:
-  - `package.json`
-  - `pnpm-lock.yaml`
-  - `prisma/`
-  - `src/`
-
-### 9.5 What to do in WinSCP after cloning
-
-After the repo is cloned with Git:
-
-1. open WinSCP
-2. connect to the server
-3. browse to `/opt/premium-polymers/app`
-4. verify that the repo files are present
-
-From this point onward:
-
-- use terminal for `git pull`
-- use WinSCP to edit deployment files and download backups
-
----
-
-## 10. Create the Production Docker Files
-
-This repo now includes starter deployment files:
-
-- `Dockerfile`
-- `.dockerignore`
-- `docker-compose.example.yml`
-- `.env.production.example`
-
-You can create these files in either of two ways:
-
-- use `nano` in the terminal
-- use WinSCP's editor if you are more comfortable editing files visually
-
-For beginners, WinSCP is often easier for these deployment files.
-
-You should end up with these deployment files in the project root:
-
-- `docker-compose.yml`
-- `.env.production`
-
-### 10.1 Review `Dockerfile`
-
-This file already exists in the repo. Verify it:
-
-```bash
-cat Dockerfile
-```
-
-Why this Dockerfile is simple:
-
-- it installs dependencies
-- copies the full app
-- builds the app
-- starts Next.js in production mode
-- it also keeps Prisma CLI available in the container, which is useful for `db:push` and `db:seed`
-
-### 10.2 Review `.dockerignore`
-
-This file also already exists in the repo:
-
-```bash
-cat .dockerignore
-```
-
-Why this matters:
-
-- it keeps secrets out of the Docker build context
-- it makes builds faster
-- it prevents copying local junk into the image
-
-### 10.3 Create `docker-compose.yml`
-
-Create the file:
-
-```bash
-cp docker-compose.example.yml docker-compose.yml
-```
-
-Then open it and edit the values you want to customize:
-
-```bash
-nano docker-compose.yml
-```
-
-Very important:
-
-- `127.0.0.1:3001:3000` means the app is only exposed on localhost
-- Nginx on the same server will forward public traffic to it
-- PostgreSQL is **not** publicly exposed
-
-This is safer than publishing `3001:3000` to the whole internet.
-
----
-
-## 11. Create the Production Environment File
-
-Create the file:
+Still in the SSH terminal inside the `app` folder:
 
 ```bash
 cp .env.production.example .env.production
-```
-
-Then open and edit the values:
-
-```bash
 nano .env.production
 ```
 
-Explanation:
-
-- `DATABASE_URL`
-  - points the app to the `postgres` service in Docker Compose
-- `NEXTAUTH_SECRET`
-  - used to sign login sessions
-- `NEXTAUTH_URL`
-  - must be the final public HTTPS URL
-- `NEXT_PUBLIC_APP_LOCALE`
-  - optional app display locale
-- `NEXT_PUBLIC_APP_TIME_ZONE`
-  - optional app timezone
-- `NODE_ENV=production`
-  - ensures production behavior
-
-Generate a strong secret:
-
-```bash
-openssl rand -hex 32
-```
-
-Then paste the output into `NEXTAUTH_SECRET`.
-
-Example:
+Fill in these values:
 
 ```env
-NEXTAUTH_SECRET=9f7b0e0d4d0e1d7f9d9c9f5a33df2f52d9e9b8c44f9c7d1e1f8a4c0b1f3d2a7c
+DATABASE_URL=postgresql://premium_polymers:YOUR_STRONG_DB_PASSWORD@postgres:5432/premium_polymers
+NEXTAUTH_SECRET=YOUR_RANDOM_SECRET_HERE
+NEXTAUTH_URL=http://YOUR_SERVER_IP:3001
+NEXT_PUBLIC_APP_LOCALE=en-IN
+NEXT_PUBLIC_APP_TIME_ZONE=Asia/Kolkata
+NODE_ENV=production
 ```
 
-If you prefer not to use `nano`, create or edit `.env.production` in WinSCP. That is a good use of WinSCP because this file is server-specific and usually should not be committed to Git.
+### Replace these placeholders:
+
+| Placeholder | What to Put |
+|------------|-------------|
+| `YOUR_STRONG_DB_PASSWORD` | A strong password for PostgreSQL (e.g., `Pr3m!um_P0ly2026`) |
+| `YOUR_RANDOM_SECRET_HERE` | Generate one by running `openssl rand -hex 32` in the terminal, or type a long random string |
+| `YOUR_SERVER_IP` | Your Oracle server's public IP address |
+
+Save and exit `nano`: Press `Ctrl+O`, then `Enter`, then `Ctrl+X`.
 
 ---
 
-## 12. If You Already Have PostgreSQL on the Server
+## 7. Step 5 — Create docker-compose.yml
 
-If your existing project already uses PostgreSQL and you want to reuse that PostgreSQL server, you can.
-
-Do this safely:
-
-1. create a **new database**
-2. create a **new database user**
-3. give that user access only to this app's database
-4. do **not** reuse the same database and user as another app
-
-In that case:
-
-- remove the `postgres` service from `docker-compose.yml`
-- change `DATABASE_URL` to point to your existing PostgreSQL server
-
-Example `DATABASE_URL` for an existing host PostgreSQL:
-
-```env
-DATABASE_URL=postgresql://premium_polymers:YOUR_PASSWORD@YOUR_DB_HOST:5432/premium_polymers
+```bash
+cp docker-compose.example.yml docker-compose.yml
+nano docker-compose.yml
 ```
 
-If PostgreSQL is running directly on the same Oracle host:
+The file should look like this:
 
-```env
-DATABASE_URL=postgresql://premium_polymers:YOUR_PASSWORD@host.docker.internal:5432/premium_polymers
+```yaml
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: premium-polymers-app
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+
+  postgres:
+    image: postgres:16
+    container_name: premium-polymers-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: premium_polymers
+      POSTGRES_USER: premium_polymers
+      POSTGRES_PASSWORD: YOUR_STRONG_DB_PASSWORD
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U premium_polymers -d premium_polymers"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - premium-polymers-postgres:/var/lib/postgresql/data
+
+volumes:
+  premium-polymers-postgres:
 ```
 
-On Linux, `host.docker.internal` may not always be available by default. If that does not work, use the host machine IP or keep the dedicated Postgres container approach from this guide.
+### ⚠️ Critical: Match the Password!
 
-If you are a beginner, use the dedicated Postgres container. It is simpler.
+The `POSTGRES_PASSWORD` in this file **must match** the password you set in `DATABASE_URL` in `.env.production`.
+
+Save and exit `nano`: Press `Ctrl+O`, then `Enter`, then `Ctrl+X`.
 
 ---
 
-## 13. Edit the Seed Script Before Production
+## 8. Step 6 — Build the Docker Image
 
-This step matters.
-
-Open the seed file:
-
-```bash
-nano prisma/seed.ts
-```
-
-Find the current demo users. They include passwords based on:
-
-```ts
-const passwordHash = await bcrypt.hash("admin123", 12);
-```
-
-For a public deployment, you should do one of these:
-
-### Safer approach
-
-Replace the demo emails and password with your real accounts before first seed.
-
-### Quick approach
-
-Seed as-is, log in immediately, and then rotate credentials before public release.
-
-The safer approach is better.
-
-If you have a team, also consider reducing the number of pre-created accounts to only what you really need.
-
----
-
-## 14. Build and Start the Containers
-
-Now move into the project directory:
-
-```bash
-cd /opt/premium-polymers/app
-```
-
-Build the image:
+Build the image. This will take **5–15 minutes** the first time.
 
 ```bash
 docker compose build
 ```
 
-Start only PostgreSQL first:
+You will see a lot of output ending with something like:
+```
+ => exporting to image
+ => => naming to docker.io/library/app-app
+```
+
+---
+
+## 9. Step 7 — Start PostgreSQL
+
+Start only the database container first:
 
 ```bash
 docker compose up -d postgres
 ```
 
-Check that PostgreSQL is healthy:
+Wait 10 seconds, then verify it's healthy:
 
 ```bash
 docker compose ps
-docker compose logs postgres
 ```
 
-Now generate Prisma client inside the container:
+You should see `Up x seconds (healthy)`.
 
+---
+
+## 10. Step 8 — Set Up the Database
+
+Run these commands to create tables and insert demo data:
+
+### Generate Prisma Client
 ```bash
-docker compose run --rm app pnpm db:generate
+docker compose run --rm app npx prisma generate
 ```
 
-Apply the schema:
-
+### Create Database Tables
 ```bash
-docker compose run --rm app pnpm db:push
+docker compose run --rm app npx prisma db push
 ```
 
-Seed initial data:
-
+### Seed Demo Data
 ```bash
-docker compose run --rm app pnpm db:seed
+docker compose run --rm app npx tsx prisma/seed.ts
 ```
 
-Then start the app:
+> ⚠️ **Important:** The seed creates demo users like `admin@premiumpolymers.com` with password `admin123`. Change these passwords immediately after your first login!
+
+---
+
+## 11. Step 9 — Start the App
 
 ```bash
 docker compose up -d app
 ```
 
-Check status:
-
+Check it's running:
 ```bash
 docker compose ps
 docker compose logs app
 ```
 
-You want to see the app container running without crashing.
+---
 
-At this stage, the app should be reachable only from the server itself on:
+## 12. Step 10 — Test It
 
-- `http://127.0.0.1:3001`
-
-Test it from the server:
+Test locally from the server terminal:
 
 ```bash
-curl http://127.0.0.1:3001/login
+curl http://localhost:3001/login
 ```
 
-If you get HTML back, the app is running.
+If you get HTML back (a wall of text), the app is working! 🎉
 
 ---
 
-## 15. Install and Configure Nginx
+## 13. Step 11 — Open Port 3001 in Oracle Cloud
 
-If Nginx is already installed because another app is using it, skip the install command and only add a new site config.
+You mentioned you've already done this ✅. To verify:
+1. Go to Oracle Cloud Console → Networking → Virtual Cloud Networks → Security Lists
+2. Ensure there's an Ingress Rule allowing TCP port `3001`.
 
-If Nginx is not installed:
+---
+
+## 14. Step 12 — Open Linux Firewall
+
+Oracle Linux instances often block ports via iptables.
+
+**For Ubuntu:**
+```bash
+sudo iptables -I INPUT -p tcp --dport 3001 -j ACCEPT
+sudo netfilter-persistent save
+```
+
+**For Oracle Linux:**
+```bash
+sudo firewall-cmd --permanent --add-port=3001/tcp
+sudo firewall-cmd --reload
+```
+
+---
+
+## 15. Step 13 — Access from Your Browser
+
+Open your browser and go to:
+
+```
+http://YOUR_SERVER_IP:3001
+```
+
+Log in with:
+- **Email:** `admin@premiumpolymers.com`
+- **Password:** `admin123`
+
+---
+
+## 16. How to Update the App Later Using GitHub
+
+When you make changes to your code locally and push them to GitHub, follow these exact steps to update your live server securely and cleanly:
+
+1. **SSH into the server:**
+```powershell
+ssh ubuntu@YOUR_SERVER_IP
+```
+
+2. **Navigate to the project folder:**
+```bash
+cd /opt/premium-polymers/app
+```
+
+3. **Pull the latest code from GitHub:**
+```bash
+git stash  # Safely stash any local accidental modifications
+git pull
+```
+*(If prompted, enter your GitHub username and Personal Access Token)*
+
+4. **Back up the database (optional but highly recommended):**
+```bash
+docker compose exec -T postgres pg_dump -U premium_polymers premium_polymers > /opt/premium-polymers/backups/backup_$(date +%F_%H-%M-%S).sql
+```
+
+5. **Rebuild the Docker image with the new code:**
+```bash
+docker compose build app
+```
+
+6. **Apply any database schema changes (run this only if you modified `prisma/schema.prisma`):**
+```bash
+docker compose run --rm app npx prisma db push
+```
+
+7. **Restart the app container to run the new code:**
+```bash
+docker compose up -d app
+```
+
+8. **Check the logs to verify it started smoothly:**
+```bash
+docker compose logs -f app
+```
+*(Press `Ctrl+C` to close logs)*
+
+### Quick Update Command (Copy-Paste)
+For a standard update where you didn't change the database schema, simply run:
+```bash
+cd /opt/premium-polymers/app && git pull && docker compose build app && docker compose up -d app && docker compose logs -f app
+```
+
+---
+
+## 17. How to Back Up the Database
+
+### Create a Backup
+```bash
+cd /opt/premium-polymers/app
+docker compose exec -T postgres pg_dump -U premium_polymers premium_polymers > /opt/premium-polymers/backups/backup_$(date +%F_%H-%M-%S).sql
+```
+
+### Download a Backup to Your PC
+Use WinSCP (Server File Protocol) or `scp` to download the `.sql` files from `/opt/premium-polymers/backups/` to your local computer for safekeeping.
+
+---
+
+## 18. Useful Docker Commands
+
+| Command | What It Does |
+|---------|-------------|
+| `docker compose ps` | Show running containers |
+| `docker compose logs app` | View app logs |
+| `docker compose logs -f app` | Watch app logs in real-time |
+| `docker compose logs postgres` | View database logs |
+| `docker compose restart app` | Restart the app |
+| `docker compose stop` | Stop everything |
+| `docker compose start` | Start everything |
+| `docker compose down` | Stop & remove containers (data is saved) |
+| `docker compose up -d` | Start everything in background |
+| `docker compose build app` | Rebuild the app image |
+| `docker compose exec app sh` | Open a shell inside the app |
+
+---
+
+## 19. Troubleshooting
+
+### Problem: Docker build fails with "Cannot find module" or missing file error
+**Cause:** The files weren't pulled completely from GitHub.
+**Fix:** 
+```bash
+cd /opt/premium-polymers/app
+git status
+git pull
+```
+
+### Problem: `Error: DATABASE_URL is not configured`
+**Cause:** The `.env.production` file is missing or doesn't contain `DATABASE_URL`.
+**Fix:** Recreate it using `cp .env.production.example .env.production` and fill the variables. Restart: `docker compose restart app`
+
+### Problem: Database connection error / `ECONNREFUSED`
+**Cause:** PostgreSQL container is not running or the password doesn't match.
+**Fix:** Check that the postgres container shows `(healthy)`. Ensure the `POSTGRES_PASSWORD` in `docker-compose.yml` matches the password in `DATABASE_URL`.
+
+### Problem: Can log in but sessions don't work / redirect loop
+**Cause:** `NEXTAUTH_URL` doesn't match the URL you're using in the browser.
+**Fix:** Edit `.env.production` and set: `NEXTAUTH_URL=http://YOUR_SERVER_IP:3001`
+
+### Problem: Built-in `git pull` throws an error about local changes
+**Cause:** You edited a file directly on the server (like `package.json` or `schema.prisma`).
+**Fix:**
+```bash
+git stash
+git pull
+```
+
+---
+
+## 20. Optional — Nginx Reverse Proxy + HTTPS
+
+If you want to use a domain name (like `stocks.yourdomain.com`) instead of `IP:3001`, you can set up Nginx.
+
+### Install Nginx
 
 ```bash
 sudo apt update
 sudo apt install -y nginx
 ```
 
-Create a new Nginx site:
+### Create Site Configuration
 
 ```bash
 sudo nano /etc/nginx/sites-available/premium-polymers
 ```
 
-Paste this:
+Paste this (replace `stocks.yourdomain.com`):
 
 ```nginx
 server {
     listen 80;
-    server_name stocks.example.com;
+    server_name stocks.yourdomain.com;
 
     location / {
         proxy_pass http://127.0.0.1:3001;
@@ -767,515 +519,61 @@ server {
 }
 ```
 
-Replace:
-
-- `stocks.example.com`
-
-with your real domain.
-
-Enable the site:
+### Enable the Site
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/premium-polymers /etc/nginx/sites-enabled/premium-polymers
-```
-
-Test the config:
-
-```bash
+sudo ln -s /etc/nginx/sites-available/premium-polymers /etc/nginx/sites-enabled/
 sudo nginx -t
-```
-
-If the test passes, reload Nginx:
-
-```bash
 sudo systemctl reload nginx
 ```
 
----
-
-## 16. Enable HTTPS with Let's Encrypt
-
-Install Certbot:
+### Add HTTPS with Let's Encrypt
 
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d stocks.yourdomain.com
 ```
 
-Request a certificate:
-
-```bash
-sudo certbot --nginx -d stocks.example.com
+After HTTPS is set up, update `.env.production`:
+```env
+NEXTAUTH_URL=https://stocks.yourdomain.com
 ```
 
-Follow the prompts.
-
-Choose the redirect option when asked so HTTP is automatically redirected to HTTPS.
-
-After that, test the renewal timer:
-
-```bash
-sudo systemctl status certbot.timer
-```
-
-You should now be able to open:
-
-- `https://stocks.example.com/login`
+Then restart: `docker compose restart app`
 
 ---
 
-## 17. Open the Correct Firewall Rules
+## 21. Production Security Checklist
 
-You need to handle both:
+Before allowing public access, verify:
 
-- Oracle Cloud network rules
-- Linux firewall rules on the server, if enabled
-
-### 17.1 Oracle Cloud security rules
-
-In Oracle Cloud, open inbound traffic for:
-
-- TCP 22 for SSH
-- TCP 80 for HTTP
-- TCP 443 for HTTPS
-
-You do **not** need to open:
-
-- `3001`
-- `5432`
-
-Those should stay private.
-
-### 17.2 Ubuntu firewall
-
-If `ufw` is active, allow:
-
-```bash
-sudo ufw allow OpenSSH
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw status
-```
-
-Again, do not open `3001` or `5432` to the public internet.
+- [ ] `NEXTAUTH_SECRET` is a long random string (not the example value)
+- [ ] `NEXTAUTH_URL` matches the URL users will type in their browser
+- [ ] Database password is strong (not `CHANGE_THIS_DB_PASSWORD`)
+- [ ] Demo user passwords have been changed after first login
+- [ ] PostgreSQL port (5432) is NOT exposed to the internet
+- [ ] Oracle Cloud security rules only allow port 3001 (and 22 for SSH)
+- [ ] Database backup has been taken and downloaded to your PC
 
 ---
 
-## 18. First Login and Post-Deploy Checklist
+## Quick Reference Card
 
-Once the app is live:
-
-1. open `https://stocks.example.com/login`
-2. log in with the admin account you created or seeded
-3. verify the main pages load
-4. verify transfers, materials, and dashboard render correctly
-
-After first login, do these checks:
-
-- login works
-- notifications open
-- dashboard loads charts
-- warehouses page loads
-- add material form works
-- transfer page works
-- history pages work
-
-Security checklist:
-
-- `NEXTAUTH_URL` is the real HTTPS domain
-- `NEXTAUTH_SECRET` is long and random
-- demo passwords are removed or changed
-- PostgreSQL is not public
-- app port `3001` is not public
-- DNS points to the correct server
-
----
-
-## 19. Useful Docker Commands
-
-View running containers:
-
-```bash
-docker compose ps
 ```
-
-View app logs:
-
-```bash
-docker compose logs -f app
+┌────────────────────────────────────────────────────────┐
+│  Premium Polymers — Quick Commands                     │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│  Update code limits:   git pull                        │
+│  Start everything:     docker compose up -d            │
+│  Stop everything:      docker compose down             │
+│  View app logs:        docker compose logs -f app      │
+│  Rebuild after change: docker compose build app        │
+│  Restart app:          docker compose up -d app        │
+│                                                        │
+│  Project location:     /opt/premium-polymers/app/      │
+│  Environment file:     .env.production                 │
+│  App URL:              http://YOUR_IP:3001             │
+│                                                        │
+└────────────────────────────────────────────────────────┘
 ```
-
-View database logs:
-
-```bash
-docker compose logs -f postgres
-```
-
-Restart only the app:
-
-```bash
-docker compose restart app
-```
-
-Stop everything:
-
-```bash
-docker compose down
-```
-
-Start everything again:
-
-```bash
-docker compose up -d
-```
-
-Rebuild after code changes:
-
-```bash
-docker compose build app
-docker compose up -d app
-```
-
-Open a shell inside the app container:
-
-```bash
-docker compose exec app sh
-```
-
-Run Prisma commands inside the app container:
-
-```bash
-docker compose exec app pnpm db:generate
-docker compose exec app pnpm db:push
-docker compose exec app pnpm db:seed
-```
-
----
-
-## 20. How to Update the App Later
-
-This is one of the main reasons this guide uses Git.
-
-For future updates, do **not**:
-
-- upload a new zip file
-- replace the whole app folder in WinSCP
-- drag and drop source code directly into production every time
-
-Instead, update the app with Git.
-
-### 20.1 Standard update flow
-
-```bash
-cd /opt/premium-polymers/app
-git status
-git pull
-docker compose build app
-docker compose run --rm app pnpm db:generate
-docker compose run --rm app pnpm db:push
-docker compose up -d app
-docker compose logs -f app
-```
-
-### 20.2 Safer update flow with a backup first
-
-This is the version you should prefer in real use:
-
-```bash
-cd /opt/premium-polymers/app
-docker compose exec -T postgres pg_dump -U premium_polymers premium_polymers > /opt/premium-polymers/backups/premium_polymers_$(date +%F_%H-%M-%S).sql
-git pull
-docker compose build app
-docker compose run --rm app pnpm db:generate
-docker compose run --rm app pnpm db:push
-docker compose up -d app
-docker compose logs -f app
-```
-
-### 20.3 What each command does
-
-- `git status`
-  - shows whether the server has local changes
-- `git pull`
-  - gets the latest code from GitHub
-- `docker compose build app`
-  - rebuilds the app image
-- `docker compose run --rm app pnpm db:generate`
-  - regenerates Prisma client files
-- `docker compose run --rm app pnpm db:push`
-  - applies schema updates
-- `docker compose up -d app`
-  - restarts the app container
-- `docker compose logs -f app`
-  - lets you confirm the new release started correctly
-
-### 20.4 What WinSCP should be used for during updates
-
-WinSCP is still useful during updates, but not for the code deployment itself.
-
-Use WinSCP for:
-
-- checking `.env.production`
-- editing server-only deployment files
-- downloading database backups
-- visually inspecting files after deployment
-
-Do not use WinSCP to overwrite the `src/` folder on each release.
-
-### 20.5 If `git pull` shows local changes
-
-Run:
-
-```bash
-cd /opt/premium-polymers/app
-git status
-```
-
-If the local changes are only deployment files like:
-
-- `.env.production`
-- `docker-compose.yml`
-- `Dockerfile`
-
-that can be normal.
-
-If the changes are inside app source files like:
-
-- `src/`
-- `prisma/`
-
-then someone probably edited production directly. Stop and inspect before doing anything destructive.
-
-Important update rule:
-
-- back up the database before `db:push`
-
----
-
-## 21. How to Back Up the Database
-
-If you use the Postgres container from this guide:
-
-```bash
-cd /opt/premium-polymers/app
-docker compose exec -T postgres pg_dump -U premium_polymers premium_polymers > /opt/premium-polymers/backups/premium_polymers_$(date +%F_%H-%M-%S).sql
-```
-
-This creates a SQL backup file.
-
-To see the backups:
-
-```bash
-ls -lh /opt/premium-polymers/backups
-```
-
-Recommended:
-
-- back up before every app update
-- back up before every schema change
-- copy backups off the server as well
-
-With WinSCP, you can:
-
-1. connect to the server
-2. open `/opt/premium-polymers/backups`
-3. download the `.sql` backup file to your Windows machine
-
-That gives you a copy outside the server, which is a good habit.
-
----
-
-## 22. Common Problems and Fixes
-
-### Problem: `NEXTAUTH_URL is required in production`
-
-Cause:
-
-- `.env.production` is missing `NEXTAUTH_URL`
-
-Fix:
-
-- add the correct HTTPS URL
-- restart the app container
-
-### Problem: `NEXTAUTH_SECRET is not configured`
-
-Cause:
-
-- secret missing from env file
-
-Fix:
-
-- generate a new random secret
-- add it to `.env.production`
-- restart the app container
-
-### Problem: database connection error
-
-Cause:
-
-- wrong `DATABASE_URL`
-- Postgres container not healthy
-- wrong username/password
-
-Fix:
-
-```bash
-docker compose ps
-docker compose logs postgres
-docker compose exec postgres psql -U premium_polymers -d premium_polymers
-```
-
-### Problem: domain opens the wrong app
-
-Cause:
-
-- Nginx server block points to the wrong port
-- DNS still points elsewhere
-
-Fix:
-
-- check DNS
-- check `/etc/nginx/sites-available/premium-polymers`
-- verify `proxy_pass http://127.0.0.1:3001;`
-
-### Problem: blank page or 502 Bad Gateway
-
-Cause:
-
-- app container not running
-- Nginx proxy target wrong
-
-Fix:
-
-```bash
-docker compose ps
-docker compose logs app
-curl http://127.0.0.1:3001/login
-sudo nginx -t
-```
-
-### Problem: certificate issue
-
-Cause:
-
-- DNS not pointed correctly yet
-- port 80 blocked in Oracle Cloud or UFW
-
-Fix:
-
-- verify A record
-- open 80 and 443
-- rerun Certbot
-
-### Problem: I updated files in WinSCP and now `git pull` complains
-
-Cause:
-
-- server files were edited directly and now Git sees local changes
-
-Fix:
-
-- run `git status`
-- check which files changed
-- if they are deployment-only files, that may be expected
-- if they are real source files, inspect them before pulling again
-
-Best practice:
-
-- keep source code changes in your local repo
-- use WinSCP mainly for deployment files and backups
-
----
-
-## 23. If You Do Not Want Docker
-
-Docker is recommended, but you can also deploy directly on the server using:
-
-- Node.js 20+
-- pnpm 10+
-- PostgreSQL
-- Nginx
-- PM2 or `systemd`
-
-That approach works, but it is less isolated and easier to break when multiple apps share one server.
-
-Because you already host another project on the same Oracle server, Docker Compose is the cleaner option.
-
-If you want, a second guide can be written later for:
-
-- direct `pnpm build` + `pnpm start`
-- PM2 process management
-- Nginx reverse proxy without Docker
-
----
-
-## 24. Recommended Final Deployment Flow
-
-If you want the shortest safe checklist, use this:
-
-1. point `stocks.example.com` to the Oracle server IP
-2. install Docker and Compose
-3. install Git on the server
-4. connect with WinSCP and bookmark `/opt/premium-polymers`
-5. clone this repo into `/opt/premium-polymers/app`
-6. create `Dockerfile`, `.dockerignore`, `docker-compose.yml`, and `.env.production`
-7. edit `prisma/seed.ts` so seeded users are not insecure
-8. run:
-
-```bash
-cd /opt/premium-polymers/app
-docker compose build
-docker compose up -d postgres
-docker compose run --rm app pnpm db:generate
-docker compose run --rm app pnpm db:push
-docker compose run --rm app pnpm db:seed
-docker compose up -d app
-```
-
-9. configure Nginx to proxy `stocks.example.com` to `127.0.0.1:3001`
-10. run Certbot for HTTPS
-11. test login and dashboard
-12. back up the database and download the backup with WinSCP
-13. for future releases, use `git pull`
-
----
-
-## 25. Files You Should End Up With
-
-On the server, this project folder should contain at least:
-
-```text
-/opt/premium-polymers/app/
-  .git/
-  Dockerfile
-  .dockerignore
-  docker-compose.yml
-  .env.production
-  package.json
-  pnpm-lock.yaml
-  prisma/
-  src/
-```
-
-The `.git/` folder is important because that is what makes future `git pull` updates possible.
-
----
-
-## 26. Final Advice
-
-For your specific case, where another project is already hosted on the same Oracle server:
-
-- use a separate subdomain
-- use a separate Docker Compose stack
-- use a separate PostgreSQL database
-- bind the app to `127.0.0.1` only
-- let Nginx handle public traffic and HTTPS
-- use Git as the normal deployment and update method
-- use WinSCP as the beginner-friendly file access tool, not the main release process
-
-That keeps this app cleanly separated from the existing project and makes future updates much easier.
-
-If you want, the next step can be:
-
-1. creating the actual `Dockerfile`, `.dockerignore`, and `docker-compose.yml` in this repo
-2. or creating an Oracle-specific deployment checklist with your real domain, server IP, and folder names filled in

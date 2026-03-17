@@ -1,11 +1,36 @@
+# Dependencies
+node_modules
+
+# Build output
+.next
+output
+
+# Environment files (secrets must NOT be baked into the image)
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Git
 .git
 .github
-.next
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# Local / dev
 .local
-node_modules
-output
-.env
-.env.local
-.env.production
-npm-debug.log
-pnpm-debug.log
+.playwright-cli
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Documentation (not needed in image)
+*.md
+!README.md
+
+# OS files
+Thumbs.db
+.DS_Store
