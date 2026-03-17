@@ -68,7 +68,7 @@ USER root
 # a generated client plus CLI tools inside the runtime image.
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts && \
     npm install -g prisma@7.5.0 tsx@4.21.0 && \
-    prisma generate && \
+    pnpm exec prisma generate && \
     chown -R nextjs:nodejs /app/node_modules /app/prisma
 
 USER nextjs
