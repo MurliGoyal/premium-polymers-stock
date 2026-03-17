@@ -94,7 +94,7 @@ export function AppShell({
           user={user}
           warehouses={warehouses}
         />
-        <main className="px-4 pb-10 pt-5 sm:px-6 lg:px-8 xl:px-10">{children}</main>
+        <main className="px-3 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-5 lg:px-8 xl:px-10">{children}</main>
       </div>
     </div>
   );

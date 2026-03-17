@@ -147,7 +147,7 @@ export function DashboardClient({
   const tapScale = prefersReducedMotion ? undefined : { scale: 0.985 };
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-5">
+    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-4 sm:space-y-5">
       <motion.div variants={itemVariants}>
         <ResponsivePageHeader
           eyebrow="Operations overview"
@@ -185,7 +185,7 @@ export function DashboardClient({
         />
       </motion.div>
 
-      <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3 md:grid-cols-2 lg:grid-cols-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-2 lg:grid-cols-4">
         {kpiCards.map((card) => (
           <motion.div key={card.label} whileHover={hoverLift} transition={hoverTransition}>
             <MetricCard icon={card.icon} label={card.label} tone={card.tone} value={card.value} />
@@ -193,7 +193,7 @@ export function DashboardClient({
         ))}
       </motion.div>
 
-      <motion.section variants={itemVariants} className="space-y-3">
+      <motion.section variants={itemVariants} className="space-y-3.5 sm:space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold tracking-[-0.03em]">Warehouse overview</h2>
@@ -228,15 +228,15 @@ export function DashboardClient({
               return (
                 <motion.div key={warehouse.id} whileHover={hoverLiftSoft} transition={hoverTransition}>
                   <Card className="glass-panel hover-glow overflow-hidden">
-                    <CardContent className="relative space-y-4">
+                    <CardContent className="relative space-y-3.5 sm:space-y-4">
                       <motion.div
                         aria-hidden="true"
                         className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-primary/10 blur-3xl"
                         animate={prefersReducedMotion ? undefined : { scale: [1, 1.08, 1], opacity: [0.24, 0.34, 0.24] }}
                         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
                       />
-                      <div className="relative flex items-start justify-between gap-4">
-                        <div className="space-y-2">
+                      <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                        <div className="min-w-0 space-y-2">
                           <div className="flex items-start gap-3">
                             <IconChip size="lg" tone="primary">
                               <Warehouse className="h-5 w-5" />
@@ -252,7 +252,7 @@ export function DashboardClient({
                               : `${Math.round((healthyCount / warehouse.totalMaterials) * 100)}% healthy`}
                           </p>
                         </div>
-                        <Button asChild variant="outline" size="sm">
+                        <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
                           <Link href={`/warehouses/${warehouse.slug}`}>
                             Open
                             <ArrowRight className="h-4 w-4" />
@@ -260,7 +260,7 @@ export function DashboardClient({
                         </Button>
                       </div>
 
-                      <div className="relative grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      <div className="relative grid grid-cols-2 gap-2.5 sm:gap-3 sm:grid-cols-4">
                         <MetricPill label="Materials" value={warehouse.totalMaterials} />
                         <MetricPill label="Stock" value={formatNumber(warehouse.totalStock)} tone="emerald" />
                         <MetricPill label="Low" value={warehouse.lowStockCount} tone="amber" />
@@ -275,9 +275,9 @@ export function DashboardClient({
         )}
       </motion.section>
 
-      <motion.section variants={itemVariants} className="space-y-4 md:hidden">
+      <motion.section variants={itemVariants} className="space-y-3.5 sm:space-y-4 md:hidden">
         <Card className="glass-panel">
-          <CardHeader className="space-y-4 pb-2">
+          <CardHeader className="space-y-3.5 pb-2">
             <div className="space-y-1">
               <CardTitle className="text-base font-semibold">Mobile analytics</CardTitle>
               <p className="text-sm text-muted-foreground">Choose which chart to show so the dashboard stays clean on small screens.</p>
@@ -297,7 +297,7 @@ export function DashboardClient({
                     whileTap={tapScale}
                     transition={hoverTransition}
                     className={cn(
-                      "surface-subtle flex min-w-[150px] shrink-0 items-center gap-3 rounded-[22px] px-3.5 py-3 text-left transition-all duration-200",
+                      "surface-subtle flex min-w-[148px] shrink-0 items-center gap-3 rounded-[20px] px-3 py-2.5 text-left transition-all duration-200",
                       isActive
                         ? "border-primary/30 bg-primary/[0.10] text-foreground shadow-[0_18px_38px_rgba(91,102,255,0.16)]"
                         : "text-muted-foreground hover:border-white/15 hover:bg-white/[0.05]"
@@ -388,7 +388,7 @@ export function DashboardClient({
               <Badge variant="warning">{lowStockMaterials.length} items</Badge>
             </div>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-2.5">
             {lowStockMaterials.length === 0 ? (
               <EmptyState description="All tracked materials are above their minimum stock levels." icon={AlertTriangle} title="No low stock alerts" />
             ) : (
@@ -470,7 +470,7 @@ export function DashboardClient({
         </motion.div>
       </motion.section>
 
-      <motion.section variants={itemVariants} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <motion.section variants={itemVariants} className="grid gap-3.5 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Card className="glass-panel hover-glow">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">
@@ -478,7 +478,7 @@ export function DashboardClient({
               Recent activity
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2.5 sm:space-y-3">
             {recentActivities.length === 0 ? (
               <EmptyState description="Material events will appear here after stock is created, updated, or transferred." icon={Activity} title="No recent activity yet" />
             ) : (
@@ -508,7 +508,7 @@ export function DashboardClient({
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2.5 sm:space-y-3">
             {recentTransfers.length === 0 ? (
               <EmptyState description="Transfers will appear here once approved stock movements are recorded." icon={ArrowRightLeft} title="No recent transfers yet" />
             ) : (
@@ -597,9 +597,9 @@ function MetricCard({
 
   return (
     <Card className="glass-panel hover-glow h-full overflow-hidden">
-      <CardContent className="flex min-h-[148px] flex-col justify-between">
+      <CardContent className="flex min-h-[138px] flex-col justify-between sm:min-h-[148px]">
         <div className="flex items-start justify-between gap-3">
-          <p className="max-w-[10rem] text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="max-w-[9rem] text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:max-w-[10rem]">
             {label}
           </p>
           <IconChip
@@ -610,7 +610,7 @@ function MetricCard({
             <Icon className="h-4 w-4" />
           </IconChip>
         </div>
-        <p className="text-3xl font-semibold tracking-[-0.04em]">{formatNumber(value)}</p>
+        <p className="text-[clamp(2rem,8vw,2.55rem)] font-semibold tracking-[-0.04em]">{formatNumber(value)}</p>
       </CardContent>
     </Card>
   );
@@ -633,9 +633,9 @@ function MetricPill({
   };
 
   return (
-    <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+    <div className="rounded-[18px] border border-white/8 bg-white/[0.03] p-3 sm:rounded-[20px]">
       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
-      <p className={`mt-2 text-lg font-semibold ${tones[tone]}`}>{value}</p>
+      <p className={`mt-2 text-base font-semibold sm:text-lg ${tones[tone]}`}>{value}</p>
     </div>
   );
 }
@@ -650,7 +650,7 @@ function InsightTile({
   value: string;
 }) {
   return (
-    <div className="rounded-[20px] border border-white/8 bg-white/[0.03] px-3 py-3">
+    <div className="rounded-[18px] border border-white/8 bg-white/[0.03] px-3 py-3 sm:rounded-[20px]">
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
       <p className={cn("mt-2 font-semibold", compact ? "text-sm" : "text-base")}>{value}</p>
     </div>
@@ -659,7 +659,7 @@ function InsightTile({
 
 function ChartFrame({ children, title }: { children: React.ReactNode; title: string }) {
   return (
-    <div className="rounded-[24px] border border-white/8 bg-black/10 p-4">
+    <div className="rounded-[22px] border border-white/8 bg-black/10 p-3.5 sm:rounded-[24px] sm:p-4">
       <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
       {children}
     </div>
@@ -766,7 +766,7 @@ function AlertRow({
     <motion.div
       whileHover={prefersReducedMotion ? undefined : { x: 2 }}
       transition={hoverTransition}
-      className="rounded-[22px] border border-white/8 bg-white/[0.03] p-3"
+      className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -802,10 +802,10 @@ function ActivityRow({
     <motion.div
       whileHover={prefersReducedMotion ? undefined : { x: 2, y: -1 }}
       transition={hoverTransition}
-      className="flex items-start gap-3 rounded-[22px] border border-white/8 bg-white/[0.03] p-3"
+      className="flex items-start gap-3 rounded-[20px] border border-white/8 bg-white/[0.03] p-3"
     >
       <div className={`mt-0.5 rounded-xl p-2 ${badgeClass}`}>{icon}</div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{title}</p>
         <p className="mt-1 text-xs text-muted-foreground">{meta}</p>
         <p className="mt-1 text-[11px] text-muted-foreground/70">{subMeta}</p>

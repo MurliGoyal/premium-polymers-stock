@@ -21,7 +21,7 @@ export function ResponsiveFiltersSheet({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button type="button" variant="outline" className="w-full sm:w-auto xl:hidden">
+        <Button type="button" variant="outline" className="w-full justify-between rounded-[18px] sm:w-auto sm:rounded-2xl xl:hidden">
           <SlidersHorizontal className="h-4 w-4" />
           Filters
           {activeCount > 0 ? <Badge variant="secondary">{activeCount}</Badge> : null}

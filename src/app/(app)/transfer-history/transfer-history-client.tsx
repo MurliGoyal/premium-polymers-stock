@@ -234,7 +234,7 @@ export function TransferHistoryClient({
   );
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 sm:space-y-5">
       <ResponsivePageHeader
         eyebrow="Audit trail"
         title="Transfer history"
@@ -299,16 +299,16 @@ export function TransferHistoryClient({
                 <motion.div key={transfer.id} whileHover={{ y: -2, scale: 1.01 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
                   <Card className="cursor-pointer rounded-[24px] glass-panel hover-glow border-white/10 h-full" onClick={() => setSelectedTransfer(transfer)}>
                     <CardContent className="space-y-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-2">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 space-y-2">
                           <div className="flex flex-wrap gap-2">
                             <Badge variant="secondary">{transfer.warehouseCode}</Badge>
                             <Badge variant="outline">{transfer.category}</Badge>
                           </div>
-                          <p className="text-base font-semibold">{transfer.materialName}</p>
-                          <p className="text-sm text-muted-foreground">{transfer.recipientName}</p>
+                          <p className="text-base font-semibold leading-6">{transfer.materialName}</p>
+                          <p className="truncate text-sm text-muted-foreground">{transfer.recipientName}</p>
                         </div>
-                        <div className="text-right">
+                        <div className="surface-subtle self-start rounded-[18px] px-3 py-2 text-left sm:self-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-right sm:shadow-none">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Quantity</p>
                           <p className="mt-1 text-2xl font-semibold text-amber-300">
                             -{formatNumber(transfer.quantity)}
@@ -322,7 +322,7 @@ export function TransferHistoryClient({
                         <DetailBlock label="Created by" value={transfer.createdBy} compact />
                       </div>
 
-                      <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-3 text-sm text-muted-foreground backdrop-blur-sm transition-all hover:bg-white/[0.05]">
+                      <div className="rounded-[20px] border border-white/10 bg-white/[0.03] p-3 text-sm text-muted-foreground backdrop-blur-sm transition-all hover:bg-white/[0.05]">
                         {formatDateTime(transfer.createdAt)}
                       </div>
                     </CardContent>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { signOut } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import { Bell, LogOut, Menu, PanelLeft, Search } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import {
 import type { ApiResponse } from "@/lib/api-response";
 import { getRoleColor, getRoleLabel } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
+import { NAV_SECTIONS } from "./nav-config";
 import { CommandPalette } from "./command-palette";
 import { NotificationSheet } from "./notification-sheet";
 import type { AppShellNotification, AppShellUser, AppShellWarehouse } from "./types";
@@ -60,6 +62,7 @@ export function Topbar({
   user,
   warehouses,
 }: TopbarProps) {
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppShellNotification[]>([]);
@@ -163,13 +166,51 @@ export function Topbar({
     [user.name]
   );
 
+  const { mobileSubtitle, mobileTitle } = useMemo(() => {
+    const matchedNavItem = NAV_SECTIONS.flatMap((section) => section.items).find(
+      (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
+    );
+
+    let title = matchedNavItem?.label ?? "Operations";
+    let subtitle = "Mobile warehouse control";
+
+    if (pathname === "/dashboard") {
+      subtitle = "Health, alerts, and movement";
+    } else if (pathname === "/warehouses") {
+      subtitle = "Sites, stock, and health";
+    } else if (pathname.startsWith("/warehouses/")) {
+      const segments = pathname.split("/").filter(Boolean);
+      const warehouseCode = segments[1]?.toUpperCase() ?? "WAREHOUSE";
+      const action = segments[2];
+
+      if (action === "transfer") {
+        title = `Transfer ${warehouseCode}`;
+        subtitle = "Deduct stock and record movement";
+      } else if (action === "raw-materials") {
+        title = "Add material";
+        subtitle = `${warehouseCode} inventory intake`;
+      } else {
+        title = `Warehouse ${warehouseCode}`;
+        subtitle = "Inventory and material controls";
+      }
+    } else if (pathname === "/transfer-history") {
+      subtitle = "Deduction and recipient audit trail";
+    } else if (pathname === "/raw-materials-history") {
+      subtitle = "Material activity and stock changes";
+    } else if (pathname.startsWith("/settings")) {
+      subtitle = "Administration and master data";
+    }
+
+    return { mobileSubtitle: subtitle, mobileTitle: title };
+  }, [pathname]);
+
   const mobileIconButtonClass =
-    "h-11 w-11 rounded-[20px] px-0 text-muted-foreground sm:h-12 sm:w-12";
+    "h-10 w-10 rounded-[18px] px-0 text-muted-foreground sm:h-11 sm:w-11";
 
   return (
     <>
-      <header className="sticky top-0 z-30 px-4 pt-4 sm:px-6 lg:px-8 xl:px-10">
-        <div className="surface-panel flex min-h-[72px] items-center gap-3 rounded-[28px] px-3 py-3 sm:px-4">
+      <header className="sticky top-0 z-30 px-3 pt-3 sm:px-6 sm:pt-4 lg:px-8 xl:px-10">
+        <div className="surface-panel flex min-h-[68px] items-center gap-2.5 rounded-[26px] px-2.5 py-2.5 sm:min-h-[72px] sm:gap-3 sm:px-4 sm:py-3">
           <div className="flex items-center gap-2 md:hidden">
             <Button type="button" variant="ghost" className={mobileIconButtonClass} onClick={onMobileNavOpen}>
               <IconChip size="sm" tone="default" className="sm:h-10 sm:w-10 sm:rounded-[18px]">
@@ -196,12 +237,9 @@ export function Topbar({
               <span className="sr-only">Open search</span>
             </Button>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-foreground min-[420px]:hidden">Operations</p>
-              <p className="hidden truncate text-sm font-semibold text-foreground min-[420px]:block">
-                Operations cockpit
-              </p>
-              <p className="hidden truncate text-[11px] text-muted-foreground min-[480px]:block">
-                Mobile-first warehouse control
+              <p className="truncate text-sm font-semibold text-foreground">{mobileTitle}</p>
+              <p className="mt-0.5 hidden truncate text-[11px] text-muted-foreground min-[390px]:block">
+                {mobileSubtitle}
               </p>
             </div>
           </div>
@@ -251,7 +289,7 @@ export function Topbar({
             {mounted ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="ghost" className="h-auto rounded-[24px] px-2 py-1.5 sm:px-2.5">
+                  <Button type="button" variant="ghost" className="h-auto rounded-[22px] px-1.5 py-1.5 sm:rounded-[24px] sm:px-2.5">
                     <Avatar className="h-9 w-9">
                       <AvatarFallback>{initials}</AvatarFallback>
                     </Avatar>
@@ -279,7 +317,7 @@ export function Topbar({
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button type="button" variant="ghost" className="h-auto rounded-[24px] px-2 py-1.5 sm:px-2.5" disabled>
+              <Button type="button" variant="ghost" className="h-auto rounded-[22px] px-1.5 py-1.5 sm:rounded-[24px] sm:px-2.5" disabled>
                 <Avatar className="h-9 w-9">
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>

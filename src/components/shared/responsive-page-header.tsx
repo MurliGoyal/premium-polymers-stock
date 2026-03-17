@@ -18,25 +18,39 @@ export function ResponsivePageHeader({
   title,
 }: ResponsivePageHeaderProps) {
   return (
-    <section className={cn("surface-panel relative overflow-hidden rounded-[30px] p-5 sm:p-6", className)}>
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top_left,rgba(91,102,255,0.18),transparent_52%)]" />
-      <div aria-hidden="true" className="animate-float-soft pointer-events-none absolute -right-10 top-4 h-28 w-28 rounded-full bg-white/[0.04] blur-3xl" />
+    <section className={cn("surface-panel relative overflow-hidden rounded-[26px] p-4 sm:rounded-[30px] sm:p-6", className)}>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top_left,rgba(91,102,255,0.18),transparent_52%)] sm:h-28"
+      />
+      <div
+        aria-hidden="true"
+        className="animate-float-soft pointer-events-none absolute -right-8 top-3 h-24 w-24 rounded-full bg-white/[0.04] blur-3xl sm:-right-10 sm:top-4 sm:h-28 sm:w-28"
+      />
       <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0 space-y-3">
           {eyebrow ? (
-            <div className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <div className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:text-[11px]">
               {eyebrow}
             </div>
           ) : null}
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-[clamp(2rem,7vw,3rem)] font-semibold tracking-[-0.04em] text-gradient">{title}</h1>
-              {badge}
+          <div className="space-y-2.5">
+            <div className="flex flex-col items-start gap-2 min-[480px]:flex-row min-[480px]:items-center">
+              <h1 className="text-[clamp(2.05rem,9vw,3rem)] font-semibold leading-none tracking-[-0.045em] text-gradient">
+                {title}
+              </h1>
+              {badge ? <div className="shrink-0">{badge}</div> : null}
             </div>
-            <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">{description}</p>
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:max-w-3xl sm:text-base">
+              {description}
+            </p>
           </div>
         </div>
-        {actions ? <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">{actions}</div> : null}
+        {actions ? (
+          <div className="grid w-full gap-2 min-[420px]:grid-cols-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
+            {actions}
+          </div>
+        ) : null}
       </div>
     </section>
   );

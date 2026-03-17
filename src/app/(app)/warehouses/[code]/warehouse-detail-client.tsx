@@ -28,7 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { WAREHOUSE_MATERIAL_PAGE_SIZE } from "@/lib/constants";
 import { hasPermission } from "@/lib/rbac";
-import { formatDate, formatNumber, getStatusColor, getStatusLabel } from "@/lib/utils";
+import { cn, formatDate, formatNumber, getStatusColor, getStatusLabel } from "@/lib/utils";
 
 type WarehouseDetailData = {
   warehouse: { id: string; code: string; name: string; slug: string };
@@ -92,6 +92,13 @@ export function WarehouseDetailClient({
 
   const canCreateMaterials = hasPermission(userRole, "raw_materials:create");
   const canCreateTransfers = hasPermission(userRole, "transfers:create");
+  const statCards = [
+    { icon: Package, label: "Total materials", value: stats.totalCount },
+    { icon: BarChart3, label: "Total stock", value: formatNumber(stats.totalStock), tone: "emerald" as const },
+    { icon: AlertTriangle, label: "Low stock", value: stats.lowStockCount, tone: "amber" as const },
+    { icon: OctagonAlert, label: "Out of stock", value: stats.outOfStockCount, tone: "red" as const },
+    { icon: ArrowRightLeft, label: "Recent transfers", value: stats.recentTransfers, tone: "blue" as const },
+  ];
   const categories = useMemo(() => [...new Set(materials.map((material) => material.category))].sort(), [materials]);
   const units = useMemo(() => [...new Set(materials.map((material) => material.baseUnit))].sort(), [materials]);
 
@@ -253,7 +260,7 @@ export function WarehouseDetailClient({
   );
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-5">
+    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-4 sm:space-y-5">
       <motion.div variants={itemVariants} className="mb-1 flex items-center gap-2 text-sm text-muted-foreground">
         <Link href="/warehouses" className="flex items-center gap-1 transition-colors hover:text-foreground">
           <ChevronLeft className="h-3.5 w-3.5" />
@@ -297,12 +304,17 @@ export function WarehouseDetailClient({
         />
       </motion.div>
 
-      <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        <MetricCard icon={Package} label="Total materials" value={stats.totalCount} />
-        <MetricCard icon={BarChart3} label="Total stock" value={formatNumber(stats.totalStock)} tone="emerald" />
-        <MetricCard icon={AlertTriangle} label="Low stock" value={stats.lowStockCount} tone="amber" />
-        <MetricCard icon={OctagonAlert} label="Out of stock" value={stats.outOfStockCount} tone="red" />
-        <MetricCard icon={ArrowRightLeft} label="Recent transfers" value={stats.recentTransfers} tone="blue" />
+      <motion.div variants={itemVariants} className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 xl:grid-cols-5">
+        {statCards.map((card, index) => (
+          <MetricCard
+            key={card.label}
+            className={index === statCards.length - 1 ? "col-span-2 md:col-span-1" : undefined}
+            icon={card.icon}
+            label={card.label}
+            tone={card.tone}
+            value={card.value}
+          />
+        ))}
       </motion.div>
 
       <motion.div variants={itemVariants}>
@@ -330,14 +342,14 @@ export function WarehouseDetailClient({
                 />
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild variant="outline" size="sm">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+              <Button asChild variant="outline" size="sm" className="w-full">
                 <Link href={`/transfer-history?warehouse=${warehouse.code}`}>
                   <History className="h-4 w-4" />
                   Transfer history
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="outline" size="sm" className="w-full">
                 <Link href={`/raw-materials-history?warehouse=${warehouse.code}`}>
                   <ClipboardList className="h-4 w-4" />
                   Materials history
@@ -371,7 +383,7 @@ export function WarehouseDetailClient({
                 {paginatedMaterials.map((material) => (
                   <Card key={material.id} className="rounded-[24px]">
                     <CardContent className="space-y-4">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0 space-y-2">
                           <p className="text-base font-semibold">{material.name}</p>
                           <div className="flex flex-wrap gap-2">
@@ -381,7 +393,7 @@ export function WarehouseDetailClient({
                             </Badge>
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="surface-subtle self-start rounded-[18px] px-3 py-2 text-left sm:self-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-right sm:shadow-none">
                           <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Stock</p>
                           <p className="mt-1 text-2xl font-semibold">
                             {formatNumber(material.currentStock)}
@@ -395,7 +407,7 @@ export function WarehouseDetailClient({
                         <InfoPill label="Updated" value={formatDate(material.updatedAt)} />
                       </div>
 
-                      <div className="rounded-[22px] border border-white/8 bg-white/[0.03] p-3">
+                      <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                           Specifications
                         </p>
@@ -533,11 +545,13 @@ function InfoPill({ label, value }: { label: string; value: string }) {
 }
 
 function MetricCard({
+  className,
   icon: Icon,
   label,
   value,
   tone = "default",
 }: {
+  className?: string;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number | string;
@@ -552,9 +566,9 @@ function MetricCard({
   };
 
   return (
-    <Card className="rounded-[24px]">
-      <CardContent className="flex min-h-[132px] items-center gap-3">
-        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${toneClasses[tone]}`}>
+    <Card className={cn("rounded-[24px]", className)}>
+      <CardContent className="flex min-h-[124px] items-center gap-3 sm:min-h-[132px]">
+        <div className={`flex h-11 w-11 items-center justify-center rounded-[18px] sm:h-12 sm:w-12 sm:rounded-2xl ${toneClasses[tone]}`}>
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0">
