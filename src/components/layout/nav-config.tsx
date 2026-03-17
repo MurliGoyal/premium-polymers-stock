@@ -2,6 +2,7 @@ import {
   ArrowRightLeft,
   ClipboardList,
   LayoutDashboard,
+  Shield,
   Tag,
   UserCheck,
   Users,
@@ -42,6 +43,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Categories", href: "/settings/categories", icon: Tag, permission: "categories:manage" },
       { label: "Recipients", href: "/settings/recipients", icon: UserCheck, permission: "recipients:manage" },
       { label: "Users", href: "/settings/users", icon: Users, permission: "users:manage" },
+      { label: "System Admin", href: "/settings/system", icon: Shield, permission: "settings:manage" },
     ],
   },
 ];

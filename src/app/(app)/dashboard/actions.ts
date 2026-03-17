@@ -80,7 +80,7 @@ export async function getDashboardData() {
       },
     }),
     prisma.transfer.findMany({
-      take: 5,
+      take: 4,
       where: { warehouse: { code: { in: SEEDED_WAREHOUSE_CODES } } },
       orderBy: { createdAt: "desc" },
       include: {
@@ -91,7 +91,7 @@ export async function getDashboardData() {
       },
     }),
     prisma.rawMaterialActivityLog.findMany({
-      take: 8,
+      take: 5,
       where: { warehouse: { code: { in: SEEDED_WAREHOUSE_CODES } } },
       orderBy: { createdAt: "desc" },
       include: {

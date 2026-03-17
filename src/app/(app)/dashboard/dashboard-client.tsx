@@ -470,13 +470,18 @@ export function DashboardClient({
         </motion.div>
       </motion.section>
 
-      <motion.section variants={itemVariants} className="grid gap-3.5 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <motion.section variants={itemVariants} className="grid gap-3.5 sm:gap-4 md:grid-cols-2 xl:grid-cols-[1.08fr_1.08fr_0.92fr]">
         <Card className="glass-panel hover-glow">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-              <Activity className="h-4 w-4 text-primary" />
-              Recent activity
-            </CardTitle>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <Activity className="h-4 w-4 text-primary" />
+                Recent activity
+              </CardTitle>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/raw-materials-history">View all</Link>
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-2.5 sm:space-y-3">
             {recentActivities.length === 0 ? (
@@ -526,9 +531,12 @@ export function DashboardClient({
           </CardContent>
         </Card>
 
-        <Card className="glass-panel hover-glow md:col-span-2 xl:col-span-1">
+        <Card className="glass-panel hover-glow md:col-span-2 xl:col-span-1 xl:sticky xl:top-28 xl:self-start">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Quick actions</CardTitle>
+            <div className="space-y-1">
+              <CardTitle className="text-sm font-semibold">Quick actions</CardTitle>
+              <p className="text-xs text-muted-foreground">Fast paths into the actions used most often by operations.</p>
+            </div>
           </CardHeader>
           <CardContent className="space-y-2">
             <Button asChild variant="outline" className="h-auto w-full items-start justify-start rounded-[22px] px-4 py-4">

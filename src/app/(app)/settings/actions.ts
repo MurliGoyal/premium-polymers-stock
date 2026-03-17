@@ -13,6 +13,8 @@ type CreatedEntityResult<T> = {
   entity: T;
 };
 
+const OPERATIONAL_DELETE_CONFIRMATION = "DELETE INVENTORY";
+
 function isUniqueConstraintError(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
@@ -151,4 +153,88 @@ export async function getUsers() {
     select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });
+}
+
+export async function getOperationalDataSummary() {
+  await assertServerPermission("settings:manage");
+
+  const [
+    rawMaterials,
+    transfers,
+    activityLogs,
+    stockTransactions,
+    notifications,
+    users,
+    categories,
+    recipients,
+    warehouses,
+  ] = await Promise.all([
+    prisma.rawMaterial.count(),
+    prisma.transfer.count(),
+    prisma.rawMaterialActivityLog.count(),
+    prisma.stockTransaction.count(),
+    prisma.notification.count(),
+    prisma.user.count(),
+    prisma.category.count(),
+    prisma.recipient.count(),
+    prisma.warehouse.count(),
+  ]);
+
+  return {
+    deletable: {
+      rawMaterials,
+      transfers,
+      activityLogs,
+      stockTransactions,
+      notifications,
+      total: rawMaterials + transfers + activityLogs + stockTransactions + notifications,
+    },
+    preserved: {
+      users,
+      categories,
+      recipients,
+      warehouses,
+    },
+  };
+}
+
+export async function resetOperationalData(confirmationText: string) {
+  await assertServerPermission("settings:manage");
+
+  if (confirmationText.trim() !== OPERATIONAL_DELETE_CONFIRMATION) {
+    throw new Error(`Type ${OPERATIONAL_DELETE_CONFIRMATION} to confirm this reset.`);
+  }
+
+  const [notifications, transfers, activityLogs, stockTransactions, rawMaterials] =
+    await prisma.$transaction([
+      prisma.notification.deleteMany(),
+      prisma.transfer.deleteMany(),
+      prisma.rawMaterialActivityLog.deleteMany(),
+      prisma.stockTransaction.deleteMany(),
+      prisma.rawMaterial.deleteMany(),
+    ]);
+
+  [
+    "/dashboard",
+    "/warehouses",
+    "/transfer-history",
+    "/raw-materials-history",
+    "/settings/system",
+  ].forEach((path) => revalidatePath(path));
+
+  return {
+    deleted: {
+      rawMaterials: rawMaterials.count,
+      transfers: transfers.count,
+      activityLogs: activityLogs.count,
+      stockTransactions: stockTransactions.count,
+      notifications: notifications.count,
+    },
+    totalDeleted:
+      notifications.count +
+      transfers.count +
+      activityLogs.count +
+      stockTransactions.count +
+      rawMaterials.count,
+  };
 }
