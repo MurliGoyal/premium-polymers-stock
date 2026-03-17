@@ -282,7 +282,7 @@ export function DashboardClient({
               <CardTitle className="text-base font-semibold">Mobile analytics</CardTitle>
               <p className="text-sm text-muted-foreground">Choose which chart to show so the dashboard stays clean on small screens.</p>
             </div>
-            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+            <div className="scroll-x-contain flex gap-2 pb-1">
               {chartOptions.map((option) => {
                 const Icon = option.icon;
                 const isActive = mobileChartView === option.key;
