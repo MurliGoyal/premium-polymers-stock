@@ -20,7 +20,7 @@ services:
     environment:
       POSTGRES_DB: premium_polymers
       POSTGRES_USER: premium_polymers
-      POSTGRES_PASSWORD: 9634609988Aa
+      POSTGRES_PASSWORD: CHANGE_THIS_DB_PASSWORD
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U premium_polymers -d premium_polymers" ]
       interval: 10s

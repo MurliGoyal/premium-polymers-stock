@@ -1,85 +1,43 @@
-# Premium Polymers — Oracle Server Deployment Guide
+# Premium Polymers Oracle Server Deployment Guide
 
-> **Port:** `3001` · **Method:** GitHub Clone + SSH terminal · **Stack:** Docker Compose (Next.js + PostgreSQL)
+Port: `3001`  
+Method: Git clone over SSH  
+Stack: Docker Compose (`app` + `postgres`)
 
----
+This setup intentionally uses host port `3001` so it can live on the same Oracle VM as another project already using port `3000`.
 
-## Table of Contents
+## 1. Architecture
 
-1. [What You Need Before Starting](#1-what-you-need-before-starting)
-2. [Architecture Overview](#2-architecture-overview)
-3. [Step 1 — Connect to Your Oracle Server](#3-step-1--connect-to-your-oracle-server)
-4. [Step 2 — Install Docker and Git on the Server](#4-step-2--install-docker-and-git-on-the-server)
-5. [Step 3 — Clone the Repository from GitHub](#5-step-3--clone-the-repository-from-github)
-6. [Step 4 — Create the Production Environment File](#6-step-4--create-the-production-environment-file)
-7. [Step 5 — Create docker-compose.yml](#7-step-5--create-docker-composeyml)
-8. [Step 6 — Build the Docker Image](#8-step-6--build-the-docker-image)
-9. [Step 7 — Start PostgreSQL](#9-step-7--start-postgresql)
-10. [Step 8 — Set Up the Database](#10-step-8--set-up-the-database)
-11. [Step 9 — Start the App](#11-step-9--start-the-app)
-12. [Step 10 — Test It](#12-step-10--test-it)
-13. [Step 11 — Open Port 3001 in Oracle Cloud](#13-step-11--open-port-3001-in-oracle-cloud)
-14. [Step 12 — Open Linux Firewall](#14-step-12--open-linux-firewall)
-15. [Step 13 — Access from Your Browser](#15-step-13--access-from-your-browser)
-16. [How to Update the App Later Using GitHub](#16-how-to-update-the-app-later-using-github)
-17. [How to Back Up the Database](#17-how-to-back-up-the-database)
-18. [Useful Docker Commands](#18-useful-docker-commands)
-19. [Troubleshooting](#19-troubleshooting)
-20. [Optional — Nginx Reverse Proxy + HTTPS](#20-optional--nginx-reverse-proxy--https)
-21. [Production Security Checklist](#21-production-security-checklist)
-
----
-
-## 1. What You Need Before Starting
-
-| Item | Details |
-|------|---------|
-| **Oracle Cloud VM** | A running Linux instance (Ubuntu recommended) |
-| **SSH access** | Your server's public IP + SSH key or password (using PuTTY or Windows Terminal) |
-| **GitHub Repo URL** | e.g., `https://github.com/yourusername/premiumpolymers.git` |
-| **GitHub Token** | A GitHub Personal Access Token (classic or fine-grained) with `repo` access |
-| **Oracle security rule** | Port `3001` open for inbound TCP (you said this is already done ✅) |
-
----
-
-## 2. Architecture Overview
-
-```
-GitHub Repository                  Oracle Cloud Server
-┌─────────────┐                   ┌──────────────────────────────────┐
-│             │                   │  /opt/premium-polymers/app/      │
-│ Source Code │───── Clone ──────▶│                                  │
-│             │    & Pull         │  ┌────────────────────────────┐  │
-└─────────────┘                   │  │ Docker Compose             │  │
-                                  │  │  ┌──────────┐ ┌─────────┐ │  │
-Your Browser                      │  │  │ Next.js  │ │Postgres │ │  │
-┌─────────────┐                   │  │  │ App:3001 │─│ DB:5432 │ │  │
-│  Browser    │◀──── Port 3001 ──│  │  └──────────┘ └─────────┘ │  │
-└─────────────┘                   │  └────────────────────────────┘  │
-                                  └──────────────────────────────────┘
+```text
+Browser --> Oracle public IP:3001 --> app container:3001 --> postgres container:5432
 ```
 
-- Target deployment directory: `/opt/premium-polymers/app`
-- The app runs on port **3001** inside Docker
-- You access the app from your browser at `http://YOUR_SERVER_IP:3001`
+Key points:
 
----
+- Keep this app on `3001`.
+- Do not expose PostgreSQL (`5432`) to the internet.
+- The app image already includes `prisma` and `tsx`, so database setup commands can run inside the app container.
 
-## 3. Step 1 — Connect to Your Oracle Server
+## 2. Prerequisites
 
-Open Windows Terminal, PowerShell, or PuTTY on your PC and SSH into your server:
+- An Oracle Cloud VM running Ubuntu or another Linux distribution.
+- SSH access to the VM.
+- Git installed or permission to install it.
+- Docker Engine and Docker Compose plugin installed or permission to install them.
+- Your GitHub repository URL.
+- Oracle Cloud ingress rule for TCP `3001`.
 
-```powershell
+## 3. SSH Into the Server
+
+```bash
 ssh ubuntu@YOUR_SERVER_IP
 ```
 
-> 💡 **Throughout this guide**, every command starting with `$` should be typed in this **SSH terminal** on the server. Do not type the `$` character itself.
+All commands below are meant to be run inside that SSH session.
 
----
+## 4. Install Docker and Git
 
-## 4. Step 2 — Install Docker and Git on the Server
-
-First, check if Docker and Git are already installed:
+Check first:
 
 ```bash
 docker --version
@@ -87,15 +45,14 @@ docker compose version
 git --version
 ```
 
-If everything shows a version number, **skip to Step 3**.
+If Git is missing:
 
-If **Git** is missing:
 ```bash
 sudo apt update
 sudo apt install -y git
 ```
 
-If **Docker** is missing, run these commands:
+If Docker is missing:
 
 ```bash
 sudo apt update
@@ -113,87 +70,57 @@ echo \
 sudo apt update
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-sudo usermod -aG docker $USER
+sudo usermod -aG docker "$USER"
 newgrp docker
 ```
 
----
-
-## 5. Step 3 — Clone the Repository from GitHub
-
-Instead of uploading files manually, we will pull them securely from GitHub.
-
-First, create the deployment root folder:
+## 5. Clone the Repository
 
 ```bash
 sudo mkdir -p /opt/premium-polymers
 sudo mkdir -p /opt/premium-polymers/backups
-sudo chown -R $USER:$USER /opt/premium-polymers
+sudo chown -R "$USER:$USER" /opt/premium-polymers
+
 cd /opt/premium-polymers
-```
-
-Now clone your repository into a folder called `app`.
-
-Replace `yourusername` and `yourrepo` below. When prompted for a password, **paste your GitHub Personal Access Token (PAT)**, not your regular GitHub account password.
-
-```bash
 git clone https://github.com/yourusername/yourrepo.git app
-```
-
-If you want to bake the token into the URL so Git remembers it for future pulls (convenient but slightly less secure on shared servers), you can do:
-
-```bash
-git clone https://yourusername:YOUR_GITHUB_TOKEN@github.com/yourusername/yourrepo.git app
-```
-
-Verify the files are there:
-```bash
 cd /opt/premium-polymers/app
 ls -la
 ```
 
----
+If you use a private repository, authenticate with your GitHub PAT when prompted.
 
-## 6. Step 4 — Create the Production Environment File
-
-Still in the SSH terminal inside the `app` folder:
+## 6. Create `.env.production`
 
 ```bash
 cp .env.production.example .env.production
 nano .env.production
 ```
 
-Fill in these values:
+Set at least these values:
 
 ```env
-DATABASE_URL=postgresql://premium_polymers:YOUR_STRONG_DB_PASSWORD@postgres:5432/premium_polymers
-NEXTAUTH_SECRET=YOUR_RANDOM_SECRET_HERE
+DATABASE_URL=postgresql://premium_polymers:CHANGE_THIS_DB_PASSWORD@postgres:5432/premium_polymers
+NEXTAUTH_SECRET=CHANGE_THIS_NEXTAUTH_SECRET
 NEXTAUTH_URL=http://YOUR_SERVER_IP:3001
 NEXT_PUBLIC_APP_LOCALE=en-IN
 NEXT_PUBLIC_APP_TIME_ZONE=Asia/Kolkata
 NODE_ENV=production
 ```
 
-### Replace these placeholders:
+Replace:
 
-| Placeholder | What to Put |
-|------------|-------------|
-| `YOUR_STRONG_DB_PASSWORD` | A strong password for PostgreSQL (e.g., `Pr3m!um_P0ly2026`) |
-| `YOUR_RANDOM_SECRET_HERE` | Generate one by running `openssl rand -hex 32` in the terminal, or type a long random string |
-| `YOUR_SERVER_IP` | Your Oracle server's public IP address |
+- `CHANGE_THIS_DB_PASSWORD` with a strong password.
+- `CHANGE_THIS_NEXTAUTH_SECRET` with the output of `openssl rand -hex 32`.
+- `YOUR_SERVER_IP` with your Oracle VM public IP.
 
-Save and exit `nano`: Press `Ctrl+O`, then `Enter`, then `Ctrl+X`.
-
----
-
-## 7. Step 5 — Create docker-compose.yml
+## 7. Create `docker-compose.yml`
 
 ```bash
 cp docker-compose.example.yml docker-compose.yml
 nano docker-compose.yml
 ```
 
-The file should look like this:
+Use this structure:
 
 ```yaml
 services:
@@ -218,7 +145,7 @@ services:
     environment:
       POSTGRES_DB: premium_polymers
       POSTGRES_USER: premium_polymers
-      POSTGRES_PASSWORD: YOUR_STRONG_DB_PASSWORD
+      POSTGRES_PASSWORD: CHANGE_THIS_DB_PASSWORD
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U premium_polymers -d premium_polymers"]
       interval: 10s
@@ -231,274 +158,252 @@ volumes:
   premium-polymers-postgres:
 ```
 
-### ⚠️ Critical: Match the Password!
+Important:
 
-The `POSTGRES_PASSWORD` in this file **must match** the password you set in `DATABASE_URL` in `.env.production`.
+- `POSTGRES_PASSWORD` must exactly match the password inside `DATABASE_URL`.
+- Keep the host mapping as `3001:3001` unless you intentionally want a different public port.
 
-Save and exit `nano`: Press `Ctrl+O`, then `Enter`, then `Ctrl+X`.
+## 8. Build the App Image
 
----
-
-## 8. Step 6 — Build the Docker Image
-
-Build the image. This will take **5–15 minutes** the first time.
+Normal build:
 
 ```bash
-docker compose build
+docker compose build app
 ```
 
-You will see a lot of output ending with something like:
+If you previously built an older broken image or you changed the Dockerfile, rebuild without cache:
+
+```bash
+docker compose build --no-cache app
 ```
- => exporting to image
- => => naming to docker.io/library/app-app
-```
 
----
+The fixed image should no longer fail with `prisma: not found`.
 
-## 9. Step 7 — Start PostgreSQL
-
-Start only the database container first:
+## 9. Start PostgreSQL First
 
 ```bash
 docker compose up -d postgres
-```
-
-Wait 10 seconds, then verify it's healthy:
-
-```bash
 docker compose ps
 ```
 
-You should see `Up x seconds (healthy)`.
+Wait until `premium-polymers-db` shows `healthy`.
 
----
+## 10. Initialize the Database
 
-## 10. Step 8 — Set Up the Database
+Create tables:
 
-Run these commands to create tables and insert demo data:
-
-### Generate Prisma Client
 ```bash
-docker compose run --rm app npx prisma generate
+docker compose run --rm app prisma db push
 ```
 
-### Create Database Tables
+Seed demo data:
+
 ```bash
-docker compose run --rm app npx prisma db push
+docker compose run --rm app tsx prisma/seed.ts
 ```
 
-### Seed Demo Data
-```bash
-docker compose run --rm app npx tsx prisma/seed.ts
-```
+Notes:
 
-> ⚠️ **Important:** The seed creates demo users like `admin@premiumpolymers.com` with password `admin123`. Change these passwords immediately after your first login!
+- `prisma generate` is already handled during the image build.
+- The seed creates demo users such as `admin@premiumpolymers.com` with password `admin123`. Change those passwords immediately after first login.
 
----
-
-## 11. Step 9 — Start the App
+## 11. Start the App
 
 ```bash
 docker compose up -d app
-```
-
-Check it's running:
-```bash
 docker compose ps
-docker compose logs app
+docker compose logs --tail=100 app
 ```
 
----
+## 12. Verify the App
 
-## 12. Step 10 — Test It
-
-Test locally from the server terminal:
+From the server:
 
 ```bash
 curl http://localhost:3001/login
 ```
 
-If you get HTML back (a wall of text), the app is working! 🎉
+From your browser:
 
----
-
-## 13. Step 11 — Open Port 3001 in Oracle Cloud
-
-You mentioned you've already done this ✅. To verify:
-1. Go to Oracle Cloud Console → Networking → Virtual Cloud Networks → Security Lists
-2. Ensure there's an Ingress Rule allowing TCP port `3001`.
-
----
-
-## 14. Step 12 — Open Linux Firewall
-
-Oracle Linux instances often block ports via iptables.
-
-**For Ubuntu:**
-```bash
-sudo iptables -I INPUT -p tcp --dport 3001 -j ACCEPT
-sudo netfilter-persistent save
-```
-
-**For Oracle Linux:**
-```bash
-sudo firewall-cmd --permanent --add-port=3001/tcp
-sudo firewall-cmd --reload
-```
-
----
-
-## 15. Step 13 — Access from Your Browser
-
-Open your browser and go to:
-
-```
+```text
 http://YOUR_SERVER_IP:3001
 ```
 
-Log in with:
-- **Email:** `admin@premiumpolymers.com`
-- **Password:** `admin123`
+Demo login:
 
----
+- Email: `admin@premiumpolymers.com`
+- Password: `admin123`
 
-## 16. How to Update the App Later Using GitHub
+## 13. Open Oracle and OS Firewalls
 
-When you make changes to your code locally and push them to GitHub, follow these exact steps to update your live server securely and cleanly:
+Oracle Cloud:
 
-1. **SSH into the server:**
-```powershell
-ssh ubuntu@YOUR_SERVER_IP
+- Add an ingress rule allowing TCP `3001`.
+- Keep `5432` closed publicly.
+
+Ubuntu firewall example:
+
+```bash
+sudo ufw allow 3001/tcp
+sudo ufw reload
 ```
 
-2. **Navigate to the project folder:**
+If your instance uses iptables instead of UFW:
+
+```bash
+sudo iptables -I INPUT -p tcp --dport 3001 -j ACCEPT
+```
+
+## 14. Updating the App Later
+
 ```bash
 cd /opt/premium-polymers/app
+git status
+git pull --ff-only
+docker compose build app
+docker compose up -d app
 ```
 
-3. **Pull the latest code from GitHub:**
-```bash
-git stash  # Safely stash any local accidental modifications
-git pull
-```
-*(If prompted, enter your GitHub username and Personal Access Token)*
+If `prisma/schema.prisma` changed:
 
-4. **Back up the database (optional but highly recommended):**
 ```bash
+docker compose run --rm app prisma db push
+```
+
+Then verify:
+
+```bash
+docker compose logs --tail=100 app
+```
+
+If `git pull --ff-only` fails because the server has local tracked changes, inspect them with `git status` before deciding whether to stash or discard them.
+
+## 15. Back Up the Database
+
+Create a backup:
+
+```bash
+cd /opt/premium-polymers/app
 docker compose exec -T postgres pg_dump -U premium_polymers premium_polymers > /opt/premium-polymers/backups/backup_$(date +%F_%H-%M-%S).sql
 ```
 
-5. **Rebuild the Docker image with the new code:**
+Restore from a backup:
+
 ```bash
-docker compose build app
+cat /opt/premium-polymers/backups/backup_FILE.sql | docker compose exec -T postgres psql -U premium_polymers -d premium_polymers
 ```
 
-6. **Apply any database schema changes (run this only if you modified `prisma/schema.prisma`):**
+## 16. Useful Commands
+
 ```bash
-docker compose run --rm app npx prisma db push
+docker compose ps
+docker compose logs -f app
+docker compose logs postgres
+docker compose restart app
+docker compose stop
+docker compose down
+docker compose exec app sh
+docker compose exec postgres psql -U premium_polymers -d premium_polymers
 ```
 
-7. **Restart the app container to run the new code:**
+## 17. Troubleshooting
+
+### Build fails with `prisma: not found`
+
+Cause:
+
+- You are building from an older checkout or cached image layers.
+
+Fix:
+
+```bash
+cd /opt/premium-polymers/app
+git pull --ff-only
+docker compose build --no-cache app
+```
+
+### `DATABASE_URL is not configured`
+
+Cause:
+
+- `.env.production` is missing or incomplete.
+
+Fix:
+
+```bash
+cd /opt/premium-polymers/app
+ls -la .env.production
+grep DATABASE_URL .env.production
+docker compose restart app
+```
+
+### Database connection fails
+
+Cause:
+
+- PostgreSQL is not healthy yet, or the password in `docker-compose.yml` does not match the password in `DATABASE_URL`.
+
+Fix:
+
+```bash
+docker compose ps
+docker compose logs postgres
+```
+
+Then confirm the password matches in both places.
+
+### Login redirects loop or sessions fail
+
+Cause:
+
+- `NEXTAUTH_URL` does not match the actual URL being used.
+
+Fix:
+
+- If you access the app by IP and port, use `http://YOUR_SERVER_IP:3001`.
+- If you move behind a domain and HTTPS later, change it to `https://your-domain`.
+
+Then restart the app:
+
 ```bash
 docker compose up -d app
 ```
 
-8. **Check the logs to verify it started smoothly:**
-```bash
-docker compose logs -f app
-```
-*(Press `Ctrl+C` to close logs)*
+### Port `3001` is already in use
 
-### Quick Update Command (Copy-Paste)
-For a standard update where you didn't change the database schema, simply run:
+Check:
+
 ```bash
-cd /opt/premium-polymers/app && git pull && docker compose build app && docker compose up -d app && docker compose logs -f app
+sudo ss -ltnp | grep 3001
 ```
 
----
+If another service is using `3001`, either stop that service or change the host side of the port mapping in `docker-compose.yml`, for example:
 
-## 17. How to Back Up the Database
-
-### Create a Backup
-```bash
-cd /opt/premium-polymers/app
-docker compose exec -T postgres pg_dump -U premium_polymers premium_polymers > /opt/premium-polymers/backups/backup_$(date +%F_%H-%M-%S).sql
+```yaml
+ports:
+  - "3002:3001"
 ```
 
-### Download a Backup to Your PC
-Use WinSCP (Server File Protocol) or `scp` to download the `.sql` files from `/opt/premium-polymers/backups/` to your local computer for safekeeping.
+If you do that, also update `NEXTAUTH_URL` to `http://YOUR_SERVER_IP:3002`.
 
----
+## 18. Optional: Nginx Reverse Proxy and HTTPS
 
-## 18. Useful Docker Commands
+If you later want a domain name, keep the app listening on port `3001` internally and proxy to it with Nginx.
 
-| Command | What It Does |
-|---------|-------------|
-| `docker compose ps` | Show running containers |
-| `docker compose logs app` | View app logs |
-| `docker compose logs -f app` | Watch app logs in real-time |
-| `docker compose logs postgres` | View database logs |
-| `docker compose restart app` | Restart the app |
-| `docker compose stop` | Stop everything |
-| `docker compose start` | Start everything |
-| `docker compose down` | Stop & remove containers (data is saved) |
-| `docker compose up -d` | Start everything in background |
-| `docker compose build app` | Rebuild the app image |
-| `docker compose exec app sh` | Open a shell inside the app |
-
----
-
-## 19. Troubleshooting
-
-### Problem: Docker build fails with "Cannot find module" or missing file error
-**Cause:** The files weren't pulled completely from GitHub.
-**Fix:** 
-```bash
-cd /opt/premium-polymers/app
-git status
-git pull
-```
-
-### Problem: `Error: DATABASE_URL is not configured`
-**Cause:** The `.env.production` file is missing or doesn't contain `DATABASE_URL`.
-**Fix:** Recreate it using `cp .env.production.example .env.production` and fill the variables. Restart: `docker compose restart app`
-
-### Problem: Database connection error / `ECONNREFUSED`
-**Cause:** PostgreSQL container is not running or the password doesn't match.
-**Fix:** Check that the postgres container shows `(healthy)`. Ensure the `POSTGRES_PASSWORD` in `docker-compose.yml` matches the password in `DATABASE_URL`.
-
-### Problem: Can log in but sessions don't work / redirect loop
-**Cause:** `NEXTAUTH_URL` doesn't match the URL you're using in the browser.
-**Fix:** Edit `.env.production` and set: `NEXTAUTH_URL=http://YOUR_SERVER_IP:3001`
-
-### Problem: Built-in `git pull` throws an error about local changes
-**Cause:** You edited a file directly on the server (like `package.json` or `schema.prisma`).
-**Fix:**
-```bash
-git stash
-git pull
-```
-
----
-
-## 20. Optional — Nginx Reverse Proxy + HTTPS
-
-If you want to use a domain name (like `stocks.yourdomain.com`) instead of `IP:3001`, you can set up Nginx.
-
-### Install Nginx
+Install Nginx:
 
 ```bash
 sudo apt update
 sudo apt install -y nginx
 ```
 
-### Create Site Configuration
+Create a site file:
 
 ```bash
 sudo nano /etc/nginx/sites-available/premium-polymers
 ```
 
-Paste this (replace `stocks.yourdomain.com`):
+Example config:
 
 ```nginx
 server {
@@ -519,7 +424,7 @@ server {
 }
 ```
 
-### Enable the Site
+Enable it:
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/premium-polymers /etc/nginx/sites-enabled/
@@ -527,53 +432,29 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-### Add HTTPS with Let's Encrypt
+Add HTTPS:
 
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d stocks.yourdomain.com
 ```
 
-After HTTPS is set up, update `.env.production`:
+Then update `.env.production`:
+
 ```env
 NEXTAUTH_URL=https://stocks.yourdomain.com
 ```
 
-Then restart: `docker compose restart app`
+And restart:
 
----
-
-## 21. Production Security Checklist
-
-Before allowing public access, verify:
-
-- [ ] `NEXTAUTH_SECRET` is a long random string (not the example value)
-- [ ] `NEXTAUTH_URL` matches the URL users will type in their browser
-- [ ] Database password is strong (not `CHANGE_THIS_DB_PASSWORD`)
-- [ ] Demo user passwords have been changed after first login
-- [ ] PostgreSQL port (5432) is NOT exposed to the internet
-- [ ] Oracle Cloud security rules only allow port 3001 (and 22 for SSH)
-- [ ] Database backup has been taken and downloaded to your PC
-
----
-
-## Quick Reference Card
-
+```bash
+docker compose up -d app
 ```
-┌────────────────────────────────────────────────────────┐
-│  Premium Polymers — Quick Commands                     │
-├────────────────────────────────────────────────────────┤
-│                                                        │
-│  Update code limits:   git pull                        │
-│  Start everything:     docker compose up -d            │
-│  Stop everything:      docker compose down             │
-│  View app logs:        docker compose logs -f app      │
-│  Rebuild after change: docker compose build app        │
-│  Restart app:          docker compose up -d app        │
-│                                                        │
-│  Project location:     /opt/premium-polymers/app/      │
-│  Environment file:     .env.production                 │
-│  App URL:              http://YOUR_IP:3001             │
-│                                                        │
-└────────────────────────────────────────────────────────┘
-```
+
+## 19. Security Checklist
+
+- `NEXTAUTH_SECRET` is random and not the example value.
+- Database password is strong.
+- Demo passwords are changed after first login.
+- Oracle Cloud exposes `3001` and `22`, not `5432`.
+- Backups are stored outside the container and tested.

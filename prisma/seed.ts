@@ -1,7 +1,10 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, Role, MaterialStatus, ActivityType, TransactionType, NotificationType } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
-import { normalizeRecordName } from "../src/lib/naming";
+
+function normalizeRecordName(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
 
 const connectionString = process.env.DATABASE_URL;
 
