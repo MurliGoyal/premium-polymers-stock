@@ -153,12 +153,36 @@ async function main() {
 
   for (const mat of materialsData) {
     const status = mat.stock <= 0 ? MaterialStatus.OUT_OF_STOCK : mat.stock <= mat.min ? MaterialStatus.LOW_STOCK : MaterialStatus.IN_STOCK;
+    const normalizedName = normalizeRecordName(mat.name);
 
-    const m = await prisma.rawMaterial.create({
-      data: {
+    const m = await prisma.rawMaterial.upsert({
+      where: {
+        warehouseId_normalizedName: {
+          warehouseId: mat.wh,
+          normalizedName,
+        },
+      },
+      update: {
+        name: mat.name,
+        normalizedName,
+        categoryId: categories[mat.cat].id,
+        baseUnit: mat.unit,
+        currentStock: mat.stock,
+        minimumStock: mat.min,
+        thicknessValue: mat.thickness,
+        thicknessUnit: mat.thickness ? "mm" : null,
+        sizeValue: mat.size,
+        sizeUnit: mat.size ? "mm" : null,
+        weightValue: mat.weight,
+        weightUnit: mat.weightUnit,
+        gsm: mat.gsm,
+        status,
+        createdById: admin.id,
+      },
+      create: {
         warehouseId: mat.wh,
         name: mat.name,
-        normalizedName: normalizeRecordName(mat.name),
+        normalizedName,
         categoryId: categories[mat.cat].id,
         baseUnit: mat.unit,
         currentStock: mat.stock,

@@ -49,6 +49,8 @@ function isUniqueConstraintError(error: unknown) {
 }
 
 export async function getWarehouseData(warehouseRef: string) {
+  await assertServerPermission("raw_materials:view");
+
   const warehouse = await prisma.warehouse.findFirst({
     where: {
       OR: [{ slug: warehouseRef }, { code: { equals: warehouseRef, mode: "insensitive" } }],

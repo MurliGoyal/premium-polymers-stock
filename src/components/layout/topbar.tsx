@@ -60,6 +60,7 @@ export function Topbar({
   user,
   warehouses,
 }: TopbarProps) {
+  const [mounted, setMounted] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppShellNotification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
@@ -122,6 +123,10 @@ export function Topbar({
     },
     []
   );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     void loadNotifications();
@@ -243,35 +248,47 @@ export function Topbar({
               <span className="sr-only">Notifications</span>
             </Button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="ghost" className="h-auto rounded-[24px] px-2 py-1.5 sm:px-2.5">
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback>{initials}</AvatarFallback>
-                  </Avatar>
-                  <div className="hidden text-left lg:block">
-                    <p className="text-sm font-semibold leading-none">{user.name}</p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{getRoleLabel(user.role)}</p>
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuLabel className="font-normal">
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold">{user.name}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
-                    <Badge variant="outline" className={`mt-2 ${getRoleColor(user.role)}`}>
-                      {getRoleLabel(user.role)}
-                    </Badge>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
-                  <LogOut className="h-4 w-4" />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {mounted ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="ghost" className="h-auto rounded-[24px] px-2 py-1.5 sm:px-2.5">
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback>{initials}</AvatarFallback>
+                    </Avatar>
+                    <div className="hidden text-left lg:block">
+                      <p className="text-sm font-semibold leading-none">{user.name}</p>
+                      <p className="mt-1 text-[11px] text-muted-foreground">{getRoleLabel(user.role)}</p>
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold">{user.name}</p>
+                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                      <Badge variant="outline" className={`mt-2 ${getRoleColor(user.role)}`}>
+                        {getRoleLabel(user.role)}
+                      </Badge>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+                    <LogOut className="h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button type="button" variant="ghost" className="h-auto rounded-[24px] px-2 py-1.5 sm:px-2.5" disabled>
+                <Avatar className="h-9 w-9">
+                  <AvatarFallback>{initials}</AvatarFallback>
+                </Avatar>
+                <div className="hidden text-left lg:block">
+                  <p className="text-sm font-semibold leading-none">{user.name}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">{getRoleLabel(user.role)}</p>
+                </div>
+              </Button>
+            )}
           </div>
         </div>
       </header>

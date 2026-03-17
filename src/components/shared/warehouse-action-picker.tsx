@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useDeferredValue, useMemo, useState } from "react";
+import { type ReactNode, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRightLeft, Plus, Search, Warehouse } from "lucide-react";
 import type { AppShellWarehouse } from "@/components/layout/types";
@@ -70,10 +70,15 @@ export function WarehouseActionPicker({
   warehouses,
 }: WarehouseActionPickerProps) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const config = ACTION_COPY[action];
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const filteredWarehouses = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();
@@ -88,6 +93,10 @@ export function WarehouseActionPicker({
   }, [deferredQuery, warehouses]);
 
   const ActionIcon = config.icon;
+
+  if (!mounted) {
+    return <>{trigger}</>;
+  }
 
   return (
     <Dialog

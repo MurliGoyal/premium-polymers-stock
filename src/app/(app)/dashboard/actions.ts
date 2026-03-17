@@ -2,6 +2,7 @@
 
 import { MaterialStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { assertServerPermission } from "@/lib/auth";
 import { SEEDED_WAREHOUSE_CODES } from "@/lib/constants";
 import { quantityToNumber, sumQuantities } from "@/lib/quantities";
 import { formatAppDayLabel, getAppDateKey, getAppStartOfDay } from "@/lib/utils";
@@ -11,6 +12,8 @@ function getWarehouseSortIndex(code: string) {
 }
 
 export async function getDashboardData() {
+  await assertServerPermission("dashboard:view");
+
   const now = new Date();
   const startToday = getAppStartOfDay(now);
   const sevenDaysAgo = new Date(startToday);
