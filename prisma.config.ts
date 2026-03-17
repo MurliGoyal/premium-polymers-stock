@@ -2,9 +2,12 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { defineConfig } from 'prisma/config';
 
-// Manually load .env since Prisma 7 doesn't auto-load it
-const envPath = path.join(__dirname, '.env');
-if (fs.existsSync(envPath)) {
+function loadEnvFile(fileName: string) {
+  const envPath = path.join(__dirname, fileName);
+  if (!fs.existsSync(envPath)) {
+    return;
+  }
+
   const envContent = fs.readFileSync(envPath, 'utf-8');
   for (const line of envContent.split('\n')) {
     const trimmed = line.trim();
@@ -16,6 +19,11 @@ if (fs.existsSync(envPath)) {
     if (!process.env[key]) process.env[key] = value;
   }
 }
+
+// Prisma 7 does not auto-load env files. Prefer runtime-provided env vars,
+// then fall back to local env files for dev and one-off Docker commands.
+loadEnvFile('.env');
+loadEnvFile('.env.production');
 
 export default defineConfig({
   schema: path.join(__dirname, 'prisma', 'schema.prisma'),

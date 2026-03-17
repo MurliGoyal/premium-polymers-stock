@@ -113,10 +113,9 @@ Replace:
 - `CHANGE_THIS_NEXTAUTH_SECRET` with the output of `openssl rand -hex 32`.
 - `YOUR_SERVER_IP` with your Oracle VM public IP.
 
-## 7. Create `docker-compose.yml`
+## 7. Review `docker-compose.yml`
 
 ```bash
-cp docker-compose.example.yml docker-compose.yml
 nano docker-compose.yml
 ```
 
@@ -132,6 +131,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env.production
+    volumes:
+      - ./.env.production:/app/.env.production:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -162,6 +163,7 @@ Important:
 
 - `POSTGRES_PASSWORD` must exactly match the password inside `DATABASE_URL`.
 - Keep the host mapping as `3001:3001` unless you intentionally want a different public port.
+- The read-only `.env.production` mount lets Prisma CLI commands such as `prisma db push` read the production database URL inside one-off `docker compose run` containers.
 
 ## 8. Build the App Image
 
