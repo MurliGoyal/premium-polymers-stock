@@ -1,0 +1,11 @@
+.git
+.github
+.next
+.local
+node_modules
+output
+.env
+.env.local
+.env.production
+npm-debug.log
+pnpm-debug.log

@@ -2,10 +2,16 @@ import { getServerSession, type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { redirect } from "next/navigation";
+import { getRequiredServerEnv } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { hasPermission, type Permission } from "@/lib/rbac";
 
+function normalizeEmailInput(email: string) {
+  return email.trim().toLowerCase();
+}
+
 export const authOptions: NextAuthOptions = {
+  secret: getRequiredServerEnv("NEXTAUTH_SECRET"),
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   providers: [
@@ -16,15 +22,18 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        const normalizedEmail = credentials?.email ? normalizeEmailInput(credentials.email) : "";
+        const password = credentials?.password ?? "";
+
+        if (!normalizedEmail || !password) return null;
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: normalizedEmail },
         });
 
         if (!user || !user.isActive) return null;
 
-        const isPasswordValid = await compare(credentials.password, user.passwordHash);
+        const isPasswordValid = await compare(password, user.passwordHash);
         if (!isPasswordValid) return null;
 
         return {

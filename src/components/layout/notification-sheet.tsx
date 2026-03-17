@@ -4,6 +4,7 @@ import { Bell, CheckCheck, CircleAlert } from "lucide-react";
 import type { AppShellNotification } from "@/components/layout/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconChip } from "@/components/ui/icon-chip";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatDateTime } from "@/lib/utils";
 
@@ -34,10 +35,12 @@ export function NotificationSheet({
 }: NotificationSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
-        <SheetHeader className="text-left">
+      <SheetContent side="right" className="flex h-full w-full flex-col sm:max-w-md">
+        <SheetHeader className="shrink-0 text-left">
           <SheetTitle className="flex items-center gap-2">
-            <Bell className="h-4 w-4 text-primary" />
+            <IconChip size="sm" tone="primary">
+              <Bell className="h-4 w-4 text-primary" />
+            </IconChip>
             Notifications
           </SheetTitle>
           <SheetDescription>
@@ -47,8 +50,8 @@ export function NotificationSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-5 space-y-4">
-          <div className="flex items-center justify-between gap-3">
+        <div className="mt-5 flex min-h-0 flex-1 flex-col">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
             <Badge variant={unreadCount > 0 ? "warning" : "secondary"}>
               {notifications.length} recent items
             </Badge>
@@ -73,58 +76,60 @@ export function NotificationSheet({
             </div>
           ) : null}
 
-          {isLoading ? (
-            <div className="rounded-[24px] border border-white/8 bg-white/[0.03] px-4 py-10 text-center text-sm text-muted-foreground">
-              Loading notifications...
-            </div>
-          ) : notifications.length === 0 ? (
-            <div className="rounded-[24px] border border-white/8 bg-white/[0.03] px-4 py-10 text-center text-sm text-muted-foreground">
-              No recent notifications.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className="rounded-[24px] border border-white/8 bg-white/[0.03] p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant={notification.isRead ? "secondary" : "warning"}>
-                          {notification.type.replaceAll("_", " ")}
-                        </Badge>
-                        {notification.warehouseCode ? (
-                          <Badge variant="outline">{notification.warehouseCode}</Badge>
-                        ) : null}
-                        {notification.rawMaterialName ? (
-                          <Badge variant="outline">{notification.rawMaterialName}</Badge>
-                        ) : null}
+          <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+            {isLoading ? (
+              <div className="rounded-[24px] border border-white/8 bg-white/[0.03] px-4 py-10 text-center text-sm text-muted-foreground">
+                Loading notifications...
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="rounded-[24px] border border-white/8 bg-white/[0.03] px-4 py-10 text-center text-sm text-muted-foreground">
+                No recent notifications.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className="rounded-[24px] border border-white/8 bg-white/[0.03] p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant={notification.isRead ? "secondary" : "warning"}>
+                            {notification.type.replaceAll("_", " ")}
+                          </Badge>
+                          {notification.warehouseCode ? (
+                            <Badge variant="outline">{notification.warehouseCode}</Badge>
+                          ) : null}
+                          {notification.rawMaterialName ? (
+                            <Badge variant="outline">{notification.rawMaterialName}</Badge>
+                          ) : null}
+                        </div>
+                        <p className="text-sm leading-6 text-foreground/88">{notification.message}</p>
+                        <p className="text-xs text-muted-foreground">{formatDateTime(notification.createdAt)}</p>
                       </div>
-                      <p className="text-sm leading-6 text-foreground/88">{notification.message}</p>
-                      <p className="text-xs text-muted-foreground">{formatDateTime(notification.createdAt)}</p>
-                    </div>
 
-                    {notification.isRead ? (
-                      <Badge variant="secondary">Read</Badge>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onMarkRead(notification.id)}
-                        className="shrink-0"
-                        disabled={isActionPending}
-                      >
-                        <CircleAlert className="h-4 w-4" />
-                        Mark read
-                      </Button>
-                    )}
+                      {notification.isRead ? (
+                        <Badge variant="secondary">Read</Badge>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onMarkRead(notification.id)}
+                          className="shrink-0"
+                          disabled={isActionPending}
+                        >
+                          <CircleAlert className="h-4 w-4" />
+                          Mark read
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </SheetContent>
     </Sheet>

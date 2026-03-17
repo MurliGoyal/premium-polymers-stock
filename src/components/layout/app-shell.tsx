@@ -35,7 +35,11 @@ function getSidebarSnapshot() {
     return false;
   }
 
-  return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
+  try {
+    return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
 }
 
 export function AppShell({
@@ -58,7 +62,11 @@ export function AppShell({
 
   const toggleSidebar = useCallback(() => {
     const nextValue = !getSidebarSnapshot();
-    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, nextValue ? "true" : "false");
+    try {
+      window.localStorage.setItem(SIDEBAR_STORAGE_KEY, nextValue ? "true" : "false");
+    } catch {
+      return;
+    }
     window.dispatchEvent(new Event(SIDEBAR_EVENT));
   }, []);
 

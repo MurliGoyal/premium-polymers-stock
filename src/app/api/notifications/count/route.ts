@@ -15,7 +15,8 @@ export async function GET() {
   try {
     const unreadCount = await prisma.notification.count({ where: { isRead: false } });
     return jsonSuccess({ unreadCount });
-  } catch {
+  } catch (error) {
+    console.error("Failed to load notification count", error);
     return jsonError(
       {
         code: "NOTIFICATION_COUNT_FAILED",

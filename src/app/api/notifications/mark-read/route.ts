@@ -49,7 +49,8 @@ export async function POST(request: Request) {
       markedIds: payload.markAll ? [] : ids,
       unreadCount,
     });
-  } catch {
+  } catch (error) {
+    console.error("Failed to mark notifications as read", error);
     return jsonError(
       {
         code: "MARK_READ_FAILED",

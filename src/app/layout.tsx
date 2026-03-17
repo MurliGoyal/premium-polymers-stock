@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
+import { getAppUrl } from "@/lib/env";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -17,6 +18,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Premium Polymers - Stock Management",
   description: "Enterprise-grade raw material stock management system for Premium Polymers",
+  metadataBase: getAppUrl(),
 };
 
 export default function RootLayout({

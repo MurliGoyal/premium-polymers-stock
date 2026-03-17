@@ -8,6 +8,7 @@ import { getWarehouseActionHref } from "@/components/shared/warehouse-action-pic
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { IconChip } from "@/components/ui/icon-chip";
 import { Input } from "@/components/ui/input";
 import { hasPermission } from "@/lib/rbac";
 import { NAV_SECTIONS } from "./nav-config";
@@ -145,7 +146,7 @@ export function CommandPalette({
         }
       }}
     >
-      <DialogContent className="max-w-3xl overflow-hidden p-0 flex flex-col max-h-[85vh]">
+      <DialogContent className="flex max-h-[min(88vh,760px)] w-[calc(100vw-1rem)] max-w-3xl flex-col overflow-hidden p-0 sm:w-full">
         <DialogHeader className="border-b border-white/8 px-6 py-5 shrink-0">
           <DialogTitle>Command palette</DialogTitle>
           <DialogDescription>Search pages and warehouse workflows with one shortcut.</DialogDescription>
@@ -235,9 +236,9 @@ function CommandGroup({
               onClick={() => onSelect(item.href)}
             >
               <div className="flex min-w-0 items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/12 text-primary">
+                <IconChip size="sm" tone="primary" className="mt-0.5 sm:h-10 sm:w-10 sm:rounded-[18px]">
                   <item.icon className="h-4 w-4" />
-                </div>
+                </IconChip>
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-semibold">{item.title}</span>

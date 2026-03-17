@@ -238,6 +238,17 @@
   animation: shimmer 1.5s infinite;
 }
 
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(0, -10px, 0) scale(1.04);
+  }
+}
+
 @layer utilities {
   .surface-panel {
     background:
@@ -271,12 +282,13 @@
   }
 
   .hover-glow {
-    transition: all 0.3s ease;
+    transition: box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   }
   
   .hover-glow:hover {
-    box-shadow: 0 0 20px color-mix(in oklab, var(--color-primary) 40%, transparent);
-    transform: translateY(-2px);
+    box-shadow:
+      0 0 28px color-mix(in oklab, var(--color-primary) 28%, transparent),
+      0 24px 52px rgba(2, 6, 23, 0.2);
   }
 
   .text-gradient {
@@ -288,6 +300,10 @@
 
   .safe-bottom {
     padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+  }
+
+  .animate-float-soft {
+    animation: float-soft 7.5s ease-in-out infinite;
   }
 }
 

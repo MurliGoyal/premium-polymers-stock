@@ -35,6 +35,7 @@ import { ResponsivePageHeader } from "@/components/shared/responsive-page-header
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { IconChip } from "@/components/ui/icon-chip";
 import { hasPermission } from "@/lib/rbac";
 import { cn, formatDateTime, formatNumber, getActivityColor, getActivityLabel } from "@/lib/utils";
 
@@ -68,15 +69,15 @@ const itemVariants = {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { duration: 0.35, ease: [0.2, 1, 0.22, 1] as [number, number, number, number] },
+    transition: { duration: 0.42, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] },
   },
 };
 
 const hoverTransition = {
   type: "spring" as const,
-  stiffness: 320,
-  damping: 24,
-  mass: 0.8,
+  stiffness: 260,
+  damping: 28,
+  mass: 0.9,
 };
 
 function truncateLabel(label: string, max = 12) {
@@ -141,8 +142,8 @@ export function DashboardClient({
     (best, warehouse) => (warehouse.totalStock > best.totalStock ? warehouse : best),
     warehouseOverview[0] ?? { code: "-", totalStock: 0 }
   );
-  const hoverLift = prefersReducedMotion ? undefined : { y: -6, scale: 1.01 };
-  const hoverLiftSoft = prefersReducedMotion ? undefined : { y: -4, scale: 1.005 };
+  const hoverLift = prefersReducedMotion ? undefined : { y: -4, scale: 1.008 };
+  const hoverLiftSoft = prefersReducedMotion ? undefined : { y: -2, scale: 1.003 };
   const tapScale = prefersReducedMotion ? undefined : { scale: 0.985 };
 
   return (
@@ -237,9 +238,9 @@ export function DashboardClient({
                       <div className="relative flex items-start justify-between gap-4">
                         <div className="space-y-2">
                           <div className="flex items-start gap-3">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/14 text-primary">
+                            <IconChip size="lg" tone="primary">
                               <Warehouse className="h-5 w-5" />
-                            </div>
+                            </IconChip>
                             <div className="min-w-0">
                               <h3 className="text-lg font-semibold">{warehouse.code}</h3>
                               <p className="truncate text-sm text-muted-foreground">{warehouse.name}</p>
@@ -302,9 +303,9 @@ export function DashboardClient({
                         : "text-muted-foreground hover:border-white/15 hover:bg-white/[0.05]"
                     )}
                   >
-                    <div className={cn("flex h-10 w-10 items-center justify-center rounded-2xl", isActive ? "bg-primary/18 text-primary" : "bg-white/[0.04]")}>
+                    <IconChip size="md" tone={isActive ? "primary" : "default"}>
                       <Icon className="h-4 w-4" />
-                    </div>
+                    </IconChip>
                     <div>
                       <p className="text-sm font-semibold">{option.label}</p>
                       <p className="text-xs text-muted-foreground">{option.description}</p>
@@ -584,14 +585,14 @@ function MetricCard({
   value: number;
 }) {
   const toneClasses: Record<string, string> = {
-    amber: "bg-amber-500/14 text-amber-300",
-    blue: "bg-sky-500/14 text-sky-300",
-    cyan: "bg-cyan-500/14 text-cyan-300",
-    emerald: "bg-emerald-500/14 text-emerald-300",
-    indigo: "bg-indigo-500/14 text-indigo-300",
-    red: "bg-red-500/14 text-red-300",
-    slate: "bg-slate-500/14 text-slate-200",
-    violet: "bg-violet-500/14 text-violet-300",
+    amber: "amber",
+    blue: "blue",
+    cyan: "cyan",
+    emerald: "emerald",
+    indigo: "primary",
+    red: "danger",
+    slate: "slate",
+    violet: "violet",
   };
 
   return (
@@ -601,9 +602,13 @@ function MetricCard({
           <p className="max-w-[10rem] text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             {label}
           </p>
-          <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${toneClasses[tone]}`}>
+          <IconChip
+            size="lg"
+            tone={toneClasses[tone] as "amber" | "blue" | "cyan" | "danger" | "emerald" | "primary" | "slate" | "violet"}
+            className="h-11 w-11 rounded-[18px] sm:h-12 sm:w-12 sm:rounded-[20px]"
+          >
             <Icon className="h-4 w-4" />
-          </div>
+          </IconChip>
         </div>
         <p className="text-3xl font-semibold tracking-[-0.04em]">{formatNumber(value)}</p>
       </CardContent>
@@ -759,7 +764,7 @@ function AlertRow({
 
   return (
     <motion.div
-      whileHover={prefersReducedMotion ? undefined : { x: 4 }}
+      whileHover={prefersReducedMotion ? undefined : { x: 2 }}
       transition={hoverTransition}
       className="rounded-[22px] border border-white/8 bg-white/[0.03] p-3"
     >
@@ -795,7 +800,7 @@ function ActivityRow({
 
   return (
     <motion.div
-      whileHover={prefersReducedMotion ? undefined : { x: 4, y: -2 }}
+      whileHover={prefersReducedMotion ? undefined : { x: 2, y: -1 }}
       transition={hoverTransition}
       className="flex items-start gap-3 rounded-[22px] border border-white/8 bg-white/[0.03] p-3"
     >
@@ -840,9 +845,9 @@ function QuickActionContent({
 }) {
   return (
     <>
-      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/12 text-primary">
+      <IconChip size="md" tone="primary">
         <Icon className="h-4 w-4" />
-      </div>
+      </IconChip>
       <div className="text-left">
         <p className="text-sm font-semibold normal-case tracking-normal">{title}</p>
         <p className="mt-1 text-xs normal-case tracking-normal text-muted-foreground">{description}</p>

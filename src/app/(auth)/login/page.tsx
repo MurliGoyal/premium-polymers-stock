@@ -24,9 +24,17 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !password) {
+      setError("Email and password are required.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const result = await signIn("credentials", {
-        email,
+        email: normalizedEmail,
         password,
         redirect: false,
       });

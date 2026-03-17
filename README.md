@@ -5,12 +5,14 @@ Premium stock and raw-material management for small operations teams, built as a
 ## Highlights
 
 - Warehouse-scoped raw material management for exactly two seeded warehouses: `E-219` and `F-12`
-- Premium dashboard with KPIs, charts, alerts, and recent activity
+- Premium dashboard with KPIs, charts, alerts, recent activity, and mobile chart selection
 - Validated raw-material creation with category master data and optional dimensional metadata
+- Mobile-first responsive shell with tablet rail, mobile sheets, and premium icon treatment
 - Secure transfer workflow with stock deduction, recipient reuse, and audit snapshots
 - Separate transfer history and raw-material activity history ledgers
 - Credentials auth with RBAC foundation for Admin, Manager, Operator, and Viewer
-- PostgreSQL-backed persistence with transactional inventory updates and audit logs
+- PostgreSQL-backed persistence with transactional inventory updates, typed notification APIs, and audit logs
+- Production hardening for env validation, notification failure handling, and security headers
 
 ## Tech Stack
 
@@ -24,6 +26,36 @@ Premium stock and raw-material management for small operations teams, built as a
 - Zod + react-hook-form
 - Framer Motion
 - Recharts
+
+## Production Readiness
+
+This repo is now set up for production-oriented deployment and verification:
+
+- fail-fast required env validation for `DATABASE_URL`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL`
+- production metadata base URL handling
+- security headers via `next.config.ts`
+- notification API error contracts and safer client handling
+- Docker assets included:
+  - [Dockerfile](./Dockerfile)
+  - [.dockerignore](./.dockerignore)
+  - [docker-compose.example.yml](./docker-compose.example.yml)
+  - [.env.production.example](./.env.production.example)
+
+Before any public deployment:
+
+- replace demo credentials in `prisma/seed.ts` or rotate them immediately after seeding
+- set strong production secrets
+- verify HTTPS and reverse proxy config
+- back up the database before any schema push on non-empty environments
+
+## Deployment
+
+- Detailed Oracle Cloud VM guide: [ORACLE_SERVER_DEPLOYMENT_GUIDE.md](./ORACLE_SERVER_DEPLOYMENT_GUIDE.md)
+- Recommended deployment style:
+  - Git-based updates with `git pull`
+  - Docker Compose for isolation
+  - Nginx reverse proxy on a separate subdomain
+  - WinSCP for server file access, env editing, and backup downloads
 
 ## Getting Started
 
@@ -56,6 +88,8 @@ Required variables:
 - `DATABASE_URL`: PostgreSQL connection string
 - `NEXTAUTH_SECRET`: long random secret for session signing
 - `NEXTAUTH_URL`: app URL, usually `http://localhost:3000` in development
+- `NEXT_PUBLIC_APP_LOCALE`: optional locale override, defaults to `en-IN`
+- `NEXT_PUBLIC_APP_TIME_ZONE`: optional timezone override, defaults to `Asia/Kolkata`
 
 To generate a secret:
 
@@ -105,6 +139,22 @@ These credentials are for local seeded data only. Change them before any shared 
 - `pnpm db:generate`: generate the Prisma client
 - `pnpm db:push`: sync the Prisma schema to PostgreSQL
 - `pnpm db:seed`: seed demo data
+
+## Docker Assets
+
+This repository now includes production-oriented Docker starter files:
+
+- [Dockerfile](./Dockerfile)
+- [.dockerignore](./.dockerignore)
+- [docker-compose.example.yml](./docker-compose.example.yml)
+- [.env.production.example](./.env.production.example)
+
+Typical usage:
+
+1. copy `docker-compose.example.yml` to `docker-compose.yml`
+2. copy `.env.production.example` to `.env.production`
+3. update secrets, domain, and database credentials
+4. build and run with Docker Compose
 
 ## Project Structure
 
@@ -166,6 +216,7 @@ Core models:
 This repository includes:
 
 - `.env.example` for safe environment setup
+- `.env.production.example` for production Docker setup
 - `.gitignore` coverage for local runtime artifacts and secrets
 - GitHub Actions CI at `.github/workflows/ci.yml`
 
@@ -184,4 +235,4 @@ Current local verification completed successfully:
 - `pnpm db:seed`
 - `pnpm lint`
 - `pnpm build`
-- live browser validation of login, dashboard, add material, transfer, transfer history, and raw-material history
+- live browser validation of login, dashboard, mobile/tablet shell behavior, add material, transfer, transfer history, and raw-material history

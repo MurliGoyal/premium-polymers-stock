@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconChip } from "@/components/ui/icon-chip";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -59,16 +60,15 @@ export function SidebarNavigation({
                         : "text-sidebar-foreground/64 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
                     )}
                   >
-                    <span
+                    <IconChip
+                      size="md"
+                      tone={isActive ? "primary" : "slate"}
                       className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-2xl border border-transparent transition-all",
-                        isActive
-                          ? "bg-sidebar-primary/16 text-sidebar-primary shadow-[0_14px_28px_rgba(91,102,255,0.2)]"
-                          : "bg-white/[0.02] text-sidebar-foreground/72 group-hover:bg-white/[0.05]"
+                        !isActive && "text-sidebar-foreground/72 group-hover:border-white/10 group-hover:bg-white/[0.06] group-hover:text-sidebar-foreground"
                       )}
                     >
                       <item.icon className="h-4 w-4" />
-                    </span>
+                    </IconChip>
                     {!collapsed ? (
                       <span className="truncate">{item.label}</span>
                     ) : (
@@ -103,7 +103,7 @@ export function Sidebar({ collapsed, onToggle, user }: SidebarProps) {
     >
       <div className="flex h-full flex-col rounded-[32px] border border-sidebar-border/80 bg-sidebar-background/90 p-3 text-sidebar-foreground shadow-[0_28px_90px_rgba(2,6,23,0.48)] backdrop-blur-2xl">
         <div className="flex items-center gap-3 px-2 py-2">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sidebar-primary/16 text-sm font-black tracking-[0.2em] text-sidebar-primary">
+          <div className="flex h-12 w-12 items-center justify-center rounded-[20px] border border-white/8 bg-sidebar-primary/16 text-sm font-black tracking-[0.2em] text-sidebar-primary shadow-[0_18px_40px_rgba(91,102,255,0.12)]">
             PP
           </div>
           {!collapsed ? (
@@ -145,9 +145,8 @@ export function Sidebar({ collapsed, onToggle, user }: SidebarProps) {
           <Button
             type="button"
             variant="ghost"
-            size="icon"
             onClick={onToggle}
-            className="mt-3 w-full rounded-2xl border border-white/6 text-sidebar-foreground/70 hover:bg-white/[0.06] hover:text-sidebar-foreground"
+            className="mt-3 h-11 w-full rounded-2xl border border-white/6 text-sidebar-foreground/70 hover:bg-white/[0.06] hover:text-sidebar-foreground"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}

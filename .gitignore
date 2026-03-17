@@ -43,3 +43,5 @@ next-env.d.ts
 
 # local runtime artifacts
 .local/
+.playwright-cli/
+output/playwright/

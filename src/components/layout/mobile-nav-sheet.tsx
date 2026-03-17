@@ -4,6 +4,7 @@ import { LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconChip } from "@/components/ui/icon-chip";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getRoleLabel } from "@/lib/rbac";
 import type { AppShellUser } from "./types";
@@ -29,7 +30,7 @@ export function MobileNavSheet({ onOpenChange, open, user }: MobileNavSheetProps
 
         <div className="border-b border-sidebar-border/80 px-5 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sidebar-primary/16 text-sm font-black tracking-[0.2em] text-sidebar-primary">
+            <div className="flex h-12 w-12 items-center justify-center rounded-[20px] border border-white/8 bg-sidebar-primary/16 text-sm font-black tracking-[0.2em] text-sidebar-primary shadow-[0_18px_40px_rgba(91,102,255,0.12)]">
               PP
             </div>
             <div className="min-w-0">
@@ -54,10 +55,12 @@ export function MobileNavSheet({ onOpenChange, open, user }: MobileNavSheetProps
           <Button
             type="button"
             variant="ghost"
-            className="w-full justify-center text-sidebar-foreground/78 hover:text-sidebar-foreground"
+            className="w-full justify-center gap-3 text-sidebar-foreground/78 hover:text-sidebar-foreground"
             onClick={() => signOut({ callbackUrl: "/login" })}
           >
-            <LogOut className="h-4 w-4" />
+            <IconChip size="sm" tone="slate">
+              <LogOut className="h-4 w-4" />
+            </IconChip>
             Sign out
           </Button>
         </div>

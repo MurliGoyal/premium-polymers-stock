@@ -37,7 +37,8 @@ export async function GET() {
       })),
       unreadCount,
     });
-  } catch {
+  } catch (error) {
+    console.error("Failed to load notifications", error);
     return jsonError(
       {
         code: "NOTIFICATIONS_FETCH_FAILED",

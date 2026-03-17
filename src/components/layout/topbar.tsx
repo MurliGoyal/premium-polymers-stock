@@ -6,6 +6,7 @@ import { Bell, LogOut, Menu, PanelLeft, Search } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconChip } from "@/components/ui/icon-chip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { ApiResponse } from "@/lib/api-response";
 import { getRoleColor, getRoleLabel } from "@/lib/rbac";
+import { cn } from "@/lib/utils";
 import { CommandPalette } from "./command-palette";
 import { NotificationSheet } from "./notification-sheet";
 import type { AppShellNotification, AppShellUser, AppShellWarehouse } from "./types";
@@ -37,6 +39,21 @@ type MarkReadPayload = {
   unreadCount: number;
 };
 
+async function readApiPayload<T>(response: Response): Promise<ApiResponse<T>> {
+  try {
+    return (await response.json()) as ApiResponse<T>;
+  } catch {
+    return {
+      ok: false,
+      error: {
+        code: "INVALID_RESPONSE",
+        message: "The server returned an unexpected response. Please try again.",
+        retryable: true,
+      },
+    };
+  }
+}
+
 export function Topbar({
   onDesktopSidebarToggle,
   onMobileNavOpen,
@@ -56,7 +73,7 @@ export function Topbar({
 
     try {
       const response = await fetch("/api/notifications", { cache: "no-store" });
-      const payload = (await response.json()) as ApiResponse<NotificationsPayload>;
+      const payload = await readApiPayload<NotificationsPayload>(response);
 
       if (!response.ok || !payload.ok) {
         throw new Error(payload.ok ? "Notifications could not be loaded right now." : payload.error.message);
@@ -82,7 +99,7 @@ export function Topbar({
           headers: { "Content-Type": "application/json" },
           method: "POST",
         });
-        const result = (await response.json()) as ApiResponse<MarkReadPayload>;
+        const result = await readApiPayload<MarkReadPayload>(response);
 
         if (!response.ok || !result.ok) {
           throw new Error(result.ok ? "Notifications could not be updated right now." : result.error.message);
@@ -141,32 +158,46 @@ export function Topbar({
     [user.name]
   );
 
+  const mobileIconButtonClass =
+    "h-11 w-11 rounded-[20px] px-0 text-muted-foreground sm:h-12 sm:w-12";
+
   return (
     <>
       <header className="sticky top-0 z-30 px-4 pt-4 sm:px-6 lg:px-8 xl:px-10">
         <div className="surface-panel flex min-h-[72px] items-center gap-3 rounded-[28px] px-3 py-3 sm:px-4">
           <div className="flex items-center gap-2 md:hidden">
-            <Button type="button" variant="outline" size="icon" onClick={onMobileNavOpen}>
-              <Menu className="h-4 w-4" />
+            <Button type="button" variant="ghost" className={mobileIconButtonClass} onClick={onMobileNavOpen}>
+              <IconChip size="sm" tone="default" className="sm:h-10 sm:w-10 sm:rounded-[18px]">
+                <Menu className="h-4 w-4" />
+              </IconChip>
               <span className="sr-only">Open navigation</span>
             </Button>
           </div>
 
           <div className="hidden items-center gap-2 lg:flex">
-            <Button type="button" variant="outline" size="icon" onClick={onDesktopSidebarToggle}>
-              <PanelLeft className="h-4 w-4" />
+            <Button type="button" variant="ghost" className="rounded-[22px] px-1.5" onClick={onDesktopSidebarToggle}>
+              <IconChip size="md" tone="default">
+                <PanelLeft className="h-4 w-4" />
+              </IconChip>
               <span className="sr-only">Toggle sidebar</span>
             </Button>
           </div>
 
           <div className="flex min-w-0 flex-1 items-center gap-2 md:hidden">
-            <Button type="button" variant="outline" size="icon" onClick={() => setCommandOpen(true)}>
-              <Search className="h-4 w-4" />
+            <Button type="button" variant="ghost" className={mobileIconButtonClass} onClick={() => setCommandOpen(true)}>
+              <IconChip size="sm" tone="primary" className="sm:h-10 sm:w-10 sm:rounded-[18px]">
+                <Search className="h-4 w-4" />
+              </IconChip>
               <span className="sr-only">Open search</span>
             </Button>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-foreground">Operations cockpit</p>
-              <p className="truncate text-xs text-muted-foreground">Mobile-first warehouse control</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-foreground min-[420px]:hidden">Operations</p>
+              <p className="hidden truncate text-sm font-semibold text-foreground min-[420px]:block">
+                Operations cockpit
+              </p>
+              <p className="hidden truncate text-[11px] text-muted-foreground min-[480px]:block">
+                Mobile-first warehouse control
+              </p>
             </div>
           </div>
 
@@ -177,7 +208,9 @@ export function Topbar({
             onClick={() => setCommandOpen(true)}
           >
             <span className="flex min-w-0 items-center gap-3">
-              <Search className="h-4 w-4 text-muted-foreground" />
+              <IconChip size="md" tone="default">
+                <Search className="h-4 w-4 text-muted-foreground" />
+              </IconChip>
               <span className="truncate text-sm text-muted-foreground">Search pages and warehouse actions</span>
             </span>
             <span className="rounded-full border border-white/8 bg-white/[0.04] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -192,13 +225,18 @@ export function Topbar({
             <Button
               type="button"
               variant="ghost"
-              size="icon"
-              className="relative text-muted-foreground"
+              className={cn("relative", mobileIconButtonClass)}
               onClick={() => setNotificationsOpen(true)}
             >
-              <Bell className="h-4 w-4" />
+              <IconChip
+                size="sm"
+                tone={notificationCount > 0 ? "primary" : "default"}
+                className="sm:h-10 sm:w-10 sm:rounded-[18px]"
+              >
+                <Bell className="h-4 w-4" />
+              </IconChip>
               {notificationCount > 0 ? (
-                <span className="absolute right-2 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground sm:right-1 sm:top-1">
                   {notificationCount > 9 ? "9+" : notificationCount}
                 </span>
               ) : null}
@@ -207,7 +245,7 @@ export function Topbar({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button type="button" variant="ghost" className="h-auto rounded-2xl px-2 py-1.5 sm:px-2.5">
+                <Button type="button" variant="ghost" className="h-auto rounded-[24px] px-2 py-1.5 sm:px-2.5">
                   <Avatar className="h-9 w-9">
                     <AvatarFallback>{initials}</AvatarFallback>
                   </Avatar>

@@ -16,12 +16,19 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
     select: { code: true, name: true, slug: true },
   });
 
+  const normalizedName =
+    session.user.name?.trim() ||
+    session.user.email?.split("@")[0]?.trim() ||
+    "User";
+  const normalizedEmail = session.user.email?.trim() || "no-email@local.invalid";
+  const normalizedRole = session.user.role?.trim() || "VIEWER";
+
   return (
     <AppShell
       user={{
-        email: session.user.email,
-        name: session.user.name,
-        role: session.user.role,
+        email: normalizedEmail,
+        name: normalizedName,
+        role: normalizedRole,
       }}
       warehouses={warehouses}
     >
