@@ -754,10 +754,13 @@ function WarehouseStockChart({
           minTickGap={mobile ? 12 : 24}
           tickFormatter={(value) => truncateLabel(String(value), mobile ? 7 : 8)}
         />
-        <YAxis tick={{ fontSize: 11 }} stroke="rgba(255,255,255,0.48)" />
+        <YAxis
+          tick={{ fontSize: 11 }}
+          stroke="rgba(255,255,255,0.48)"
+          tickFormatter={(value) => formatNumber(Number(value))}
+        />
         <RechartsTooltip contentStyle={chartTooltipStyle} />
-        <Bar dataKey="totalMaterials" fill="hsl(250 95% 70%)" radius={[8, 8, 0, 0]} name="Materials" />
-        <Bar dataKey="lowStock" fill="hsl(36 96% 62%)" radius={[8, 8, 0, 0]} name="Low stock" />
+        <Bar dataKey="totalStock" fill="hsl(146 76% 52%)" radius={[8, 8, 0, 0]} name="Total stock" />
       </BarChart>
     </ResponsiveContainer>
   );

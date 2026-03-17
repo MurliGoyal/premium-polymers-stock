@@ -1,191 +1,180 @@
 # Premium Polymers Stock Management
 
-Premium stock and raw-material management for small operations teams, built as a polished internal SaaS-style app on Next.js, Prisma, and PostgreSQL.
+Internal stock and raw-material management app for warehouse-led operations. The project is built on Next.js App Router, Prisma, PostgreSQL, and a custom dark-first UI shell tuned for desktop, tablet, and phone usage.
 
-## Highlights
+## What This Repo Does
 
-- Warehouse-scoped raw material management for exactly two seeded warehouses: `E-219` and `F-12`
-- Premium dashboard with KPIs, charts, alerts, recent activity, and mobile chart selection
-- Validated raw-material creation with category master data and optional dimensional metadata
-- Mobile-first responsive shell with tablet rail, mobile sheets, and premium icon treatment
-- Secure transfer workflow with stock deduction, recipient reuse, and audit snapshots
-- Separate transfer history and raw-material activity history ledgers
-- Credentials auth with RBAC foundation for Admin, Manager, Operator, and Viewer
-- PostgreSQL-backed persistence with transactional inventory updates, typed notification APIs, and audit logs
-- Production hardening for env validation, notification failure handling, and security headers
+This app manages:
+
+- warehouse-level raw material inventory
+- stock transfers to recipients or internal destinations
+- audit history for raw material changes and stock deductions
+- low-stock and out-of-stock notifications
+- category, recipient, user, and system administration
+
+The seeded demo is centered around two warehouses:
+
+- `E-219` for primary resin and film storage
+- `F-12` for secondary additives and packaging stock
+
+The data model itself is not limited to two warehouses, but several dashboard views and seeded defaults are optimized around those seeded codes.
+
+## Product Features
+
+- Dashboard with KPI cards, warehouse summaries, transfer trends, category mix, stock totals, alerts, and quick actions
+- Warehouse detail pages with search, filtering, sorting, pagination, responsive cards, and desktop tables
+- Add-material workflow with server-side validation, inline category creation, dimensional metadata, and a roll-length calculator
+- Transfer workflow with availability refresh, projected-balance preview, inline recipient creation, and server-enforced stock deduction
+- Separate transfer-history and material-history ledgers with filters and detail drawers
+- Settings screens for categories, recipients, users, and system-level operational summaries
+- Credentials-based authentication with role-based access control
+- Notification APIs for unread count, list retrieval, and mark-as-read flows
 
 ## Tech Stack
 
 - Next.js 16 App Router
+- React 19
 - TypeScript
-- Tailwind CSS
-- shadcn-style UI primitives
+- Tailwind CSS v4
 - Prisma ORM
 - PostgreSQL
-- NextAuth credentials auth
-- Zod + react-hook-form
+- NextAuth credentials provider
+- Zod and react-hook-form
 - Framer Motion
 - Recharts
+- Radix-based UI primitives
 
-## Production Readiness
+## Architecture
 
-This repo is now set up for production-oriented deployment and verification:
+### Frontend
 
-- fail-fast required env validation for `DATABASE_URL`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL`
-- production metadata base URL handling
-- security headers via `next.config.ts`
-- notification API error contracts and safer client handling
-- Docker assets included:
-  - [Dockerfile](./Dockerfile)
-  - [.dockerignore](./.dockerignore)
-  - [docker-compose.example.yml](./docker-compose.example.yml)
-  - [.env.production.example](./.env.production.example)
+- `src/app` contains all routes, layouts, loading states, and route-group organization
+- `src/components/layout` provides the persistent shell: sidebar, topbar, tablet rail, mobile navigation, command palette, and notifications
+- `src/components/shared` contains responsive page headers, pagination, filter sheets, and warehouse action pickers
+- `src/components/ui` contains app-specific UI primitives and wrappers
 
-Before any public deployment:
+### Backend
 
-- replace demo credentials in `prisma/seed.ts` or rotate them immediately after seeding
-- set strong production secrets
-- verify HTTPS and reverse proxy config
-- back up the database before any schema push on non-empty environments
+- Route-local `actions.ts` files implement server actions for dashboard data, warehouse inventory, transfers, and settings mutations
+- `src/app/api/auth/[...nextauth]/route.ts` hosts NextAuth
+- `src/app/api/notifications/*` exposes notification list, unread-count, and mark-read endpoints
 
-## Deployment
+### Data Layer
 
-- Detailed Oracle Cloud VM guide: [ORACLE_SERVER_DEPLOYMENT_GUIDE.md](./ORACLE_SERVER_DEPLOYMENT_GUIDE.md)
-- Recommended deployment style:
-  - Git-based updates with `git pull`
-  - Docker Compose for isolation
-  - Nginx reverse proxy on a separate subdomain
-  - WinSCP for server file access, env editing, and backup downloads
+- Prisma schema lives in `prisma/schema.prisma`
+- Seed data lives in `prisma/seed.ts`
+- `src/lib/prisma.ts` exposes the Prisma client
+- `src/lib/quantities.ts`, `src/lib/inventory.ts`, `src/lib/naming.ts`, and related helpers centralize stock and naming behavior
 
-## Getting Started
+### Auth and Access Control
 
-### Prerequisites
+- `src/lib/auth.ts` handles session lookup and permission assertions
+- `src/lib/rbac.ts` maps permissions across `ADMIN`, `MANAGER`, `OPERATOR`, and `VIEWER`
+- Protected pages redirect unauthenticated users to `/login`
 
-- Node.js 20+
-- pnpm 10+
-- PostgreSQL 14+ recommended
-
-### 1. Install dependencies
-
-```bash
-pnpm install
-```
-
-### 2. Configure environment variables
-
-Create a `.env` file from `.env.example` and update the values for your machine.
-
-```bash
-# macOS / Linux
-cp .env.example .env
-
-# Windows PowerShell
-Copy-Item .env.example .env
-```
-
-Required variables:
-
-- `DATABASE_URL`: PostgreSQL connection string
-- `NEXTAUTH_SECRET`: long random secret for session signing
-- `NEXTAUTH_URL`: app URL, usually `http://localhost:3000` in development
-- `NEXT_PUBLIC_APP_LOCALE`: optional locale override, defaults to `en-IN`
-- `NEXT_PUBLIC_APP_TIME_ZONE`: optional timezone override, defaults to `Asia/Kolkata`
-
-To generate a secret:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-### 3. Generate the Prisma client
-
-```bash
-pnpm db:generate
-```
-
-### 4. Push the schema and seed sample data
-
-```bash
-pnpm db:push
-pnpm db:seed
-```
-
-### 5. Start the app
-
-```bash
-pnpm dev
-```
-
-Open `http://localhost:3000`.
-
-## Seeded Demo Users
-
-The seed script creates sample users for local development:
-
-- Admin: `admin@premiumpolymers.com` / `admin123`
-- Manager: `manager@premiumpolymers.com` / `admin123`
-- Operator: `operator@premiumpolymers.com` / `admin123`
-- Viewer: `viewer@premiumpolymers.com` / `admin123`
-
-These credentials are for local seeded data only. Change them before any shared deployment.
-
-## Available Scripts
-
-- `pnpm dev`: start the development server
-- `pnpm build`: create a production build
-- `pnpm start`: run the production server
-- `pnpm lint`: run ESLint
-- `pnpm check`: run the same verification used for GitHub readiness
-- `pnpm db:generate`: generate the Prisma client
-- `pnpm db:push`: sync the Prisma schema to PostgreSQL
-- `pnpm db:seed`: seed demo data
-
-## Docker Assets
-
-This repository now includes production-oriented Docker starter files:
-
-- [Dockerfile](./Dockerfile)
-- [.dockerignore](./.dockerignore)
-- [docker-compose.example.yml](./docker-compose.example.yml)
-- [.env.production.example](./.env.production.example)
-
-Typical usage:
-
-1. copy `docker-compose.example.yml` to `docker-compose.yml`
-2. copy `.env.production.example` to `.env.production`
-3. update secrets, domain, and database credentials
-4. build and run with Docker Compose
-
-## Project Structure
+## Repo Structure
 
 ```text
-prisma/
-  schema.prisma
-  seed.ts
-src/
-  app/
-    (app)/
-    (auth)/
-    api/
-  components/
-  lib/
-  types/
+.
+├─ prisma/
+│  ├─ schema.prisma              # Database schema
+│  └─ seed.ts                    # Demo users, warehouses, materials, recipients, transfers
+├─ public/                       # Static assets
+├─ src/
+│  ├─ app/
+│  │  ├─ (auth)/login            # Sign-in route
+│  │  ├─ (app)/dashboard         # KPI dashboard and analytics
+│  │  ├─ (app)/warehouses        # Warehouse list and detail views
+│  │  ├─ (app)/transfer-history  # Transfer ledger
+│  │  ├─ (app)/raw-materials-history
+│  │  ├─ (app)/settings          # Categories, recipients, users, system admin
+│  │  └─ api/                    # NextAuth and notification endpoints
+│  ├─ components/
+│  │  ├─ forms/
+│  │  ├─ layout/
+│  │  ├─ shared/
+│  │  └─ ui/
+│  ├─ lib/                       # Auth, env, RBAC, Prisma, utilities, validation
+│  ├─ proxy.ts                   # Middleware / request proxy logic
+│  └─ types/
+├─ Dockerfile
+├─ docker-compose.yml            # Docker starter file; replace placeholder credentials before use
+├─ .env.example                  # Local development environment template
+├─ .env.production.example       # Production environment template
+└─ ORACLE_SERVER_DEPLOYMENT_GUIDE.md
 ```
 
-## Product Architecture Summary
+## Routes
 
-- Frontend: server-rendered Next.js App Router with premium internal-tool UX patterns
-- Backend: protected server actions and API routes for inventory, history, and notification flows
-- Data model: warehouses, categories, recipients, raw materials, transfers, stock transactions, activity logs, notifications, and users
-- Integrity model: stock changes run through server-side validation and Prisma transactions
-- Access model: UI and backend permission checks share the same RBAC foundation
+### Public
 
-## Data Model Reference
+- `/login`
 
-- Prisma schema: [prisma/schema.prisma](./prisma/schema.prisma)
-- Seed script: [prisma/seed.ts](./prisma/seed.ts)
+### Authenticated App
 
-Core models:
+- `/dashboard`
+- `/warehouses`
+- `/warehouses/[code]`
+- `/warehouses/[code]/raw-materials/add`
+- `/warehouses/[code]/transfer`
+- `/transfer-history`
+- `/raw-materials-history`
+- `/settings/categories`
+- `/settings/recipients`
+- `/settings/users`
+- `/settings/system`
+
+## Core Subsystems
+
+### Dashboard and Analytics
+
+- Pulls aggregate inventory, warehouse, category, transfer, activity, and notification data from Prisma
+- Shows mobile-specific chart switching to keep smaller screens readable
+- Uses Recharts for transfer trend, category mix, and warehouse stock totals
+
+### Warehouse Inventory
+
+- Lists warehouse materials with status, metadata, stock values, and pagination
+- Supports filter-by-status, category, unit, and recency
+- Provides direct paths into transfer and history workflows
+
+### Raw Material Creation
+
+- Validates both on the client and server
+- Creates stock transactions and activity logs on save
+- Supports optional thickness, size, weight, GSM, and notes metadata
+- Allows inline category creation without leaving the form
+
+### Transfer Workflow
+
+- Restricts selectable materials to positive available stock
+- Revalidates stale stock availability after 5 minutes
+- Calculates projected balance before submission
+- Creates transfer records, stock transactions, audit logs, and notifications
+- Allows inline recipient creation
+
+### Audit History
+
+- `raw-materials-history` shows material lifecycle events
+- `transfer-history` shows outbound stock movement
+- Both ledgers support filtering, mobile cards, desktop tables, and detail drawers
+
+### Notifications
+
+- Stores low-stock, out-of-stock, transfer, and system notifications in the database
+- Exposes list, unread-count, and mark-read routes under `src/app/api/notifications`
+- Integrates with the topbar notification UI
+
+### Admin Settings
+
+- Categories: master data for material classification
+- Recipients: master data for transfer destinations
+- Users: role and access management
+- System admin: operational summary page for higher-level oversight
+
+## Database Model
+
+Main Prisma models:
 
 - `User`
 - `Warehouse`
@@ -197,42 +186,137 @@ Core models:
 - `StockTransaction`
 - `Notification`
 
-## Routes
+Important enums:
 
-- `/login`
-- `/dashboard`
-- `/warehouses`
-- `/warehouses/[code]`
-- `/warehouses/[code]/raw-materials/add`
-- `/warehouses/[code]/transfer`
-- `/transfer-history`
-- `/raw-materials-history`
-- `/settings/categories`
-- `/settings/recipients`
-- `/settings/users`
+- `Role`
+- `MaterialStatus`
+- `ActivityType`
+- `TransactionType`
+- `NotificationType`
 
-## GitHub Readiness
+High-level relationships:
 
-This repository includes:
+- A warehouse owns many raw materials, transfers, stock transactions, activity logs, and notifications
+- A raw material belongs to one warehouse and one category
+- Transfers deduct from one raw material and target one recipient
+- Activity logs and stock transactions preserve the inventory audit trail
 
-- `.env.example` for safe environment setup
-- `.env.production.example` for production Docker setup
-- `.gitignore` coverage for local runtime artifacts and secrets
-- GitHub Actions CI at `.github/workflows/ci.yml`
+## Environment Variables
 
-The CI workflow runs:
+### Local development
 
-- `pnpm install --frozen-lockfile`
-- `pnpm db:generate`
-- `pnpm lint`
-- `pnpm build`
+Copy `.env.example` to `.env`.
+
+Required values:
+
+- `DATABASE_URL`
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`
+
+Optional values:
+
+- `NEXT_PUBLIC_APP_LOCALE`
+- `NEXT_PUBLIC_APP_TIME_ZONE`
+
+### Production
+
+Copy `.env.production.example` to `.env.production` and replace every placeholder value.
+
+Important:
+
+- `.env.production` should stay local to the deployment target and should not be committed
+- `docker-compose.yml` ships with placeholder database credentials and must be edited before running in production
+- `POSTGRES_PASSWORD` in `docker-compose.yml` must match the password embedded in `DATABASE_URL`
+
+Generate a secret with:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+## Local Development
+
+### Prerequisites
+
+- Node.js 20+
+- pnpm 10+
+- PostgreSQL 14+ recommended
+
+### Setup
+
+```bash
+pnpm install
+Copy-Item .env.example .env
+pnpm db:generate
+pnpm db:push
+pnpm db:seed
+pnpm dev
+```
+
+Open `http://localhost:3000`.
+
+## Seeded Demo Users
+
+- Admin: `admin@premiumpolymers.com` / `admin123`
+- Manager: `manager@premiumpolymers.com` / `admin123`
+- Operator: `operator@premiumpolymers.com` / `admin123`
+- Viewer: `viewer@premiumpolymers.com` / `admin123`
+
+These accounts are for local demo data only. Replace or rotate them for any shared or production environment.
+
+## Available Scripts
+
+- `pnpm dev` starts the development server
+- `pnpm build` creates a production build
+- `pnpm start` runs the production server
+- `pnpm lint` runs ESLint
+- `pnpm check` runs lint plus build
+- `pnpm db:generate` generates the Prisma client
+- `pnpm db:push` syncs the Prisma schema to the database
+- `pnpm db:seed` seeds the demo dataset
+
+## Docker and Deployment
+
+Tracked deployment assets:
+
+- `Dockerfile`
+- `docker-compose.yml`
+- `.dockerignore`
+- `.env.production.example`
+- `ORACLE_SERVER_DEPLOYMENT_GUIDE.md`
+
+Typical production flow:
+
+1. Copy `.env.production.example` to `.env.production`
+2. Replace placeholders in `.env.production`
+3. Replace placeholder `POSTGRES_PASSWORD` in `docker-compose.yml`
+4. Build and start with Docker Compose
+5. Run Prisma schema push and seed commands inside the app container as needed
+
+For the Oracle VM flow, use [`ORACLE_SERVER_DEPLOYMENT_GUIDE.md`](./ORACLE_SERVER_DEPLOYMENT_GUIDE.md).
+
+## UI Notes
+
+- The app intentionally uses a dark-first visual system
+- Theme is currently forced to dark mode in `src/components/providers.tsx`
+- Layout behavior is optimized separately for mobile, tablet, and desktop shells
+- Motion is provided through Framer Motion with reduced-motion handling
+
+## Current Constraints and Assumptions
+
+- Dashboard summary ordering and seeded labels are optimized around the seeded warehouse catalog
+- The app currently uses credentials auth only; there are no OAuth providers configured
+- History pages currently load the most recent 200 records per ledger view
+- The notification tray currently shows the 12 most recent notifications plus a global unread count
+- Notification delivery is in-app only; there is no email or SMS channel in this repo
+- Docker assets are starter files, not turnkey infrastructure; you still need to supply production secrets and server configuration
 
 ## Verification
 
-Current local verification completed successfully:
+Latest local verification completed during this repo pass:
 
-- `pnpm db:push`
-- `pnpm db:seed`
 - `pnpm lint`
 - `pnpm build`
-- live browser validation of login, dashboard, mobile/tablet shell behavior, add material, transfer, transfer history, and raw-material history
+- live browser validation of `/dashboard` and `/warehouses/e-219`
+
+The dashboard warehouse stock chart was corrected to use stock totals instead of material counts, and production docs/assets were aligned around a sanitized `.env.production.example`.

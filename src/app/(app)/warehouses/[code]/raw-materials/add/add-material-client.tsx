@@ -121,7 +121,9 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
 
   const stockHealthLabel =
     Number.isFinite(currentStock) && Number.isFinite(minimumStock)
-      ? currentStock <= minimumStock
+      ? currentStock <= 0
+        ? "Will start as out of stock"
+        : currentStock <= minimumStock
         ? "Will start as low stock"
         : "Will start as in stock"
       : "Set stock values to preview status";

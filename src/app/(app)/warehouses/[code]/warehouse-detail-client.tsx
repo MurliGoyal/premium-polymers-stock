@@ -393,17 +393,16 @@ export function WarehouseDetailClient({
                             </Badge>
                           </div>
                         </div>
-                        <div className="surface-subtle self-start rounded-[18px] px-3 py-2 text-left sm:self-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-right sm:shadow-none">
-                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Stock</p>
-                          <p className="mt-1 text-2xl font-semibold">
-                            {formatNumber(material.currentStock)}
-                            <span className="ml-1 text-sm font-medium text-muted-foreground">{material.baseUnit}</span>
+                      <div className="surface-subtle self-start rounded-[18px] px-3 py-2 text-left sm:self-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-right sm:shadow-none">
+                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Stock</p>
+                        <p className="mt-1 text-2xl font-semibold">
+                            {formatQuantity(material.currentStock, material.baseUnit)}
                           </p>
-                        </div>
+                      </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
-                        <InfoPill label="Minimum" value={`${formatNumber(material.minimumStock)} ${material.baseUnit}`} />
+                        <InfoPill label="Minimum" value={formatQuantity(material.minimumStock, material.baseUnit)} />
                         <InfoPill label="Updated" value={formatDate(material.updatedAt)} />
                       </div>
 
@@ -582,11 +581,15 @@ function MetricCard({
 
 function formatSpecs(material: WarehouseDetailData["materials"][number]) {
   const specs = [
-    material.thicknessValue ? `Thickness ${material.thicknessValue}${material.thicknessUnit ?? ""}` : null,
+    material.thicknessValue ? `Thickness ${formatQuantity(material.thicknessValue, material.thicknessUnit)}` : null,
     material.sizeValue ? `Size ${material.sizeValue}${material.sizeUnit ? ` ${material.sizeUnit}` : ""}` : null,
-    material.weightValue ? `Weight ${material.weightValue}${material.weightUnit ?? ""}` : null,
+    material.weightValue ? `Weight ${formatQuantity(material.weightValue, material.weightUnit)}` : null,
     material.gsm ? `GSM ${material.gsm}` : null,
   ].filter(Boolean);
 
   return specs.length > 0 ? specs.join(" / ") : "No dimensional metadata";
+}
+
+function formatQuantity(value: number | string, unit?: string | null) {
+  return `${formatNumber(value)}${unit ? ` ${unit}` : ""}`;
 }

@@ -120,12 +120,16 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
       window.setTimeout(() => {
         void trigger("quantity");
       }, 0);
+
+      return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Availability could not be refreshed";
       setAvailabilityError(message);
       if (notify) {
         toast.error(message);
       }
+
+      return false;
     } finally {
       setIsRefreshingAvailability(false);
     }
@@ -135,7 +139,12 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
     startTransition(async () => {
       try {
         if (Date.now() - lastCheckedAt >= STALE_AVAILABILITY_MS) {
-          await refreshAvailability({ notify: false });
+          const refreshed = await refreshAvailability({ notify: false });
+
+          if (!refreshed) {
+            return;
+          }
+
           toast.info("Availability was refreshed after 5 minutes. Review the latest balance and submit again.");
           return;
         }
