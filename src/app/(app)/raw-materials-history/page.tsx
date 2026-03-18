@@ -1,4 +1,9 @@
 import { requirePagePermission } from "@/lib/auth";
+import {
+  getDateOnlySearchParam,
+  getMatchingOptionValue,
+  getTrimmedSearchParam,
+} from "@/lib/drilldowns";
 import { prisma } from "@/lib/prisma";
 import { quantityToNumber } from "@/lib/quantities";
 import { MaterialHistoryClient } from "./material-history-client";
@@ -30,6 +35,32 @@ export default async function RawMaterialsHistoryPage({ searchParams }: { search
     : resolvedSearchParams.warehouse;
   const initialWarehouseFilter =
     warehouses.find((warehouse) => warehouse.code.toLowerCase() === requestedWarehouse?.toLowerCase())?.code ?? "all";
+  const activityTypes = [...new Set(activities.map((activity) => activity.activityType))];
+  const initialMaterialFilter = getMatchingOptionValue(
+    materials.map((material) => material.name),
+    resolvedSearchParams.material
+  );
+  const initialCategoryFilter = getMatchingOptionValue(
+    categories.map((category) => category.name),
+    resolvedSearchParams.category
+  );
+  const requestedType = getTrimmedSearchParam(resolvedSearchParams.type);
+  const initialTypeFilter = activityTypes.includes(requestedType as (typeof activityTypes)[number]) ? requestedType : "all";
+  const initialUserFilter = getMatchingOptionValue(
+    users.map((user) => user.name),
+    resolvedSearchParams.user
+  );
+  const initialFromDate = getDateOnlySearchParam(resolvedSearchParams.from);
+  const initialToDate = getDateOnlySearchParam(resolvedSearchParams.to);
+  const clientKey = [
+    initialWarehouseFilter,
+    initialMaterialFilter,
+    initialCategoryFilter,
+    initialTypeFilter,
+    initialUserFilter,
+    initialFromDate,
+    initialToDate,
+  ].join("|");
 
   const data = activities.map((a) => ({
     id: a.id,
@@ -48,12 +79,19 @@ export default async function RawMaterialsHistoryPage({ searchParams }: { search
 
   return (
     <MaterialHistoryClient
+      key={clientKey}
       activities={data}
       warehouses={warehouses.map((w) => w.code)}
       categories={categories.map((category) => category.name)}
       materials={materials.map((material) => material.name)}
       users={users.map((user) => user.name)}
       initialWarehouseFilter={initialWarehouseFilter}
+      initialMaterialFilter={initialMaterialFilter}
+      initialCategoryFilter={initialCategoryFilter}
+      initialTypeFilter={initialTypeFilter}
+      initialUserFilter={initialUserFilter}
+      initialFromDate={initialFromDate}
+      initialToDate={initialToDate}
     />
   );
 }

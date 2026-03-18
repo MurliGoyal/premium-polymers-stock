@@ -3,6 +3,7 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRightLeft, CalendarRange, Search } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { ResponsiveFiltersSheet } from "@/components/shared/responsive-filters-sheet";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
@@ -38,6 +39,11 @@ export function TransferHistoryClient({
   recipients,
   categories,
   materials,
+  initialCategoryFilter = "all",
+  initialFromDate = "",
+  initialMaterialFilter = "all",
+  initialRecipientFilter = "all",
+  initialToDate = "",
   initialWarehouseFilter = "all",
 }: {
   transfers: TransferRecord[];
@@ -45,15 +51,22 @@ export function TransferHistoryClient({
   recipients: string[];
   categories: string[];
   materials: string[];
+  initialCategoryFilter?: string;
+  initialFromDate?: string;
+  initialMaterialFilter?: string;
+  initialRecipientFilter?: string;
+  initialToDate?: string;
   initialWarehouseFilter?: string;
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState(initialWarehouseFilter);
-  const [recipientFilter, setRecipientFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [materialFilter, setMaterialFilter] = useState("all");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [recipientFilter, setRecipientFilter] = useState(initialRecipientFilter);
+  const [categoryFilter, setCategoryFilter] = useState(initialCategoryFilter);
+  const [materialFilter, setMaterialFilter] = useState(initialMaterialFilter);
+  const [fromDate, setFromDate] = useState(initialFromDate);
+  const [toDate, setToDate] = useState(initialToDate);
   const [page, setPage] = useState(1);
   const [selectedTransfer, setSelectedTransfer] = useState<TransferRecord | null>(null);
   const deferredSearch = useDeferredValue(search);
@@ -114,6 +127,7 @@ export function TransferHistoryClient({
     setFromDate("");
     setToDate("");
     setPage(1);
+    router.replace(pathname, { scroll: false });
   };
 
   const filters = (

@@ -1,17 +1,22 @@
 import { MaterialStatus } from "@prisma/client";
 import { requirePagePermission } from "@/lib/auth";
 import { SEEDED_WAREHOUSE_CODES, WAREHOUSE_CATALOG } from "@/lib/constants";
+import { WAREHOUSE_HEALTH_FILTERS, getAllowedSearchParam } from "@/lib/drilldowns";
 import { daysAgo } from "@/lib/inventory";
 import { prisma } from "@/lib/prisma";
 import { quantityToNumber, sumQuantities } from "@/lib/quantities";
 import { WarehousesClient } from "./warehouses-client";
 
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
 function getWarehouseSortIndex(code: string) {
   return SEEDED_WAREHOUSE_CODES.indexOf(code as (typeof SEEDED_WAREHOUSE_CODES)[number]);
 }
 
-export default async function WarehousesPage() {
+export default async function WarehousesPage({ searchParams }: { searchParams: SearchParams }) {
   await requirePagePermission("warehouses:view");
+  const resolvedSearchParams = await searchParams;
+  const initialHealthFilter = getAllowedSearchParam(resolvedSearchParams.health, WAREHOUSE_HEALTH_FILTERS, "all");
 
   const sevenDaysAgo = daysAgo(6);
   const warehouses = await prisma.warehouse.findMany({
@@ -44,5 +49,5 @@ export default async function WarehousesPage() {
       totalTransferQty: quantityToNumber(sumQuantities(w.transfers.map((transfer) => transfer.quantity))),
     }));
 
-  return <WarehousesClient warehouses={data} />;
+  return <WarehousesClient key={initialHealthFilter} warehouses={data} initialHealthFilter={initialHealthFilter} />;
 }

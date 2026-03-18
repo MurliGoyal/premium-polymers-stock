@@ -1,4 +1,5 @@
 import { requirePagePermission } from "@/lib/auth";
+import { getDateOnlySearchParam, getMatchingOptionValue } from "@/lib/drilldowns";
 import { prisma } from "@/lib/prisma";
 import { quantityToNumber } from "@/lib/quantities";
 import { TransferHistoryClient } from "./transfer-history-client";
@@ -31,6 +32,28 @@ export default async function TransferHistoryPage({ searchParams }: { searchPara
     : resolvedSearchParams.warehouse;
   const initialWarehouseFilter =
     warehouses.find((warehouse) => warehouse.code.toLowerCase() === requestedWarehouse?.toLowerCase())?.code ?? "all";
+  const initialMaterialFilter = getMatchingOptionValue(
+    materials.map((material) => material.name),
+    resolvedSearchParams.material
+  );
+  const initialRecipientFilter = getMatchingOptionValue(
+    recipients.map((recipient) => recipient.name),
+    resolvedSearchParams.recipient
+  );
+  const initialCategoryFilter = getMatchingOptionValue(
+    categories.map((category) => category.name),
+    resolvedSearchParams.category
+  );
+  const initialFromDate = getDateOnlySearchParam(resolvedSearchParams.from);
+  const initialToDate = getDateOnlySearchParam(resolvedSearchParams.to);
+  const clientKey = [
+    initialWarehouseFilter,
+    initialMaterialFilter,
+    initialRecipientFilter,
+    initialCategoryFilter,
+    initialFromDate,
+    initialToDate,
+  ].join("|");
 
   const data = transfers.map((t) => ({
     id: t.id,
@@ -49,12 +72,18 @@ export default async function TransferHistoryPage({ searchParams }: { searchPara
 
   return (
     <TransferHistoryClient
+      key={clientKey}
       transfers={data}
       warehouses={warehouses.map((w) => w.code)}
       recipients={recipients.map((r) => r.name)}
       categories={categories.map((category) => category.name)}
       materials={materials.map((material) => material.name)}
       initialWarehouseFilter={initialWarehouseFilter}
+      initialMaterialFilter={initialMaterialFilter}
+      initialRecipientFilter={initialRecipientFilter}
+      initialCategoryFilter={initialCategoryFilter}
+      initialFromDate={initialFromDate}
+      initialToDate={initialToDate}
     />
   );
 }

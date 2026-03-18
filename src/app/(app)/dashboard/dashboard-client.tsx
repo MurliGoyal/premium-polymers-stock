@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type KeyboardEvent, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   AlertTriangle,
@@ -36,6 +37,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { IconChip } from "@/components/ui/icon-chip";
+import {
+  getMaterialHistoryHref,
+  getTransferHistoryHref,
+  getTransferHistoryRangeHref,
+  getWarehouseDetailHref,
+  getWarehousesHref,
+} from "@/lib/drilldowns";
 import { hasPermission } from "@/lib/rbac";
 import { cn, formatDateTime, formatNumber, getActivityColor, getActivityLabel } from "@/lib/utils";
 
@@ -91,6 +99,7 @@ export function DashboardClient({
   data: DashboardData;
   userRole: string;
 }) {
+  const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
   const [mobileChartView, setMobileChartView] = useState<MobileChartView>("transfers");
   const {
@@ -106,12 +115,17 @@ export function DashboardClient({
 
   const canCreateMaterials = hasPermission(userRole, "raw_materials:create");
   const canCreateTransfers = hasPermission(userRole, "transfers:create");
+  const canManageCategories = hasPermission(userRole, "categories:manage");
   const warehouseOptions: AppShellWarehouse[] = warehouseOverview.map((warehouse) => ({
     code: warehouse.code,
     name: warehouse.name,
     slug: warehouse.slug,
   }));
   const hasWarehouses = warehouseOptions.length > 0;
+  const warehousesHref = getWarehousesHref();
+  const categoriesHref = canManageCategories ? "/settings/categories" : getMaterialHistoryHref();
+  const transferTodayHref = getTransferHistoryRangeHref("today");
+  const transferWeekHref = getTransferHistoryRangeHref("last-7-days");
 
   const chartOptions = useMemo(
     () => [
@@ -123,28 +137,40 @@ export function DashboardClient({
   );
 
   const kpiCards = [
-    { label: "Total materials", value: kpis.totalMaterials, icon: Package, tone: "indigo" },
-    { label: "Categories", value: kpis.totalCategories, icon: Layers, tone: "violet" },
-    { label: "Total stock", value: kpis.totalStock, icon: BarChart3, tone: "emerald" },
-    { label: "Low stock", value: kpis.lowStockItems, icon: AlertTriangle, tone: "amber" },
-    { label: "Transfers today", value: kpis.transfersToday, icon: ArrowRightLeft, tone: "blue" },
-    { label: "Transfers (7d)", value: kpis.transfersThisWeek, icon: TrendingUp, tone: "cyan" },
-    { label: "Warehouses", value: kpis.warehouseCount, icon: Warehouse, tone: "slate" },
-    { label: "Out of stock", value: kpis.outOfStockItems, icon: OctagonAlert, tone: "red" },
+    { href: warehousesHref, label: "Total materials", value: kpis.totalMaterials, icon: Package, tone: "indigo" },
+    { href: categoriesHref, label: "Categories", value: kpis.totalCategories, icon: Layers, tone: "violet" },
+    { href: warehousesHref, label: "Total stock", value: kpis.totalStock, icon: BarChart3, tone: "emerald" },
+    { href: getWarehousesHref("low-stock"), label: "Low stock", value: kpis.lowStockItems, icon: AlertTriangle, tone: "amber" },
+    { href: transferTodayHref, label: "Transfers today", value: kpis.transfersToday, icon: ArrowRightLeft, tone: "blue" },
+    { href: transferWeekHref, label: "Transfers (7d)", value: kpis.transfersThisWeek, icon: TrendingUp, tone: "cyan" },
+    { href: warehousesHref, label: "Warehouses", value: kpis.warehouseCount, icon: Warehouse, tone: "slate" },
+    { href: getWarehousesHref("out-of-stock"), label: "Out of stock", value: kpis.outOfStockItems, icon: OctagonAlert, tone: "red" },
   ];
 
   const topCategory = categoryChartData[0];
   const peakTransferDay = transferTrendData.reduce(
     (best, point) => (point.count > best.count ? point : best),
-    transferTrendData[0] ?? { count: 0, label: "-", quantity: 0 }
+    transferTrendData[0] ?? { count: 0, date: "", label: "-", quantity: 0 }
   );
   const topWarehouse = warehouseOverview.reduce(
     (best, warehouse) => (warehouse.totalStock > best.totalStock ? warehouse : best),
-    warehouseOverview[0] ?? { code: "-", totalStock: 0 }
+    warehouseOverview[0] ?? { code: "-", slug: "", totalStock: 0 }
   );
+  const peakTransferHref = peakTransferDay.date
+    ? getTransferHistoryHref({ from: peakTransferDay.date, to: peakTransferDay.date })
+    : transferWeekHref;
+  const topCategoryHref = topCategory ? getMaterialHistoryHref({ category: topCategory.name }) : categoriesHref;
+  const topWarehouseHref = topWarehouse.slug ? getWarehouseDetailHref(topWarehouse.slug) : warehousesHref;
   const hoverLift = prefersReducedMotion ? undefined : { y: -4, scale: 1.008 };
   const hoverLiftSoft = prefersReducedMotion ? undefined : { y: -2, scale: 1.003 };
   const tapScale = prefersReducedMotion ? undefined : { scale: 0.985 };
+
+  const handleSummaryCardKeyDown = (event: KeyboardEvent<HTMLElement>, href: string) => {
+    if ((event.key === "Enter" || event.key === " ") && event.target === event.currentTarget) {
+      event.preventDefault();
+      router.push(href);
+    }
+  };
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-4 sm:space-y-5">
@@ -188,7 +214,7 @@ export function DashboardClient({
       <motion.div variants={itemVariants} className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-2 lg:grid-cols-4">
         {kpiCards.map((card) => (
           <motion.div key={card.label} whileHover={hoverLift} transition={hoverTransition}>
-            <MetricCard icon={card.icon} label={card.label} tone={card.tone} value={card.value} />
+            <MetricCard href={card.href} icon={card.icon} label={card.label} tone={card.tone} value={card.value} />
           </motion.div>
         ))}
       </motion.div>
@@ -224,10 +250,20 @@ export function DashboardClient({
                 warehouse.totalMaterials - warehouse.lowStockCount - warehouse.outOfStockCount,
                 0
               );
+              const warehouseHref = getWarehouseDetailHref(warehouse.slug);
+              const lowStockHref = getWarehouseDetailHref(warehouse.slug, { status: "LOW_STOCK" });
+              const transfersHref = getTransferHistoryRangeHref("last-7-days", { warehouse: warehouse.code });
 
               return (
                 <motion.div key={warehouse.id} whileHover={hoverLiftSoft} transition={hoverTransition}>
-                  <Card className="glass-panel hover-glow overflow-hidden">
+                  <Card
+                    aria-label={`Open ${warehouse.code} warehouse`}
+                    className="glass-panel hover-glow cursor-pointer overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => router.push(warehouseHref)}
+                    onKeyDown={(event) => handleSummaryCardKeyDown(event, warehouseHref)}
+                  >
                     <CardContent className="relative space-y-3.5 sm:space-y-4">
                       <motion.div
                         aria-hidden="true"
@@ -253,7 +289,7 @@ export function DashboardClient({
                           </p>
                         </div>
                         <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
-                          <Link href={`/warehouses/${warehouse.slug}`}>
+                          <Link href={warehouseHref} onClick={(event) => event.stopPropagation()}>
                             Open
                             <ArrowRight className="h-4 w-4" />
                           </Link>
@@ -261,10 +297,10 @@ export function DashboardClient({
                       </div>
 
                       <div className="relative grid grid-cols-2 gap-2.5 sm:gap-3 sm:grid-cols-4">
-                        <MetricPill label="Materials" value={warehouse.totalMaterials} />
-                        <MetricPill label="Stock" value={formatNumber(warehouse.totalStock)} tone="emerald" />
-                        <MetricPill label="Low" value={warehouse.lowStockCount} tone="amber" />
-                        <MetricPill label="Transfers" value={warehouse.recentTransfers} tone="blue" />
+                        <MetricPill href={warehouseHref} label="Materials" value={warehouse.totalMaterials} />
+                        <MetricPill href={warehouseHref} label="Stock" value={formatNumber(warehouse.totalStock)} tone="emerald" />
+                        <MetricPill href={lowStockHref} label="Low" value={warehouse.lowStockCount} tone="amber" />
+                        <MetricPill href={transfersHref} label="Transfers" value={warehouse.recentTransfers} tone="blue" />
                       </div>
                     </CardContent>
                   </Card>
@@ -328,9 +364,9 @@ export function DashboardClient({
                 {mobileChartView === "transfers" ? (
                   <>
                     <div className="grid grid-cols-3 gap-2">
-                      <InsightTile label="Today" value={formatNumber(kpis.transfersToday)} />
-                      <InsightTile label="7 days" value={formatNumber(kpis.transfersThisWeek)} />
-                      <InsightTile label="Peak day" value={peakTransferDay.label} compact />
+                      <InsightTile href={transferTodayHref} label="Today" value={formatNumber(kpis.transfersToday)} />
+                      <InsightTile href={transferWeekHref} label="7 days" value={formatNumber(kpis.transfersThisWeek)} />
+                      <InsightTile href={peakTransferHref} label="Peak day" value={peakTransferDay.label} compact />
                     </div>
                     <ChartFrame title="Transfer activity">
                       {transferTrendData.length === 0 ? (
@@ -345,8 +381,8 @@ export function DashboardClient({
                 {mobileChartView === "categories" ? (
                   <>
                     <div className="grid grid-cols-2 gap-2">
-                      <InsightTile label="Top category" value={topCategory ? topCategory.name : "-"} compact />
-                      <InsightTile label="Count" value={topCategory ? formatNumber(topCategory.count) : "0"} />
+                      <InsightTile href={topCategoryHref} label="Top category" value={topCategory ? topCategory.name : "-"} compact />
+                      <InsightTile href={topCategoryHref} label="Count" value={topCategory ? formatNumber(topCategory.count) : "0"} />
                     </div>
                     <ChartFrame title="Category mix">
                       {categoryChartData.length === 0 ? (
@@ -361,8 +397,8 @@ export function DashboardClient({
                 {mobileChartView === "stock" ? (
                   <>
                     <div className="grid grid-cols-2 gap-2">
-                      <InsightTile label="Top warehouse" value={topWarehouse.code} compact />
-                      <InsightTile label="Stock" value={formatNumber(topWarehouse.totalStock)} />
+                      <InsightTile href={topWarehouseHref} label="Top warehouse" value={topWarehouse.code} compact />
+                      <InsightTile href={topWarehouseHref} label="Stock" value={formatNumber(topWarehouse.totalStock)} />
                     </div>
                     <ChartFrame title="Warehouse stock">
                       {warehouseStockChart.length === 0 ? (
@@ -392,7 +428,13 @@ export function DashboardClient({
             {lowStockMaterials.length === 0 ? (
               <EmptyState description="All tracked materials are above their minimum stock levels." icon={AlertTriangle} title="No low stock alerts" />
             ) : (
-              lowStockMaterials.map((material) => <AlertRow key={material.id} material={material} />)
+              lowStockMaterials.map((material) => (
+                <AlertRow
+                  key={material.id}
+                  href={getWarehouseDetailHref(material.warehouseCode, { search: material.name, status: material.status })}
+                  material={material}
+                />
+              ))
             )}
           </CardContent>
         </Card>
@@ -463,7 +505,13 @@ export function DashboardClient({
                   <EmptyState description="All tracked materials are above their minimum stock levels." icon={AlertTriangle} title="No low stock alerts" />
                 </div>
               ) : (
-                lowStockMaterials.map((material) => <AlertRow key={material.id} material={material} />)
+                lowStockMaterials.map((material) => (
+                  <AlertRow
+                    key={material.id}
+                    href={getWarehouseDetailHref(material.warehouseCode, { search: material.name, status: material.status })}
+                    material={material}
+                  />
+                ))
               )}
             </CardContent>
           </Card>
@@ -489,6 +537,11 @@ export function DashboardClient({
             ) : (
               recentActivities.map((activity) => (
                 <ActivityRow
+                  href={getMaterialHistoryHref({
+                    material: activity.materialName,
+                    type: activity.activityType,
+                    warehouse: activity.warehouseCode,
+                  })}
                   key={activity.id}
                   title={activity.materialName}
                   badgeClass={getActivityColor(activity.activityType)}
@@ -519,6 +572,11 @@ export function DashboardClient({
             ) : (
               recentTransfers.map((transfer) => (
                 <ActivityRow
+                  href={getTransferHistoryHref({
+                    material: transfer.materialName,
+                    recipient: transfer.recipientName,
+                    warehouse: transfer.warehouseCode,
+                  })}
                   key={transfer.id}
                   title={transfer.materialName}
                   badgeClass="bg-sky-500/12 text-sky-300"
@@ -582,11 +640,13 @@ export function DashboardClient({
 }
 
 function MetricCard({
+  href,
   icon: Icon,
   label,
   tone,
   value,
 }: {
+  href?: string;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   tone: string;
@@ -603,7 +663,7 @@ function MetricCard({
     violet: "violet",
   };
 
-  return (
+  const content = (
     <Card className="glass-panel hover-glow h-full overflow-hidden">
       <CardContent className="flex min-h-[138px] flex-col justify-between sm:min-h-[148px]">
         <div className="flex items-start justify-between gap-3">
@@ -622,13 +682,25 @@ function MetricCard({
       </CardContent>
     </Card>
   );
+
+  if (!href) {
+    return content;
+  }
+
+  return (
+    <Link href={href} className="block rounded-[26px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70">
+      {content}
+    </Link>
+  );
 }
 
 function MetricPill({
+  href,
   label,
   tone = "default",
   value,
 }: {
+  href?: string;
   label: string;
   tone?: "amber" | "blue" | "default" | "emerald";
   value: number | string;
@@ -640,28 +712,54 @@ function MetricPill({
     blue: "text-sky-300",
   };
 
-  return (
+  const content = (
     <div className="rounded-[18px] border border-white/8 bg-white/[0.03] p-3 sm:rounded-[20px]">
       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
       <p className={`mt-2 text-base font-semibold sm:text-lg ${tones[tone]}`}>{value}</p>
     </div>
   );
+
+  if (!href) {
+    return content;
+  }
+
+  return (
+    <Link
+      href={href}
+      onClick={(event) => event.stopPropagation()}
+      className="block rounded-[20px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+    >
+      {content}
+    </Link>
+  );
 }
 
 function InsightTile({
   compact = false,
+  href,
   label,
   value,
 }: {
   compact?: boolean;
+  href?: string;
   label: string;
   value: string;
 }) {
-  return (
+  const content = (
     <div className="rounded-[18px] border border-white/8 bg-white/[0.03] px-3 py-3 sm:rounded-[20px]">
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
       <p className={cn("mt-2 font-semibold", compact ? "text-sm" : "text-base")}>{value}</p>
     </div>
+  );
+
+  if (!href) {
+    return content;
+  }
+
+  return (
+    <Link href={href} className="block rounded-[20px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70">
+      {content}
+    </Link>
   );
 }
 
@@ -767,13 +865,15 @@ function WarehouseStockChart({
 }
 
 function AlertRow({
+  href,
   material,
 }: {
+  href?: string;
   material: DashboardData["lowStockMaterials"][number];
 }) {
   const prefersReducedMotion = useReducedMotion();
 
-  return (
+  const content = (
     <motion.div
       whileHover={prefersReducedMotion ? undefined : { x: 2 }}
       transition={hoverTransition}
@@ -792,16 +892,28 @@ function AlertRow({
       </div>
     </motion.div>
   );
+
+  if (!href) {
+    return content;
+  }
+
+  return (
+    <Link href={href} className="block rounded-[20px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70">
+      {content}
+    </Link>
+  );
 }
 
 function ActivityRow({
   badgeClass,
+  href,
   icon,
   meta,
   subMeta,
   title,
 }: {
   badgeClass: string;
+  href?: string;
   icon: React.ReactNode;
   meta: string;
   subMeta: string;
@@ -809,7 +921,7 @@ function ActivityRow({
 }) {
   const prefersReducedMotion = useReducedMotion();
 
-  return (
+  const content = (
     <motion.div
       whileHover={prefersReducedMotion ? undefined : { x: 2, y: -1 }}
       transition={hoverTransition}
@@ -822,6 +934,16 @@ function ActivityRow({
         <p className="mt-1 text-[11px] text-muted-foreground/70">{subMeta}</p>
       </div>
     </motion.div>
+  );
+
+  if (!href) {
+    return content;
+  }
+
+  return (
+    <Link href={href} className="block rounded-[20px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70">
+      {content}
+    </Link>
   );
 }
 

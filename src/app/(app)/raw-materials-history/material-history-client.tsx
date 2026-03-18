@@ -3,6 +3,7 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Activity, Search } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { ResponsiveFiltersSheet } from "@/components/shared/responsive-filters-sheet";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
@@ -38,6 +39,12 @@ export function MaterialHistoryClient({
   categories,
   materials,
   users,
+  initialCategoryFilter = "all",
+  initialFromDate = "",
+  initialMaterialFilter = "all",
+  initialToDate = "",
+  initialTypeFilter = "all",
+  initialUserFilter = "all",
   initialWarehouseFilter = "all",
 }: {
   activities: ActivityRecord[];
@@ -45,16 +52,24 @@ export function MaterialHistoryClient({
   categories: string[];
   materials: string[];
   users: string[];
+  initialCategoryFilter?: string;
+  initialFromDate?: string;
+  initialMaterialFilter?: string;
+  initialToDate?: string;
+  initialTypeFilter?: string;
+  initialUserFilter?: string;
   initialWarehouseFilter?: string;
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState(initialWarehouseFilter);
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [materialFilter, setMaterialFilter] = useState("all");
-  const [userFilter, setUserFilter] = useState("all");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [typeFilter, setTypeFilter] = useState(initialTypeFilter);
+  const [categoryFilter, setCategoryFilter] = useState(initialCategoryFilter);
+  const [materialFilter, setMaterialFilter] = useState(initialMaterialFilter);
+  const [userFilter, setUserFilter] = useState(initialUserFilter);
+  const [fromDate, setFromDate] = useState(initialFromDate);
+  const [toDate, setToDate] = useState(initialToDate);
   const [page, setPage] = useState(1);
   const [selectedActivity, setSelectedActivity] = useState<ActivityRecord | null>(null);
   const deferredSearch = useDeferredValue(search);
@@ -127,6 +142,7 @@ export function MaterialHistoryClient({
     setFromDate("");
     setToDate("");
     setPage(1);
+    router.replace(pathname, { scroll: false });
   };
 
   const filters = (

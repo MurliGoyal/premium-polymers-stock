@@ -17,6 +17,7 @@ import {
   Search,
   Warehouse,
 } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { ResponsiveFiltersSheet } from "@/components/shared/responsive-filters-sheet";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
@@ -27,6 +28,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { WAREHOUSE_MATERIAL_PAGE_SIZE } from "@/lib/constants";
+import {
+  type WarehouseStatusFilter,
+  type WarehouseUpdatedFilter,
+  getTransferHistoryRangeHref,
+  getWarehouseDetailHref,
+} from "@/lib/drilldowns";
 import { hasPermission } from "@/lib/rbac";
 import { cn, formatDate, formatNumber, getStatusColor, getStatusLabel } from "@/lib/utils";
 
@@ -74,17 +81,29 @@ const itemVariants = {
 
 export function WarehouseDetailClient({
   data,
+  initialCategoryFilter,
+  initialSearch,
+  initialStatusFilter,
+  initialUnitFilter,
+  initialUpdatedFilter,
   userRole,
 }: {
   data: WarehouseDetailData;
+  initialCategoryFilter: string;
+  initialSearch: string;
+  initialStatusFilter: WarehouseStatusFilter;
+  initialUnitFilter: string;
+  initialUpdatedFilter: WarehouseUpdatedFilter;
   userRole: string;
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const { warehouse, materials, stats } = data;
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [unitFilter, setUnitFilter] = useState("all");
-  const [updatedFilter, setUpdatedFilter] = useState("all");
+  const [search, setSearch] = useState(initialSearch);
+  const [statusFilter, setStatusFilter] = useState<WarehouseStatusFilter>(initialStatusFilter);
+  const [categoryFilter, setCategoryFilter] = useState(initialCategoryFilter);
+  const [unitFilter, setUnitFilter] = useState(initialUnitFilter);
+  const [updatedFilter, setUpdatedFilter] = useState<WarehouseUpdatedFilter>(initialUpdatedFilter);
   const [sortField, setSortField] = useState<string>("updatedAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
@@ -92,12 +111,32 @@ export function WarehouseDetailClient({
 
   const canCreateMaterials = hasPermission(userRole, "raw_materials:create");
   const canCreateTransfers = hasPermission(userRole, "transfers:create");
+  const defaultWarehouseHref = getWarehouseDetailHref(warehouse.slug);
+  const recentTransfersHref = getTransferHistoryRangeHref("last-7-days", { warehouse: warehouse.code });
   const statCards = [
-    { icon: Package, label: "Total materials", value: stats.totalCount },
-    { icon: BarChart3, label: "Total stock", value: formatNumber(stats.totalStock), tone: "emerald" as const },
-    { icon: AlertTriangle, label: "Low stock", value: stats.lowStockCount, tone: "amber" as const },
-    { icon: OctagonAlert, label: "Out of stock", value: stats.outOfStockCount, tone: "red" as const },
-    { icon: ArrowRightLeft, label: "Recent transfers", value: stats.recentTransfers, tone: "blue" as const },
+    { href: defaultWarehouseHref, icon: Package, label: "Total materials", value: stats.totalCount },
+    { href: defaultWarehouseHref, icon: BarChart3, label: "Total stock", value: formatNumber(stats.totalStock), tone: "emerald" as const },
+    {
+      href: getWarehouseDetailHref(warehouse.slug, { status: "LOW_STOCK" }),
+      icon: AlertTriangle,
+      label: "Low stock",
+      value: stats.lowStockCount,
+      tone: "amber" as const,
+    },
+    {
+      href: getWarehouseDetailHref(warehouse.slug, { status: "OUT_OF_STOCK" }),
+      icon: OctagonAlert,
+      label: "Out of stock",
+      value: stats.outOfStockCount,
+      tone: "red" as const,
+    },
+    {
+      href: recentTransfersHref,
+      icon: ArrowRightLeft,
+      label: "Recent transfers",
+      value: stats.recentTransfers,
+      tone: "blue" as const,
+    },
   ];
   const categories = useMemo(() => [...new Set(materials.map((material) => material.category))].sort(), [materials]);
   const units = useMemo(() => [...new Set(materials.map((material) => material.baseUnit))].sort(), [materials]);
@@ -159,6 +198,7 @@ export function WarehouseDetailClient({
     setUnitFilter("all");
     setUpdatedFilter("all");
     setPage(1);
+    router.replace(pathname, { scroll: false });
   };
 
   const toggleSort = (field: string) => {
@@ -188,7 +228,7 @@ export function WarehouseDetailClient({
       <Select
         value={statusFilter}
         onValueChange={(value) => {
-          setStatusFilter(value);
+          setStatusFilter(value as WarehouseStatusFilter);
           setPage(1);
         }}
       >
@@ -243,7 +283,7 @@ export function WarehouseDetailClient({
       <Select
         value={updatedFilter}
         onValueChange={(value) => {
-          setUpdatedFilter(value);
+          setUpdatedFilter(value as WarehouseUpdatedFilter);
           setPage(1);
         }}
       >
@@ -309,6 +349,7 @@ export function WarehouseDetailClient({
           <MetricCard
             key={card.label}
             className={index === statCards.length - 1 ? "col-span-2 md:col-span-1" : undefined}
+            href={card.href}
             icon={card.icon}
             label={card.label}
             tone={card.tone}
@@ -545,12 +586,14 @@ function InfoPill({ label, value }: { label: string; value: string }) {
 
 function MetricCard({
   className,
+  href,
   icon: Icon,
   label,
   value,
   tone = "default",
 }: {
   className?: string;
+  href?: string;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number | string;
@@ -564,7 +607,7 @@ function MetricCard({
     blue: "bg-sky-500/14 text-sky-300",
   };
 
-  return (
+  const content = (
     <Card className={cn("rounded-[24px]", className)}>
       <CardContent className="flex min-h-[124px] items-center gap-3 sm:min-h-[132px]">
         <div className={`flex h-11 w-11 items-center justify-center rounded-[18px] sm:h-12 sm:w-12 sm:rounded-2xl ${toneClasses[tone]}`}>
@@ -576,6 +619,16 @@ function MetricCard({
         </div>
       </CardContent>
     </Card>
+  );
+
+  if (!href) {
+    return content;
+  }
+
+  return (
+    <Link href={href} className="block rounded-[24px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70">
+      {content}
+    </Link>
   );
 }
 

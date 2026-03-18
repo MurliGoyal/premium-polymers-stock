@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -11,11 +12,12 @@ import {
   Warehouse,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { type WarehouseHealthFilter, getWarehousesHref } from "@/lib/drilldowns";
 import { cn, formatNumber } from "@/lib/utils";
 
 type WarehouseData = {
@@ -44,8 +46,49 @@ const cardVariants = {
   show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.35, ease: [0.2, 1, 0.22, 1] as [number, number, number, number] } },
 };
 
-export function WarehousesClient({ warehouses }: { warehouses: WarehouseData[] }) {
+export function WarehousesClient({
+  warehouses,
+  initialHealthFilter,
+}: {
+  warehouses: WarehouseData[];
+  initialHealthFilter: WarehouseHealthFilter;
+}) {
+  const pathname = usePathname();
   const router = useRouter();
+  const [healthFilter, setHealthFilter] = useState<WarehouseHealthFilter>(initialHealthFilter);
+
+  const filteredWarehouses = useMemo(() => {
+    switch (healthFilter) {
+      case "low-stock":
+        return warehouses.filter((warehouse) => warehouse.lowStockCount > 0);
+      case "out-of-stock":
+        return warehouses.filter((warehouse) => warehouse.outOfStockCount > 0);
+      default:
+        return warehouses;
+    }
+  }, [healthFilter, warehouses]);
+
+  const filterOptions = useMemo(
+    () => [
+      { key: "all" as const, label: "All", count: warehouses.length },
+      {
+        key: "low-stock" as const,
+        label: "Low stock",
+        count: warehouses.filter((warehouse) => warehouse.lowStockCount > 0).length,
+      },
+      {
+        key: "out-of-stock" as const,
+        label: "Out of stock",
+        count: warehouses.filter((warehouse) => warehouse.outOfStockCount > 0).length,
+      },
+    ],
+    [warehouses]
+  );
+
+  const applyHealthFilter = (nextFilter: WarehouseHealthFilter) => {
+    setHealthFilter(nextFilter);
+    router.replace(nextFilter === "all" ? pathname : getWarehousesHref(nextFilter), { scroll: false });
+  };
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-4 sm:space-y-5">
@@ -54,7 +97,11 @@ export function WarehousesClient({ warehouses }: { warehouses: WarehouseData[] }
           eyebrow="Warehouse directory"
           title="Warehouses"
           description="Choose a warehouse to manage stock, inspect health signals, and move into material-level workflows without losing context on mobile."
-          badge={<Badge variant="secondary">{warehouses.length} active warehouses</Badge>}
+          badge={
+            <Badge variant="secondary">
+              {healthFilter === "all" ? `${warehouses.length} active warehouses` : `${filteredWarehouses.length} matching warehouses`}
+            </Badge>
+          }
         />
       </motion.div>
 
@@ -75,79 +122,115 @@ export function WarehousesClient({ warehouses }: { warehouses: WarehouseData[] }
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3.5 sm:gap-4 md:grid-cols-2 xl:grid-cols-2">
-          {warehouses.map((warehouse) => {
-            const totalMaterials = warehouse.totalMaterials;
-            const healthSummary =
-              totalMaterials === 0
-                ? "No materials yet"
-                : `${Math.round((warehouse.inStockCount / totalMaterials) * 100)}% healthy / ${Math.round((warehouse.lowStockCount / totalMaterials) * 100)}% low / ${Math.round((warehouse.outOfStockCount / totalMaterials) * 100)}% empty`;
+        <>
+          <div className="flex flex-wrap gap-2">
+            {filterOptions.map((option) => (
+              <Button
+                key={option.key}
+                type="button"
+                variant={healthFilter === option.key ? "default" : "outline"}
+                onClick={() => applyHealthFilter(option.key)}
+              >
+                {option.label}
+                <span className="text-xs text-current/80">{option.count}</span>
+              </Button>
+            ))}
+          </div>
 
-            return (
-              <motion.div key={warehouse.id} variants={cardVariants}>
-                <Link href={`/warehouses/${warehouse.slug}`} className="block">
-                  <Card className="group relative overflow-hidden border-white/10 glass-panel hover-glow">
-                    <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${warehouse.gradient} opacity-70`} />
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_36%)]" />
+          {filteredWarehouses.length === 0 ? (
+            <Card className="glass-panel border-white/10">
+              <CardContent className="flex flex-col items-center justify-center px-6 py-20 text-center">
+                <Warehouse className="mb-4 h-12 w-12 text-muted-foreground/30" />
+                <h3 className="text-lg font-semibold">No warehouses match this filter</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Clear the active health filter to see the full warehouse directory again.
+                </p>
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <Button type="button" onClick={() => applyHealthFilter("all")}>
+                    Show all
+                  </Button>
+                  <Button asChild variant="outline">
+                    <Link href="/dashboard">Go to dashboard</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-3.5 sm:gap-4 md:grid-cols-2 xl:grid-cols-2">
+              {filteredWarehouses.map((warehouse) => {
+                const totalMaterials = warehouse.totalMaterials;
+                const healthSummary =
+                  totalMaterials === 0
+                    ? "No materials yet"
+                    : `${Math.round((warehouse.inStockCount / totalMaterials) * 100)}% healthy / ${Math.round((warehouse.lowStockCount / totalMaterials) * 100)}% low / ${Math.round((warehouse.outOfStockCount / totalMaterials) * 100)}% empty`;
 
-                    <CardContent className="relative space-y-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-start gap-3">
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-primary/14 text-primary shadow-[0_18px_38px_rgba(91,102,255,0.18)] sm:h-14 sm:w-14 sm:rounded-[20px]">
-                            <Warehouse className="h-6 w-6" />
+                return (
+                  <motion.div key={warehouse.id} variants={cardVariants}>
+                    <Link href={`/warehouses/${warehouse.slug}`} className="block">
+                      <Card className="group relative overflow-hidden border-white/10 glass-panel hover-glow">
+                        <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${warehouse.gradient} opacity-70`} />
+                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_36%)]" />
+
+                        <CardContent className="relative space-y-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex min-w-0 items-start gap-3">
+                              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-primary/14 text-primary shadow-[0_18px_38px_rgba(91,102,255,0.18)] sm:h-14 sm:w-14 sm:rounded-[20px]">
+                                <Warehouse className="h-6 w-6" />
+                              </div>
+                              <div className="min-w-0 space-y-1">
+                                <h2 className="text-[1.85rem] font-semibold tracking-[-0.04em] sm:text-2xl">{warehouse.code}</h2>
+                                <p className="line-clamp-2 text-sm text-muted-foreground">{warehouse.subtitle || warehouse.name}</p>
+                                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/80">{healthSummary}</p>
+                              </div>
+                            </div>
+                            <div className="rounded-full border border-white/8 bg-white/[0.05] p-2.5 text-muted-foreground transition-all duration-200 group-hover:translate-x-1 group-hover:text-foreground sm:p-3">
+                              <ArrowRight className="h-4 w-4" />
+                            </div>
                           </div>
-                          <div className="min-w-0 space-y-1">
-                            <h2 className="text-[1.85rem] font-semibold tracking-[-0.04em] sm:text-2xl">{warehouse.code}</h2>
-                            <p className="line-clamp-2 text-sm text-muted-foreground">{warehouse.subtitle || warehouse.name}</p>
-                            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/80">{healthSummary}</p>
+
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            <MetricCell label="Healthy" tone="emerald" value={warehouse.inStockCount} />
+                            <MetricCell label="Low" tone="amber" value={warehouse.lowStockCount} />
+                            <MetricCell label="Empty" tone="red" value={warehouse.outOfStockCount} />
+                            <MetricCell label="Moves" tone="blue" value={warehouse.recentTransfers} />
                           </div>
-                        </div>
-                        <div className="rounded-full border border-white/8 bg-white/[0.05] p-2.5 text-muted-foreground transition-all duration-200 group-hover:translate-x-1 group-hover:text-foreground sm:p-3">
-                          <ArrowRight className="h-4 w-4" />
-                        </div>
-                      </div>
 
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        <MetricCell label="Healthy" tone="emerald" value={warehouse.inStockCount} />
-                        <MetricCell label="Low" tone="amber" value={warehouse.lowStockCount} />
-                        <MetricCell label="Empty" tone="red" value={warehouse.outOfStockCount} />
-                        <MetricCell label="Moves" tone="blue" value={warehouse.recentTransfers} />
-                      </div>
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                            <DetailStat icon={Package} label="Materials" value={warehouse.totalMaterials} />
+                            <DetailStat icon={BarChart3} label="Total stock" value={formatNumber(warehouse.totalStock)} accent="emerald" />
+                            <DetailStat
+                              className="col-span-2 sm:col-span-1"
+                              icon={ArrowRightLeft}
+                              label="Transfer qty"
+                              value={formatNumber(warehouse.totalTransferQty)}
+                              accent="blue"
+                            />
+                          </div>
 
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                        <DetailStat icon={Package} label="Materials" value={warehouse.totalMaterials} />
-                        <DetailStat icon={BarChart3} label="Total stock" value={formatNumber(warehouse.totalStock)} accent="emerald" />
-                        <DetailStat
-                          className="col-span-2 sm:col-span-1"
-                          icon={ArrowRightLeft}
-                          label="Transfer qty"
-                          value={formatNumber(warehouse.totalTransferQty)}
-                          accent="blue"
-                        />
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="success">
-                          <CheckCircle2 className="mr-1 h-3 w-3" />
-                          {warehouse.inStockCount} in stock
-                        </Badge>
-                        {warehouse.lowStockCount > 0 ? (
-                          <Badge variant="warning">{warehouse.lowStockCount} low stock</Badge>
-                        ) : null}
-                        {warehouse.outOfStockCount > 0 ? (
-                          <Badge variant="danger">
-                            <OctagonAlert className="mr-1 h-3 w-3" />
-                            {warehouse.outOfStockCount} out of stock
-                          </Badge>
-                        ) : null}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </motion.div>
-            );
-          })}
-        </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="success">
+                              <CheckCircle2 className="mr-1 h-3 w-3" />
+                              {warehouse.inStockCount} in stock
+                            </Badge>
+                            {warehouse.lowStockCount > 0 ? (
+                              <Badge variant="warning">{warehouse.lowStockCount} low stock</Badge>
+                            ) : null}
+                            {warehouse.outOfStockCount > 0 ? (
+                              <Badge variant="danger">
+                                <OctagonAlert className="mr-1 h-3 w-3" />
+                                {warehouse.outOfStockCount} out of stock
+                              </Badge>
+                            ) : null}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </motion.div>
   );
