@@ -96,7 +96,7 @@ export function WarehousesClient({
         <ResponsivePageHeader
           eyebrow="Warehouse directory"
           title="Warehouses"
-          description="Choose a warehouse to manage stock, inspect health signals, and move into material-level workflows without losing context on mobile."
+          description="Select a warehouse to view stock, health status, and materials."
           badge={
             <Badge variant="secondary">
               {healthFilter === "all" ? `${warehouses.length} active warehouses` : `${filteredWarehouses.length} matching warehouses`}
@@ -156,13 +156,13 @@ export function WarehousesClient({
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-3.5 sm:gap-4 md:grid-cols-2 xl:grid-cols-2">
+            <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
               {filteredWarehouses.map((warehouse) => {
                 const totalMaterials = warehouse.totalMaterials;
                 const healthSummary =
                   totalMaterials === 0
                     ? "No materials yet"
-                    : `${Math.round((warehouse.inStockCount / totalMaterials) * 100)}% healthy / ${Math.round((warehouse.lowStockCount / totalMaterials) * 100)}% low / ${Math.round((warehouse.outOfStockCount / totalMaterials) * 100)}% empty`;
+                    : `${Math.round((warehouse.inStockCount / totalMaterials) * 100)}% healthy · ${Math.round((warehouse.lowStockCount / totalMaterials) * 100)}% low · ${Math.round((warehouse.outOfStockCount / totalMaterials) * 100)}% empty`;
 
                 return (
                   <motion.div key={warehouse.id} variants={cardVariants}>
@@ -171,19 +171,19 @@ export function WarehousesClient({
                         <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${warehouse.gradient} opacity-70`} />
                         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_36%)]" />
 
-                        <CardContent className="relative space-y-4">
+                        <CardContent className="relative space-y-3 sm:space-y-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex min-w-0 items-start gap-3">
-                              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-primary/14 text-primary shadow-[0_18px_38px_rgba(91,102,255,0.18)] sm:h-14 sm:w-14 sm:rounded-[20px]">
-                                <Warehouse className="h-6 w-6" />
+                              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-primary/14 text-primary shadow-[0_18px_38px_rgba(91,102,255,0.18)] sm:h-14 sm:w-14 sm:rounded-[20px]">
+                                <Warehouse className="h-5 w-5 sm:h-6 sm:w-6" />
                               </div>
-                              <div className="min-w-0 space-y-1">
-                                <h2 className="text-[1.85rem] font-semibold tracking-[-0.04em] sm:text-2xl">{warehouse.code}</h2>
-                                <p className="line-clamp-2 text-sm text-muted-foreground">{warehouse.subtitle || warehouse.name}</p>
-                                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/80">{healthSummary}</p>
+                              <div className="min-w-0 space-y-0.5 sm:space-y-1">
+                                <h2 className="text-xl font-semibold tracking-[-0.04em] sm:text-2xl">{warehouse.code}</h2>
+                                <p className="line-clamp-2 text-[13px] text-muted-foreground sm:text-sm">{warehouse.subtitle || warehouse.name}</p>
+                                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/80 sm:text-xs">{healthSummary}</p>
                               </div>
                             </div>
-                            <div className="rounded-full border border-white/8 bg-white/[0.05] p-2.5 text-muted-foreground transition-all duration-200 group-hover:translate-x-1 group-hover:text-foreground sm:p-3">
+                            <div className="rounded-full border border-white/8 bg-white/[0.05] p-2 text-muted-foreground transition-all duration-200 group-hover:translate-x-1 group-hover:text-foreground sm:p-3">
                               <ArrowRight className="h-4 w-4" />
                             </div>
                           </div>
@@ -253,12 +253,12 @@ function MetricCell({
   };
 
   return (
-    <div className="rounded-[18px] border border-white/10 bg-white/[0.04] p-3 backdrop-blur-sm transition-all hover:scale-[1.02] hover:bg-white/[0.06] sm:rounded-[20px]">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xl font-semibold">{value}</p>
-        <div className={`h-2.5 w-10 rounded-full ${tones[tone]}`} />
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-2.5 backdrop-blur-sm transition-all hover:scale-[1.02] hover:bg-white/[0.06] sm:rounded-[20px] sm:p-3">
+      <div className="flex items-center justify-between gap-2 sm:gap-3">
+        <p className="text-lg font-semibold sm:text-xl">{value}</p>
+        <div className={`h-2 w-8 rounded-full sm:h-2.5 sm:w-10 ${tones[tone]}`} />
       </div>
-      <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+      <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:mt-2 sm:text-[11px]">{label}</p>
     </div>
   );
 }
@@ -283,10 +283,10 @@ function DetailStat({
   };
 
   return (
-    <div className={cn("rounded-[20px] border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur-sm transition-all hover:scale-[1.02] hover:bg-white/[0.06] sm:rounded-[22px] sm:p-4", className)}>
+    <div className={cn("rounded-2xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur-sm transition-all hover:scale-[1.02] hover:bg-white/[0.06] sm:rounded-[22px] sm:p-4", className)}>
       <Icon className="h-4 w-4 text-muted-foreground" />
-      <p className={`mt-3 text-lg font-semibold sm:text-xl ${accents[accent]}`}>{value}</p>
-      <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+      <p className={`mt-2 text-base font-semibold sm:mt-3 sm:text-xl ${accents[accent]}`}>{value}</p>
+      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:mt-1 sm:text-[11px]">{label}</p>
     </div>
   );
 }

@@ -72,7 +72,7 @@ export function AppShell({
 
   return (
     <div
-      className="relative min-h-screen"
+      className="relative min-h-dvh overflow-x-clip"
       style={{
         "--shell-sidebar-offset": desktopOffset,
         "--shell-tablet-offset": tabletOffset,
@@ -87,14 +87,14 @@ export function AppShell({
         user={user}
       />
 
-      <div className="min-h-screen transition-[padding] duration-500 ease-[cubic-bezier(0.2,1,0.22,1)] md:pl-[var(--shell-tablet-offset)] lg:pl-[var(--shell-sidebar-offset)]">
+      <div className="min-h-dvh min-w-0 transition-[padding] duration-500 ease-[cubic-bezier(0.2,1,0.22,1)] md:pl-[var(--shell-tablet-offset)] lg:pl-[var(--shell-sidebar-offset)]">
         <Topbar
           onDesktopSidebarToggle={toggleSidebar}
           onMobileNavOpen={() => setMobileNavOpen(true)}
           user={user}
           warehouses={warehouses}
         />
-        <main className="px-3 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-5 lg:px-8 xl:px-10">{children}</main>
+        <main className="min-w-0 px-3 pb-24 pt-4 sm:px-6 sm:pb-10 sm:pt-5 lg:px-8 xl:px-10">{children}</main>
       </div>
     </div>
   );

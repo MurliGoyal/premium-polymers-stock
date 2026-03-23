@@ -13,12 +13,19 @@ export default async function AddRawMaterialPage({ params }: { params: Promise<{
   });
   if (!warehouse) notFound();
 
-  const categories = await prisma.category.findMany({ orderBy: { name: "asc" } });
+  const categories = await prisma.category.findMany({
+    include: { subcategories: { orderBy: { name: "asc" } } },
+    orderBy: { name: "asc" },
+  });
 
   return (
     <AddMaterialClient
       warehouse={{ id: warehouse.id, code: warehouse.code, name: warehouse.name, slug: warehouse.slug }}
-      categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+      categories={categories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        subcategories: c.subcategories.map((s) => ({ id: s.id, name: s.name })),
+      }))}
     />
   );
 }

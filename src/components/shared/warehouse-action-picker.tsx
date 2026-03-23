@@ -101,7 +101,7 @@ export function WarehouseActionPicker({
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="max-w-xl overflow-hidden p-0">
-        <DialogHeader className="border-b border-white/8 px-6 py-5">
+        <DialogHeader className="border-b border-white/8 px-4 py-4 sm:px-6 sm:py-5">
           <DialogTitle className="flex items-center gap-2">
             <ActionIcon className="h-4 w-4 text-primary" />
             {config.title}
@@ -109,7 +109,7 @@ export function WarehouseActionPicker({
           <DialogDescription>{config.description}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 px-6 py-5">
+        <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-5">
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -132,7 +132,7 @@ export function WarehouseActionPicker({
                   key={warehouse.slug}
                   type="button"
                   variant="outline"
-                  className="h-auto w-full justify-between rounded-[24px] px-4 py-4 text-left"
+                  className="h-auto w-full justify-between rounded-2xl px-3.5 py-3.5 text-left sm:rounded-[24px] sm:px-4 sm:py-4"
                   onClick={() => {
                     setOpen(false);
                     router.push(getWarehouseActionHref(action, warehouse.slug));

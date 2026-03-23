@@ -33,6 +33,27 @@ type TransferRecord = {
   materialSnapshot: Record<string, unknown> | null;
 };
 
+function parseDateBoundary(dateInput: string, endOfDay = false) {
+  if (!dateInput || !/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+    return null;
+  }
+
+  const [year, month, day] = dateInput.split("-").map(Number);
+  const parsed = endOfDay
+    ? new Date(year, month - 1, day, 23, 59, 59, 999)
+    : new Date(year, month - 1, day, 0, 0, 0, 0);
+
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return parsed;
+}
+
 export function TransferHistoryClient({
   transfers,
   warehouses,
@@ -72,6 +93,9 @@ export function TransferHistoryClient({
   const deferredSearch = useDeferredValue(search);
 
   const filtered = useMemo(() => {
+    const fromBoundary = parseDateBoundary(fromDate);
+    const toBoundary = parseDateBoundary(toDate, true);
+
     return transfers.filter((transfer) => {
       const normalizedSearch = deferredSearch.trim().toLowerCase();
       const createdAt = new Date(transfer.createdAt);
@@ -96,8 +120,8 @@ export function TransferHistoryClient({
       if (recipientFilter !== "all" && transfer.recipientName !== recipientFilter) return false;
       if (categoryFilter !== "all" && transfer.category !== categoryFilter) return false;
       if (materialFilter !== "all" && transfer.materialName !== materialFilter) return false;
-      if (fromDate && createdAt < new Date(`${fromDate}T00:00:00`)) return false;
-      if (toDate && createdAt > new Date(`${toDate}T23:59:59`)) return false;
+      if (fromBoundary && createdAt < fromBoundary) return false;
+      if (toBoundary && createdAt > toBoundary) return false;
 
       return true;
     });
@@ -252,7 +276,7 @@ export function TransferHistoryClient({
       <ResponsivePageHeader
         eyebrow="Audit trail"
         title="Transfer history"
-        description="Searchable log of stock deductions, recipients, and reference records that stays readable on phones."
+        description="Log of all stock deductions, recipients, and references."
         badge={<Badge variant="secondary">{filtered.length} matching transfers</Badge>}
       />
 
@@ -311,7 +335,7 @@ export function TransferHistoryClient({
             <div className="grid gap-3 p-4 md:grid-cols-2 xl:hidden">
               {paginatedTransfers.map((transfer) => (
                 <motion.div key={transfer.id} whileHover={{ y: -2, scale: 1.01 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
-                  <Card className="cursor-pointer rounded-[24px] glass-panel hover-glow border-white/10 h-full" onClick={() => setSelectedTransfer(transfer)}>
+                  <Card className="cursor-pointer rounded-2xl glass-panel hover-glow border-white/10 h-full sm:rounded-[24px]" onClick={() => setSelectedTransfer(transfer)}>
                     <CardContent className="space-y-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0 space-y-2">
@@ -442,7 +466,6 @@ export function TransferHistoryClient({
                       <DetailBlock label="Stock after transfer" value={formatSnapshotQuantity(snapshot.stockAfterTransfer)} accent />
                       <DetailBlock label="Thickness" value={formatOptionalMeasurement(snapshot.thicknessValue, snapshot.thicknessUnit)} />
                       <DetailBlock label="Size" value={formatOptionalMeasurement(snapshot.sizeValue, snapshot.sizeUnit)} />
-                      <DetailBlock label="Weight" value={formatOptionalMeasurement(snapshot.weightValue, snapshot.weightUnit)} />
                       <DetailBlock label="GSM" value={String(snapshot.gsm ?? "-")} />
                     </div>
                     {snapshot.notes ? (

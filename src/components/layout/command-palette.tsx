@@ -146,13 +146,13 @@ export function CommandPalette({
         }
       }}
     >
-      <DialogContent className="flex max-h-[min(88vh,760px)] w-[calc(100vw-1rem)] max-w-3xl flex-col overflow-hidden p-0 sm:w-full">
-        <DialogHeader className="border-b border-white/8 px-6 py-5 shrink-0">
+      <DialogContent className="flex max-h-[min(90vh,760px)] w-[calc(100vw-1rem)] max-w-3xl flex-col overflow-hidden p-0 sm:w-full">
+        <DialogHeader className="border-b border-white/8 px-4 py-4 shrink-0 sm:px-6 sm:py-5">
           <DialogTitle>Command palette</DialogTitle>
           <DialogDescription>Search pages and warehouse workflows with one shortcut.</DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 pt-5 shrink-0">
+        <div className="px-4 pt-4 shrink-0 sm:px-6 sm:pt-5">
           <div className="relative flex items-center">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -176,7 +176,7 @@ export function CommandPalette({
           </div>
         </div>
 
-        <div className="px-6 pb-5 pt-0 overflow-y-auto min-h-0 mt-5">
+        <div className="px-4 pb-4 pt-0 overflow-y-auto min-h-0 mt-4 sm:px-6 sm:pb-5 sm:mt-5">
           {!hasResults ? (
             <div className="flex flex-col items-center justify-center rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] px-4 py-12 text-center text-sm text-muted-foreground animate-in fade-in duration-300">
               <Search className="mb-4 h-10 w-10 text-muted-foreground/30" />
@@ -236,7 +236,7 @@ function CommandGroup({
               onClick={() => onSelect(item.href)}
             >
               <div className="flex min-w-0 items-start gap-3">
-                <IconChip size="sm" tone="primary" className="mt-0.5 sm:h-10 sm:w-10 sm:rounded-[18px]">
+                <IconChip size="sm" tone="primary" className="mt-0.5">
                   <item.icon className="h-4 w-4" />
                 </IconChip>
                 <div className="min-w-0 space-y-1">

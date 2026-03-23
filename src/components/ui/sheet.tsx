@@ -24,14 +24,14 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  "fixed z-50 gap-4 border border-white/10 bg-background/95 p-6 shadow-[0_28px_80px_rgba(2,6,23,0.48)] backdrop-blur-2xl transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500 data-[state=open]:animate-in data-[state=closed]:animate-out",
+  "fixed z-50 gap-4 overflow-y-auto overscroll-contain border border-white/10 bg-background/95 p-4 shadow-[0_28px_80px_rgba(2,6,23,0.48)] backdrop-blur-2xl transition ease-in-out sm:p-6 data-[state=closed]:duration-300 data-[state=open]:duration-500 data-[state=open]:animate-in data-[state=closed]:animate-out",
   {
     variants: {
       side: {
         top: "inset-x-0 top-0 rounded-b-[28px] border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
         bottom: "inset-x-0 bottom-0 rounded-t-[28px] border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
-        left: "inset-y-0 left-0 h-full w-[88vw] rounded-r-[28px] border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
-        right: "inset-y-0 right-0 h-full w-[88vw] rounded-l-[28px] border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-lg",
+        left: "inset-y-0 left-0 h-full w-[min(92vw,26rem)] rounded-r-[28px] border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:w-[min(84vw,28rem)] sm:max-w-sm",
+        right: "inset-y-0 right-0 h-full w-[min(92vw,26rem)] rounded-l-[28px] border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:w-[min(84vw,32rem)] sm:max-w-lg",
       },
     },
     defaultVariants: { side: "right" },
@@ -47,7 +47,7 @@ const SheetContent = React.forwardRef<React.ComponentRef<typeof DialogPrimitive.
     <SheetPortal>
       <SheetOverlay />
       <DialogPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+        <DialogPrimitive.Close className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-lg opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary sm:right-4 sm:top-4">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>

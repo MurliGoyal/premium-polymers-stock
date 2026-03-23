@@ -79,13 +79,13 @@ export function SearchableSelect({
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
+      <PopoverContent align="start" className="w-[min(var(--radix-popover-trigger-width),calc(100vw-1rem))] p-0">
         <div className="border-b border-white/8 p-2">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               autoFocus
-              className="h-10 border-0 bg-transparent pl-9 shadow-none focus-visible:ring-0"
+              className="h-11 border-0 bg-transparent pl-9 shadow-none focus-visible:ring-0"
               onChange={(event) => setQuery(event.target.value)}
               placeholder={searchPlaceholder}
               value={query}

@@ -3,6 +3,7 @@ import {
   ClipboardList,
   LayoutDashboard,
   Shield,
+  SlidersHorizontal,
   Tag,
   UserCheck,
   Users,
@@ -33,6 +34,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: "Activity",
     items: [
+      { label: "Stock Adjustments", href: "/stock-adjustments", icon: SlidersHorizontal, permission: "stock_adjustments:manage" },
       { label: "Transfer History", href: "/transfer-history", icon: ArrowRightLeft, permission: "transfer_history:view" },
       { label: "Material History", href: "/raw-materials-history", icon: ClipboardList, permission: "raw_materials_history:view" },
     ],

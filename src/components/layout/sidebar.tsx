@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
@@ -103,13 +104,20 @@ export function Sidebar({ collapsed, onToggle, user }: SidebarProps) {
     >
       <div className="flex h-full flex-col rounded-[32px] border border-sidebar-border/80 bg-sidebar-background/90 p-3 text-sidebar-foreground shadow-[0_28px_90px_rgba(2,6,23,0.48)] backdrop-blur-2xl">
         <div className="flex items-center gap-3 px-2 py-2">
-          <div className="flex h-12 w-12 items-center justify-center rounded-[20px] border border-white/8 bg-sidebar-primary/16 text-sm font-black tracking-[0.2em] text-sidebar-primary shadow-[0_18px_40px_rgba(91,102,255,0.12)]">
-            PP
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[14px]">
+            <Image 
+              src="/logo.png" 
+              alt="Premium Polymers" 
+              width={48} 
+              height={48}
+              className="h-full w-full object-cover"
+              priority
+            />
           </div>
           {!collapsed ? (
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-sidebar-foreground">Premium Polymers</p>
-              <p className="text-xs text-sidebar-foreground/48">Premium stock management</p>
+              <p className="text-xs text-sidebar-foreground/48">Stock Management</p>
             </div>
           ) : null}
         </div>

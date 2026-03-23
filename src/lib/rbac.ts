@@ -13,6 +13,7 @@ export type Permission =
   | "raw_materials_history:view"
   | "categories:manage"
   | "recipients:manage"
+  | "stock_adjustments:manage"
   | "users:manage"
   | "settings:manage";
 
@@ -21,13 +22,13 @@ const rolePermissions: Record<Role, Permission[]> = {
     "dashboard:view", "warehouses:view",
     "raw_materials:view", "raw_materials:create", "raw_materials:edit", "raw_materials:delete",
     "transfers:view", "transfers:create", "transfer_history:view", "raw_materials_history:view",
-    "categories:manage", "recipients:manage", "users:manage", "settings:manage",
+    "stock_adjustments:manage", "categories:manage", "recipients:manage", "users:manage", "settings:manage",
   ],
   MANAGER: [
     "dashboard:view", "warehouses:view",
     "raw_materials:view", "raw_materials:create", "raw_materials:edit",
     "transfers:view", "transfers:create", "transfer_history:view", "raw_materials_history:view",
-    "categories:manage", "recipients:manage",
+    "stock_adjustments:manage", "categories:manage", "recipients:manage",
   ],
   OPERATOR: [
     "dashboard:view", "warehouses:view",

@@ -19,6 +19,13 @@ export const metadata: Metadata = {
   title: "Premium Polymers - Stock Management",
   description: "Enterprise-grade raw material stock management system for Premium Polymers",
   metadataBase: getAppUrl(),
+  icons: {
+    icon: [
+      { url: "/logo.png", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" }
+    ],
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({

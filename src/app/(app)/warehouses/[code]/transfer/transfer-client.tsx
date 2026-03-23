@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -52,6 +52,8 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
   const [now, setNow] = useState(() => Date.now());
   const [isRefreshingAvailability, setIsRefreshingAvailability] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const refreshInFlightRef = useRef<Promise<boolean> | null>(null);
+  const quantityValidationTimeoutRef = useRef<number | null>(null);
 
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(transferFormSchema),
@@ -78,6 +80,14 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (quantityValidationTimeoutRef.current !== null) {
+        window.clearTimeout(quantityValidationTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const materialOptions = useMemo(
     () =>
       materialsState.map((material) => ({
@@ -100,6 +110,11 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
   const availabilityExpired = now - lastCheckedAt >= STALE_AVAILABILITY_MS;
 
   const refreshAvailability = async ({ clearError = true, notify = true } = {}) => {
+    if (refreshInFlightRef.current) {
+      return refreshInFlightRef.current;
+    }
+
+    const refreshPromise = (async () => {
     setIsRefreshingAvailability(true);
 
     try {
@@ -117,7 +132,11 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
         toast.success("Availability refreshed");
       }
 
-      window.setTimeout(() => {
+      if (quantityValidationTimeoutRef.current !== null) {
+        window.clearTimeout(quantityValidationTimeoutRef.current);
+      }
+
+      quantityValidationTimeoutRef.current = window.setTimeout(() => {
         void trigger("quantity");
       }, 0);
 
@@ -132,7 +151,12 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
       return false;
     } finally {
       setIsRefreshingAvailability(false);
+      refreshInFlightRef.current = null;
     }
+    })();
+
+    refreshInFlightRef.current = refreshPromise;
+    return refreshPromise;
   };
 
   const onSubmit = handleSubmit((values) => {
@@ -213,7 +237,7 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
       />
 
       <form onSubmit={onSubmit} className="space-y-6">
-        <Card className="rounded-[28px] border bg-card/95 shadow-sm shadow-slate-950/5">
+        <Card className="rounded-2xl border bg-card/95 shadow-sm shadow-slate-950/5 sm:rounded-[28px]">
           <CardHeader>
             <CardTitle>Transfer details</CardTitle>
             <CardDescription>
@@ -389,7 +413,7 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
           </CardContent>
         </Card>
 
-        <div className="safe-bottom sticky bottom-4 z-20 rounded-[28px] border border-white/10 bg-background/92 p-4 shadow-xl shadow-slate-950/10 backdrop-blur">
+        <div className="safe-bottom sticky bottom-4 z-20 rounded-2xl border border-white/10 bg-background/92 p-3.5 shadow-xl shadow-slate-950/10 backdrop-blur sm:rounded-[28px] sm:p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="ghost" asChild>
               <Link href={`/warehouses/${warehouse.slug}`}>Cancel</Link>

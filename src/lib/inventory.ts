@@ -14,8 +14,6 @@ type MaterialSnapshotInput = {
   thicknessUnit?: string | null;
   sizeValue?: string | null;
   sizeUnit?: string | null;
-  weightValue?: number | null;
-  weightUnit?: string | null;
   gsm?: number | null;
   notes?: string | null;
   status: MaterialStatus;
@@ -61,8 +59,6 @@ export function createMaterialSnapshot(material: MaterialSnapshotInput) {
     thicknessUnit: material.thicknessUnit ?? null,
     sizeValue: material.sizeValue ?? null,
     sizeUnit: material.sizeUnit ?? null,
-    weightValue: material.weightValue ?? null,
-    weightUnit: material.weightUnit ?? null,
     gsm: material.gsm ?? null,
     notes: material.notes ?? null,
     status: material.status,

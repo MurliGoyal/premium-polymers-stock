@@ -35,7 +35,7 @@ export function NotificationSheet({
 }: NotificationSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex h-full w-full flex-col sm:max-w-md">
+      <SheetContent side="right" className="flex h-full w-full flex-col px-4 sm:max-w-md sm:px-6">
         <SheetHeader className="shrink-0 text-left">
           <SheetTitle className="flex items-center gap-2">
             <IconChip size="sm" tone="primary">
@@ -90,7 +90,7 @@ export function NotificationSheet({
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className="rounded-[24px] border border-white/8 bg-white/[0.03] p-4"
+                    className="rounded-2xl border border-white/8 bg-white/[0.03] p-3.5 sm:rounded-[24px] sm:p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 space-y-2">

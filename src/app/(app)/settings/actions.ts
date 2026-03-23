@@ -23,7 +23,13 @@ function isUniqueConstraintError(error: unknown) {
 export async function getCategories() {
   await assertServerPermission("categories:manage");
   return prisma.category.findMany({
-    include: { _count: { select: { rawMaterials: true } } },
+    include: {
+      _count: { select: { rawMaterials: true } },
+      subcategories: {
+        include: { _count: { select: { rawMaterials: true } } },
+        orderBy: { name: "asc" },
+      },
+    },
     orderBy: { name: "asc" },
   });
 }
@@ -78,9 +84,84 @@ export async function addCategory(name: string): Promise<CreatedEntityResult<{ i
 
 export async function deleteCategory(id: string) {
   await assertServerPermission("categories:manage");
-  const count = await prisma.rawMaterial.count({ where: { categoryId: id } });
-  if (count > 0) throw new Error("Cannot delete category with existing materials");
-  await prisma.category.delete({ where: { id } });
+  const deleted = await prisma.category.deleteMany({
+    where: {
+      id,
+      rawMaterials: { none: {} },
+    },
+  });
+
+  if (deleted.count === 0) {
+    const category = await prisma.category.findUnique({ where: { id }, select: { id: true } });
+    if (!category) {
+      throw new Error("Category not found");
+    }
+
+    throw new Error("Cannot delete category with existing materials");
+  }
+
+  revalidatePath("/settings/categories");
+}
+
+// Subcategories
+export async function addSubcategory(
+  categoryId: string,
+  name: string
+): Promise<CreatedEntityResult<{ id: string; name: string; slug: string }>> {
+  await assertServerPermission("categories:manage");
+  const parsedName = categoryNameSchema.parse(name);
+  const normalizedName = normalizeRecordName(parsedName);
+  const slug = slugify(parsedName);
+
+  const category = await prisma.category.findUnique({ where: { id: categoryId } });
+  if (!category) throw new Error("Category not found");
+
+  const existing = await prisma.subcategory.findFirst({
+    where: {
+      categoryId,
+      OR: [{ normalizedName }, { slug }, { name: { equals: parsedName, mode: "insensitive" } }],
+    },
+  });
+
+  if (existing) {
+    return { created: false, entity: { id: existing.id, name: existing.name, slug: existing.slug } };
+  }
+
+  try {
+    const subcategory = await prisma.subcategory.create({
+      data: { name: parsedName, normalizedName, slug, categoryId },
+    });
+    revalidatePath("/settings/categories");
+    revalidatePath("/warehouses");
+    return { created: true, entity: { id: subcategory.id, name: subcategory.name, slug: subcategory.slug } };
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) throw error;
+    const concurrent = await prisma.subcategory.findFirst({
+      where: { categoryId, OR: [{ normalizedName }, { slug }] },
+    });
+    if (!concurrent) throw error;
+    return { created: false, entity: { id: concurrent.id, name: concurrent.name, slug: concurrent.slug } };
+  }
+}
+
+export async function deleteSubcategory(id: string) {
+  await assertServerPermission("categories:manage");
+  const deleted = await prisma.subcategory.deleteMany({
+    where: {
+      id,
+      rawMaterials: { none: {} },
+    },
+  });
+
+  if (deleted.count === 0) {
+    const subcategory = await prisma.subcategory.findUnique({ where: { id }, select: { id: true } });
+    if (!subcategory) {
+      throw new Error("Subcategory not found");
+    }
+
+    throw new Error("Cannot delete subcategory with existing materials");
+  }
+
   revalidatePath("/settings/categories");
 }
 

@@ -97,9 +97,28 @@ model Category {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  rawMaterials RawMaterial[]
+  rawMaterials  RawMaterial[]
+  subcategories Subcategory[]
 
   @@map("categories")
+}
+
+model Subcategory {
+  id             String   @id @default(cuid())
+  name           String
+  normalizedName String?  @map("normalized_name")
+  slug           String
+  categoryId     String   @map("category_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  rawMaterials RawMaterial[]
+
+  @@unique([categoryId, normalizedName])
+  @@unique([categoryId, slug])
+  @@index([categoryId])
+  @@map("subcategories")
 }
 
 // ─── Recipients ─────────────────────────────────────────────
@@ -124,6 +143,7 @@ model RawMaterial {
   name           String
   normalizedName String?        @map("normalized_name")
   categoryId     String         @map("category_id")
+  subcategoryId  String?        @map("subcategory_id")
   baseUnit       String         @map("base_unit")
   currentStock   Decimal        @default(0) @db.Decimal(18, 3) @map("current_stock")
   minimumStock   Decimal        @default(0) @db.Decimal(18, 3) @map("minimum_stock")
@@ -131,8 +151,6 @@ model RawMaterial {
   thicknessUnit  String?        @map("thickness_unit")
   sizeValue      String?        @map("size_value")
   sizeUnit       String?        @map("size_unit")
-  weightValue    Float?         @map("weight_value")
-  weightUnit     String?        @map("weight_unit")
   gsm            Float?
   notes          String?
   status         MaterialStatus @default(IN_STOCK)
@@ -140,9 +158,10 @@ model RawMaterial {
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
 
-  warehouse    Warehouse  @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  category     Category   @relation(fields: [categoryId], references: [id])
-  createdBy    User?      @relation("CreatedByUser", fields: [createdById], references: [id])
+  warehouse    Warehouse    @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  category     Category     @relation(fields: [categoryId], references: [id])
+  subcategory  Subcategory? @relation(fields: [subcategoryId], references: [id])
+  createdBy    User?        @relation("CreatedByUser", fields: [createdById], references: [id])
   transfers    Transfer[]
   activityLogs RawMaterialActivityLog[]
   stockTransactions StockTransaction[]
@@ -150,6 +169,7 @@ model RawMaterial {
 
   @@index([warehouseId])
   @@index([categoryId])
+  @@index([subcategoryId])
   @@index([status])
   @@index([warehouseId, status])
   @@index([warehouseId, updatedAt])

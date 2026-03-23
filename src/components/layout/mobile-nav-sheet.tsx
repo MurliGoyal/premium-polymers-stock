@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,7 @@ export function MobileNavSheet({ onOpenChange, open, user }: MobileNavSheetProps
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="left"
-        className="safe-bottom flex h-full w-[88vw] max-w-sm flex-col border-white/10 bg-sidebar-background/95 px-0 pb-5 pt-0 text-sidebar-foreground"
+        className="safe-bottom flex h-full w-[85vw] max-w-sm flex-col border-white/10 bg-sidebar-background/95 px-0 pb-5 pt-0 text-sidebar-foreground"
       >
         <SheetHeader className="sr-only">
           <SheetTitle>Main navigation</SheetTitle>
@@ -30,12 +31,19 @@ export function MobileNavSheet({ onOpenChange, open, user }: MobileNavSheetProps
 
         <div className="border-b border-sidebar-border/80 px-5 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-[20px] border border-white/8 bg-sidebar-primary/16 text-sm font-black tracking-[0.2em] text-sidebar-primary shadow-[0_18px_40px_rgba(91,102,255,0.12)]">
-              PP
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[14px]">
+              <Image 
+                src="/logo.png" 
+                alt="Premium Polymers" 
+                width={48} 
+                height={48}
+                className="h-full w-full object-cover"
+                priority
+              />
             </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-sidebar-foreground">Premium Polymers</p>
-              <p className="text-xs text-sidebar-foreground/55">Premium stock management</p>
+              <p className="text-xs text-sidebar-foreground/55">Stock Management</p>
             </div>
           </div>
         </div>

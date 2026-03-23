@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Plus, RotateCcw, Save, X } from "lucide-react";
-import { MATERIAL_UNITS, SIZE_UNITS, THICKNESS_UNITS, WEIGHT_UNITS } from "@/lib/constants";
+import { MATERIAL_UNITS, SIZE_UNITS, THICKNESS_UNITS } from "@/lib/constants";
 import { rawMaterialFormSchema } from "@/lib/validation";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
@@ -21,13 +21,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createCategory, createRawMaterial } from "../../actions";
+import { addSubcategory } from "@/app/(app)/settings/actions";
 
 type Props = {
   warehouse: { id: string; code: string; name: string; slug: string };
-  categories: Array<{ id: string; name: string }>;
+  categories: Array<{ id: string; name: string; subcategories: Array<{ id: string; name: string }> }>;
 };
 
 type RawMaterialFormValues = z.input<typeof rawMaterialFormSchema>;
+const EMPTY_SUBCATEGORY_OPTION = "__none__";
 
 const defaultValues = (warehouseId: string): DefaultValues<RawMaterialFormValues> => ({
   warehouseId,
@@ -40,9 +42,8 @@ const defaultValues = (warehouseId: string): DefaultValues<RawMaterialFormValues
   thicknessUnit: undefined,
   sizeValue: "",
   sizeUnit: undefined,
-  weightValue: undefined,
-  weightUnit: undefined,
   gsm: undefined,
+  subcategoryId: "",
   notes: "",
 });
 
@@ -52,7 +53,8 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
   const [categories, setCategories] = useState(initialCategories);
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [submissionMode, setSubmissionMode] = useState<"save" | "saveAndAddAnother">("save");
+  const [showNewSubcategory, setShowNewSubcategory] = useState(false);
+  const [newSubcategoryName, setNewSubcategoryName] = useState("");
   const [rollWeightKg, setRollWeightKg] = useState("");
   const [rollGsm, setRollGsm] = useState("");
   const [rollWidthValue, setRollWidthValue] = useState("");
@@ -76,19 +78,33 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
 
   const currentStock = useWatch({ control, name: "currentStock" });
   const minimumStock = useWatch({ control, name: "minimumStock" });
+  const selectedCategoryId = useWatch({ control, name: "categoryId" });
 
-  const onSubmit = handleSubmit((values) => {
+  const subcategoriesForCategory = useMemo(() => {
+    if (!selectedCategoryId) return [];
+    const cat = categories.find((c) => c.id === selectedCategoryId);
+    return cat?.subcategories ?? [];
+  }, [categories, selectedCategoryId]);
+
+  const onSubmit = handleSubmit((values, event) => {
+    const submitter =
+      event && "nativeEvent" in event
+        ? ((event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null)
+        : null;
+    const mode = submitter?.value === "saveAndAddAnother" ? "saveAndAddAnother" : "save";
+
     startTransition(async () => {
       try {
         await createRawMaterial(values);
         toast.success("Raw material created successfully");
 
-        if (submissionMode === "saveAndAddAnother") {
+        if (mode === "saveAndAddAnother") {
           reset(defaultValues(warehouse.id));
           setRollWeightKg("");
           setRollGsm("");
           setRollWidthValue("");
           setRollWidthUnit("mm");
+          setNewSubcategoryName("");
           return;
         }
 
@@ -107,15 +123,42 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
       const alreadyPresent = categories.some((category) => category.id === result.entity.id);
       const nextCategories = alreadyPresent
         ? categories
-        : [...categories, { id: result.entity.id, name: result.entity.name }].sort((a, b) => a.name.localeCompare(b.name));
+        : [...categories, { id: result.entity.id, name: result.entity.name, subcategories: [] }].sort((a, b) => a.name.localeCompare(b.name));
 
       setCategories(nextCategories);
       setValue("categoryId", result.entity.id, { shouldValidate: true });
+      setValue("subcategoryId", "", { shouldValidate: true });
       setNewCategoryName("");
       setShowNewCategory(false);
       toast.success(result.created ? "Category added" : "Category already existed and was selected");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to add category");
+    }
+  };
+
+  const handleAddSubcategory = async () => {
+    if (!newSubcategoryName.trim() || !selectedCategoryId) return;
+
+    try {
+      const result = await addSubcategory(selectedCategoryId, newSubcategoryName.trim());
+      const catIndex = categories.findIndex((c) => c.id === selectedCategoryId);
+      if (catIndex !== -1) {
+        const alreadyPresent = categories[catIndex].subcategories.some((s) => s.id === result.entity.id);
+        if (!alreadyPresent) {
+          const updated = [...categories];
+          updated[catIndex] = {
+            ...updated[catIndex],
+            subcategories: [...updated[catIndex].subcategories, { id: result.entity.id, name: result.entity.name }].sort((a, b) => a.name.localeCompare(b.name)),
+          };
+          setCategories(updated);
+        }
+      }
+      setValue("subcategoryId", result.entity.id, { shouldValidate: true });
+      setNewSubcategoryName("");
+      setShowNewSubcategory(false);
+      toast.success(result.created ? "Subcategory added" : "Subcategory already existed and was selected");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add subcategory");
     }
   };
 
@@ -168,12 +211,12 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
       <ResponsivePageHeader
         eyebrow="Warehouse context"
         title="Add raw material"
-        description="Create a warehouse-bound material record with stock controls, optional dimensions, and audit logging."
+        description="Add a new material record to this warehouse."
         badge={<Badge variant="secondary">{warehouse.code}</Badge>}
       />
 
       <form onSubmit={onSubmit} className="space-y-6">
-        <Card className="rounded-[28px] border-0 bg-gradient-to-br from-white/10 to-white/[0.02] shadow-xl shadow-slate-950/5">
+        <Card className="rounded-2xl border-0 bg-gradient-to-br from-white/10 to-white/[0.02] shadow-xl shadow-slate-950/5 sm:rounded-[28px]">
           <CardHeader>
             <CardTitle>Core stock definition</CardTitle>
             <CardDescription>
@@ -235,6 +278,46 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
                 {errors.categoryId ? <p className="text-xs text-destructive">{errors.categoryId.message}</p> : null}
               </div>
             </div>
+
+            {subcategoriesForCategory.length > 0 || selectedCategoryId ? (
+              <div className="grid gap-5 md:grid-cols-[1.4fr,1fr]">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Subcategory</Label>
+                    {selectedCategoryId ? (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewSubcategory(true)}>
+                        <Plus className="mr-1 h-3.5 w-3.5" />
+                        Add subcategory
+                      </Button>
+                    ) : null}
+                  </div>
+                  <Controller
+                    control={control}
+                    name="subcategoryId"
+                    render={({ field }) => (
+                      <Select
+                        value={field.value ?? ""}
+                        onValueChange={(value) => field.onChange(value === EMPTY_SUBCATEGORY_OPTION ? "" : value)}
+                        disabled={!selectedCategoryId || subcategoriesForCategory.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={subcategoriesForCategory.length === 0 ? "No subcategories" : "Select a subcategory (optional)"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={EMPTY_SUBCATEGORY_OPTION}>None</SelectItem>
+                          {subcategoriesForCategory.map((sub) => (
+                            <SelectItem key={sub.id} value={sub.id}>
+                              {sub.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <p className="text-xs text-muted-foreground">Optional grouping within the selected category.</p>
+                </div>
+              </div>
+            ) : null}
 
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               <div className="space-y-2">
@@ -314,7 +397,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border bg-card/95 shadow-sm shadow-slate-950/5">
+        <Card className="rounded-2xl border bg-card/95 shadow-sm shadow-slate-950/5 sm:rounded-[28px]">
           <CardHeader>
             <CardTitle>Material specifications</CardTitle>
             <CardDescription>Optional dimensional metadata improves traceability for sheets, rolls, resins, and additives.</CardDescription>
@@ -391,45 +474,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
               </div>
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-[1fr,200px,1fr]">
-              <div className="space-y-2">
-                <Label htmlFor="weightValue">Weight</Label>
-                <Input
-                  id="weightValue"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="Optional weight"
-                  {...register("weightValue", {
-                    setValueAs: (value) => (value === "" ? undefined : Number(value)),
-                  })}
-                />
-                {errors.weightValue ? <p className="text-xs text-destructive">{errors.weightValue.message}</p> : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Weight unit</Label>
-                <Controller
-                  control={control}
-                  name="weightUnit"
-                  render={({ field }) => (
-                    <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                      <SelectTrigger className={errors.weightUnit ? "border-destructive" : ""}>
-                        <SelectValue placeholder="Unit" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {WEIGHT_UNITS.map((unit) => (
-                          <SelectItem key={unit} value={unit}>
-                            {unit}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.weightUnit ? <p className="text-xs text-destructive">{errors.weightUnit.message}</p> : null}
-              </div>
-
+            <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="gsm">GSM</Label>
                 <Input
@@ -461,7 +506,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border bg-card/95 shadow-sm shadow-slate-950/5">
+        <Card className="rounded-2xl border bg-card/95 shadow-sm shadow-slate-950/5 sm:rounded-[28px]">
           <CardHeader>
             <CardTitle>Roll calculator</CardTitle>
             <CardDescription>
@@ -530,19 +575,19 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-white/8 bg-white/[0.03] p-5">
+            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4 sm:rounded-[24px] sm:p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Roll length</p>
               <p className="mt-3 text-3xl font-semibold tracking-[-0.04em]">
                 {rollLengthMeters ? `${rollLengthMeters} m` : "--"}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Formula: roll length = abs(weight in kg × 1,000,000 / (gsm × width in mm)).
+                Formula: roll length = abs((weight in kg × 1000) / (gsm × width in meters)).
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <div className="safe-bottom sticky bottom-4 z-20 rounded-[28px] border border-white/10 bg-background/92 p-4 shadow-xl shadow-slate-950/10 backdrop-blur">
+        <div className="safe-bottom sticky bottom-4 z-20 rounded-2xl border border-white/10 bg-background/92 p-3.5 shadow-xl shadow-slate-950/10 backdrop-blur sm:rounded-[28px] sm:p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="ghost" asChild>
               <Link href={`/warehouses/${warehouse.slug}`}>
@@ -555,12 +600,13 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
                 type="submit"
                 variant="outline"
                 disabled={isPending}
-                onClick={() => setSubmissionMode("saveAndAddAnother")}
+                name="submissionMode"
+                value="saveAndAddAnother"
               >
                 <RotateCcw className="mr-1.5 h-4 w-4" />
                 Save & add another
               </Button>
-              <Button type="submit" disabled={isPending} onClick={() => setSubmissionMode("save")}>
+              <Button type="submit" disabled={isPending} name="submissionMode" value="save">
                 <Save className="mr-1.5 h-4 w-4" />
                 {isPending ? "Saving..." : "Save material"}
               </Button>
@@ -597,6 +643,39 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
             </Button>
             <Button onClick={() => void handleAddCategory()} disabled={!newCategoryName.trim()}>
               Add category
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showNewSubcategory} onOpenChange={setShowNewSubcategory}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add new subcategory</DialogTitle>
+            <DialogDescription>Create a subcategory under the selected category.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="newSubcategory">Subcategory name</Label>
+            <Input
+              id="newSubcategory"
+              autoFocus
+              value={newSubcategoryName}
+              onChange={(event) => setNewSubcategoryName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void handleAddSubcategory();
+                }
+              }}
+              placeholder="e.g. High Density"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewSubcategory(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => void handleAddSubcategory()} disabled={!newSubcategoryName.trim()}>
+              Add subcategory
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -66,6 +66,12 @@ const chartTooltipStyle = {
   fontSize: "12px",
 };
 
+const MOBILE_CHART_TITLES: Record<MobileChartView, string> = {
+  transfers: "Transfer activity",
+  categories: "Category mix",
+  stock: "Warehouse stock",
+};
+
 const containerVariants = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.06 } },
@@ -178,7 +184,7 @@ export function DashboardClient({
         <ResponsivePageHeader
           eyebrow="Operations overview"
           title="Dashboard"
-          description="A cleaner mobile-first view of warehouse health, transfers, and stock risk with one-chart-at-a-time analytics on phones."
+          description="Stock levels, transfers, and alerts across all warehouses."
           badge={
             <Badge variant="secondary">
               {kpis.unreadNotifications > 0
@@ -223,7 +229,7 @@ export function DashboardClient({
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold tracking-[-0.03em]">Warehouse overview</h2>
-            <p className="text-sm text-muted-foreground">Quick access to every site with compact health summaries.</p>
+            <p className="text-sm text-muted-foreground">Stock and transfer summary per site.</p>
           </div>
           <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
             <Link href="/warehouses">
@@ -315,10 +321,10 @@ export function DashboardClient({
         <Card className="glass-panel">
           <CardHeader className="space-y-3.5 pb-2">
             <div className="space-y-1">
-              <CardTitle className="text-base font-semibold">Mobile analytics</CardTitle>
-              <p className="text-sm text-muted-foreground">Choose which chart to show so the dashboard stays clean on small screens.</p>
+              <CardTitle className="text-base font-semibold">Analytics</CardTitle>
+              <p className="text-sm text-muted-foreground">Switch between chart views.</p>
             </div>
-            <div className="scroll-x-contain flex gap-2 pb-1">
+            <div className="scroll-x-contain flex gap-2 pb-1" role="tablist" aria-label="Dashboard analytics views">
               {chartOptions.map((option) => {
                 const Icon = option.icon;
                 const isActive = mobileChartView === option.key;
@@ -328,12 +334,15 @@ export function DashboardClient({
                     key={option.key}
                     type="button"
                     aria-pressed={isActive}
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-label={`Show ${option.label} chart`}
                     onClick={() => setMobileChartView(option.key)}
                     whileHover={hoverLiftSoft}
                     whileTap={tapScale}
                     transition={hoverTransition}
                     className={cn(
-                      "surface-subtle flex min-w-[148px] shrink-0 items-center gap-3 rounded-[20px] px-3 py-2.5 text-left transition-all duration-200",
+                      "surface-subtle flex min-w-[140px] shrink-0 items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left transition-all duration-200 sm:min-w-[148px] sm:gap-3 sm:rounded-[20px]",
                       isActive
                         ? "border-primary/30 bg-primary/[0.10] text-foreground shadow-[0_18px_38px_rgba(91,102,255,0.16)]"
                         : "text-muted-foreground hover:border-white/15 hover:bg-white/[0.05]"
@@ -344,7 +353,7 @@ export function DashboardClient({
                     </IconChip>
                     <div>
                       <p className="text-sm font-semibold">{option.label}</p>
-                      <p className="text-xs text-muted-foreground">{option.description}</p>
+                      <p className="text-xs text-muted-foreground">{isActive ? "Now showing" : option.description}</p>
                     </div>
                   </motion.button>
                 );
@@ -361,6 +370,9 @@ export function DashboardClient({
                 transition={{ duration: 0.24, ease: [0.2, 1, 0.22, 1] }}
                 className="space-y-4"
               >
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Showing {MOBILE_CHART_TITLES[mobileChartView]}
+                </p>
                 {mobileChartView === "transfers" ? (
                   <>
                     <div className="grid grid-cols-3 gap-2">
@@ -593,13 +605,13 @@ export function DashboardClient({
           <CardHeader className="pb-2">
             <div className="space-y-1">
               <CardTitle className="text-sm font-semibold">Quick actions</CardTitle>
-              <p className="text-xs text-muted-foreground">Fast paths into the actions used most often by operations.</p>
+              <p className="text-xs text-muted-foreground">Common tasks.</p>
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Button asChild variant="outline" className="h-auto w-full items-start justify-start rounded-[22px] px-4 py-4">
+            <Button asChild variant="outline" className="h-auto w-full items-start justify-start rounded-2xl px-3.5 py-3.5 sm:rounded-[22px] sm:px-4 sm:py-4">
               <Link href="/warehouses">
-                <QuickActionContent description="Select a warehouse and move into material-level work." icon={Warehouse} title="Go to warehouses" />
+                <QuickActionContent description="Browse all warehouse inventories." icon={Warehouse} title="Go to warehouses" />
               </Link>
             </Button>
 
@@ -608,8 +620,8 @@ export function DashboardClient({
                 action="add-material"
                 warehouses={warehouseOptions}
                 trigger={
-                  <Button variant="outline" className="h-auto w-full items-start justify-start rounded-[22px] px-4 py-4">
-                    <QuickActionContent description="Add stock into a warehouse record." icon={Plus} title="Add raw material" />
+                  <Button variant="outline" className="h-auto w-full items-start justify-start rounded-2xl px-3.5 py-3.5 sm:rounded-[22px] sm:px-4 sm:py-4">
+                    <QuickActionContent description="Create a new stock record." icon={Plus} title="Add raw material" />
                   </Button>
                 }
               />
@@ -620,16 +632,16 @@ export function DashboardClient({
                 action="transfer"
                 warehouses={warehouseOptions}
                 trigger={
-                  <Button variant="outline" className="h-auto w-full items-start justify-start rounded-[22px] px-4 py-4">
-                    <QuickActionContent description="Deduct approved stock and log the movement." icon={ArrowRightLeft} title="Make transfer" />
+                  <Button variant="outline" className="h-auto w-full items-start justify-start rounded-2xl px-3.5 py-3.5 sm:rounded-[22px] sm:px-4 sm:py-4">
+                    <QuickActionContent description="Deduct stock and log the transfer." icon={ArrowRightLeft} title="Make transfer" />
                   </Button>
                 }
               />
             ) : null}
 
-            <Button asChild variant="outline" className="h-auto w-full items-start justify-start rounded-[22px] px-4 py-4">
+            <Button asChild variant="outline" className="h-auto w-full items-start justify-start rounded-2xl px-3.5 py-3.5 sm:rounded-[22px] sm:px-4 sm:py-4">
               <Link href="/transfer-history">
-                <QuickActionContent description="Audit every outbound quantity." icon={Clock} title="Transfer history" />
+                <QuickActionContent description="View all outbound transfers." icon={Clock} title="Transfer history" />
               </Link>
             </Button>
           </CardContent>
@@ -665,20 +677,20 @@ function MetricCard({
 
   const content = (
     <Card className="glass-panel hover-glow h-full overflow-hidden">
-      <CardContent className="flex min-h-[138px] flex-col justify-between sm:min-h-[148px]">
-        <div className="flex items-start justify-between gap-3">
-          <p className="max-w-[9rem] text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:max-w-[10rem]">
+      <CardContent className="flex min-h-[120px] flex-col justify-between sm:min-h-[148px]">
+        <div className="flex items-start justify-between gap-2 sm:gap-3">
+          <p className="max-w-[8rem] text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:max-w-[10rem] sm:text-[11px]">
             {label}
           </p>
           <IconChip
             size="lg"
             tone={toneClasses[tone] as "amber" | "blue" | "cyan" | "danger" | "emerald" | "primary" | "slate" | "violet"}
-            className="h-11 w-11 rounded-[18px] sm:h-12 sm:w-12 sm:rounded-[20px]"
+            className="h-10 w-10 rounded-[16px] sm:h-12 sm:w-12 sm:rounded-[20px]"
           >
             <Icon className="h-4 w-4" />
           </IconChip>
         </div>
-        <p className="text-[clamp(2rem,8vw,2.55rem)] font-semibold tracking-[-0.04em]">{formatNumber(value)}</p>
+        <p className="text-[clamp(1.75rem,7vw,2.55rem)] font-semibold tracking-[-0.04em]">{formatNumber(value)}</p>
       </CardContent>
     </Card>
   );
@@ -791,7 +803,11 @@ function TransferTrendChart({
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
         <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="rgba(255,255,255,0.48)" interval="preserveStartEnd" minTickGap={24} />
         <YAxis tick={{ fontSize: 11 }} stroke="rgba(255,255,255,0.48)" />
-        <RechartsTooltip contentStyle={chartTooltipStyle} />
+        <RechartsTooltip
+          contentStyle={chartTooltipStyle}
+          formatter={(value) => [formatNumber(Number(value)), "Transfers"]}
+          labelFormatter={(label) => `Day: ${label}`}
+        />
         <Area dataKey="count" type="monotone" stroke="hsl(250 95% 70%)" fill="url(#dashboard-transfer-fill)" strokeWidth={2.5} />
       </AreaChart>
     </ResponsiveContainer>
@@ -820,7 +836,11 @@ function CategoryChart({
           stroke="rgba(255,255,255,0.48)"
           tickFormatter={(value) => truncateLabel(String(value), mobile ? 10 : 14)}
         />
-        <RechartsTooltip contentStyle={chartTooltipStyle} />
+        <RechartsTooltip
+          contentStyle={chartTooltipStyle}
+          formatter={(value) => [formatNumber(Number(value)), "Materials"]}
+          labelFormatter={(label) => `Category: ${label}`}
+        />
         <Bar dataKey="count" radius={[0, 10, 10, 0]}>
           {data.map((_, index) => (
             <Cell key={`category-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
@@ -857,7 +877,11 @@ function WarehouseStockChart({
           stroke="rgba(255,255,255,0.48)"
           tickFormatter={(value) => formatNumber(Number(value))}
         />
-        <RechartsTooltip contentStyle={chartTooltipStyle} />
+        <RechartsTooltip
+          contentStyle={chartTooltipStyle}
+          formatter={(value) => [formatNumber(Number(value)), "Stock"]}
+          labelFormatter={(label) => `Warehouse: ${label}`}
+        />
         <Bar dataKey="totalStock" fill="hsl(146 76% 52%)" radius={[8, 8, 0, 0]} name="Total stock" />
       </BarChart>
     </ResponsiveContainer>

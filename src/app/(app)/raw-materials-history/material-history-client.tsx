@@ -286,7 +286,7 @@ export function MaterialHistoryClient({
       <ResponsivePageHeader
         eyebrow="Audit ledger"
         title="Raw materials history"
-        description="Premium audit ledger for material creation, stock adjustments, transfers, and metadata changes."
+        description="Full audit trail of material changes, stock adjustments, and transfers."
         badge={<Badge variant="secondary">{filtered.length} matching activities</Badge>}
       />
 
@@ -342,7 +342,7 @@ export function MaterialHistoryClient({
           <>
             <div className="grid gap-3 p-4 md:grid-cols-2 xl:hidden">
               {paginatedActivities.map((activity) => (
-                <Card key={activity.id} className="cursor-pointer rounded-[24px]" onClick={() => setSelectedActivity(activity)}>
+                <Card key={activity.id} className="cursor-pointer rounded-2xl sm:rounded-[24px]" onClick={() => setSelectedActivity(activity)}>
                   <CardContent className="space-y-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-2">
@@ -378,7 +378,7 @@ export function MaterialHistoryClient({
                       <DetailBlock label="Source" value={activity.sourceType || "-"} compact />
                     </div>
 
-                    <div className="rounded-[22px] border border-white/8 bg-white/[0.03] p-3 text-sm text-muted-foreground">
+                    <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3 text-sm text-muted-foreground sm:rounded-[22px]">
                       {formatDateTime(activity.createdAt)}
                     </div>
                   </CardContent>
@@ -604,7 +604,6 @@ function buildSnapshotFields(
     { label: "Stock after transfer", getValue: (snapshot: Record<string, unknown> | null) => formatSnapshotQuantity(snapshot?.stockAfterTransfer) },
     { label: "Thickness", getValue: (snapshot: Record<string, unknown> | null) => formatOptionalMeasurement(snapshot?.thicknessValue, snapshot?.thicknessUnit) },
     { label: "Size", getValue: (snapshot: Record<string, unknown> | null) => formatOptionalMeasurement(snapshot?.sizeValue, snapshot?.sizeUnit) },
-    { label: "Weight", getValue: (snapshot: Record<string, unknown> | null) => formatOptionalMeasurement(snapshot?.weightValue, snapshot?.weightUnit) },
     { label: "GSM", getValue: (snapshot: Record<string, unknown> | null) => formatSnapshotText(snapshot?.gsm) },
     { label: "Notes", getValue: (snapshot: Record<string, unknown> | null) => formatSnapshotText(snapshot?.notes) },
   ];

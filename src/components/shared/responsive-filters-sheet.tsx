@@ -15,13 +15,13 @@ type ResponsiveFiltersSheetProps = {
 export function ResponsiveFiltersSheet({
   activeCount = 0,
   children,
-  description = "Adjust filters without compressing the mobile layout.",
+  description = "Narrow down results using the options below.",
   title = "Filters",
 }: ResponsiveFiltersSheetProps) {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button type="button" variant="outline" className="w-full justify-between rounded-[18px] sm:w-auto sm:rounded-2xl xl:hidden">
+        <Button type="button" variant="outline" className="w-full justify-between rounded-2xl sm:w-auto xl:hidden">
           <SlidersHorizontal className="h-4 w-4" />
           Filters
           {activeCount > 0 ? <Badge variant="secondary">{activeCount}</Badge> : null}

@@ -32,7 +32,7 @@ export function UsersClient({ users }: { users: UserData[] }) {
       <ResponsivePageHeader
         eyebrow="Settings"
         title="Users"
-        description="Role visibility for the internal team without collapsing the list into unreadable columns on phones."
+        description="View team members and their assigned roles."
         badge={<Badge variant="secondary">{users.length} users</Badge>}
       />
 
@@ -55,7 +55,7 @@ export function UsersClient({ users }: { users: UserData[] }) {
           <>
             <div className="grid gap-3 p-4 md:grid-cols-2 xl:hidden">
               {users.map((user) => (
-                <Card key={user.id} className="rounded-[24px]">
+                <Card key={user.id} className="rounded-2xl sm:rounded-[24px]">
                   <CardContent className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MATERIAL_UNITS, SIZE_UNITS, THICKNESS_UNITS, WEIGHT_UNITS } from "@/lib/constants";
+import { MATERIAL_UNITS, SIZE_UNITS, THICKNESS_UNITS } from "@/lib/constants";
 import { collapseWhitespace } from "@/lib/naming";
 
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F]/;
@@ -55,9 +55,8 @@ export const rawMaterialFormSchema = z
     thicknessUnit: z.enum(THICKNESS_UNITS).optional().nullable(),
     sizeValue: optionalText(80),
     sizeUnit: z.enum(SIZE_UNITS).optional().nullable(),
-    weightValue: z.number().finite().min(0).optional().nullable(),
-    weightUnit: z.enum(WEIGHT_UNITS).optional().nullable(),
     gsm: z.number().finite().min(0).optional().nullable(),
+    subcategoryId: z.string().trim().optional().nullable(),
     notes: optionalText(400),
   })
   .superRefine((value, context) => {
@@ -76,15 +75,18 @@ export const rawMaterialFormSchema = z
         message: "Select a size unit",
       });
     }
-
-    if (value.weightValue && !value.weightUnit) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["weightUnit"],
-        message: "Select a weight unit",
-      });
-    }
   });
+
+export const stockAdjustmentFormSchema = z.object({
+  rawMaterialId: trimmedString("Raw material"),
+  warehouseId: trimmedString("Warehouse"),
+  adjustmentType: z.enum(["set", "add", "subtract"], { error: "Select an adjustment type" }),
+  quantity: z
+    .number({ error: "Quantity is required" })
+    .finite("Quantity must be a valid number")
+    .min(0, "Quantity cannot be negative"),
+  reason: trimmedString("Reason", 400),
+});
 
 export const transferFormSchema = z.object({
   warehouseId: trimmedString("Warehouse"),

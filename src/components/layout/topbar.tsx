@@ -205,15 +205,15 @@ export function Topbar({
   }, [pathname]);
 
   const mobileIconButtonClass =
-    "h-10 w-10 rounded-[18px] px-0 text-muted-foreground sm:h-11 sm:w-11";
+    "h-11 w-11 rounded-[18px] px-0 text-muted-foreground";
 
   return (
     <>
       <header className="sticky top-0 z-30 px-3 pt-3 sm:px-6 sm:pt-4 lg:px-8 xl:px-10">
-        <div className="surface-panel flex min-h-[68px] items-center gap-2.5 rounded-[26px] px-2.5 py-2.5 sm:min-h-[72px] sm:gap-3 sm:px-4 sm:py-3">
+        <div className="surface-panel flex min-h-[64px] items-center gap-2 rounded-[22px] px-2 py-2 sm:min-h-[72px] sm:gap-3 sm:rounded-[26px] sm:px-4 sm:py-3">
           <div className="flex items-center gap-2 md:hidden">
             <Button type="button" variant="ghost" className={mobileIconButtonClass} onClick={onMobileNavOpen}>
-              <IconChip size="sm" tone="default" className="sm:h-10 sm:w-10 sm:rounded-[18px]">
+              <IconChip size="sm" tone="default">
                 <Menu className="h-4 w-4" />
               </IconChip>
               <span className="sr-only">Open navigation</span>
@@ -231,14 +231,14 @@ export function Topbar({
 
           <div className="flex min-w-0 flex-1 items-center gap-2 md:hidden">
             <Button type="button" variant="ghost" className={mobileIconButtonClass} onClick={() => setCommandOpen(true)}>
-              <IconChip size="sm" tone="primary" className="sm:h-10 sm:w-10 sm:rounded-[18px]">
+              <IconChip size="sm" tone="primary">
                 <Search className="h-4 w-4" />
               </IconChip>
               <span className="sr-only">Open search</span>
             </Button>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-foreground">{mobileTitle}</p>
-              <p className="mt-0.5 hidden truncate text-[11px] text-muted-foreground min-[390px]:block">
+              <p className="mt-0.5 truncate text-[11px] text-muted-foreground min-[360px]:block hidden">
                 {mobileSubtitle}
               </p>
             </div>
@@ -274,7 +274,6 @@ export function Topbar({
               <IconChip
                 size="sm"
                 tone={notificationCount > 0 ? "primary" : "default"}
-                className="sm:h-10 sm:w-10 sm:rounded-[18px]"
               >
                 <Bell className="h-4 w-4" />
               </IconChip>

@@ -16,10 +16,10 @@ const buttonVariants = cva(
         link: "before:hidden overflow-visible rounded-none px-0 py-0 shadow-none text-primary underline-offset-4 hover:text-primary/90 hover:[&_svg]:translate-x-0.5 hover:underline",
       },
       size: {
-        default: "h-10 px-4 py-2.5 sm:h-11",
-        sm: "h-9 rounded-xl px-3.5 text-xs",
-        lg: "h-11 rounded-2xl px-5 text-sm sm:h-12 sm:px-6",
-        icon: "h-10 w-10 before:hidden sm:h-11 sm:w-11",
+        default: "h-11 px-4 py-2.5",
+        sm: "h-9 rounded-xl px-3.5 text-xs sm:h-9",
+        lg: "h-12 rounded-2xl px-5 text-sm sm:px-6",
+        icon: "h-11 w-11 before:hidden",
       },
     },
     defaultVariants: {

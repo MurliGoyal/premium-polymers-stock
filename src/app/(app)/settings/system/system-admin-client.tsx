@@ -162,7 +162,7 @@ export function SystemAdminClient({ summary }: { summary: Summary }) {
           <CardTitle className="text-sm font-semibold">Danger zone</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-[22px] border border-red-500/15 bg-red-500/8 px-4 py-4 text-sm text-red-100">
+          <div className="rounded-2xl border border-red-500/15 bg-red-500/8 px-3.5 py-3.5 text-sm text-red-100 sm:rounded-[22px] sm:px-4 sm:py-4">
             This reset permanently removes inventory records, transfer history, stock transactions, activity logs, and
             notifications. It does not remove users, categories, recipients, or warehouse definitions.
           </div>
@@ -234,10 +234,10 @@ function SummaryRow({
       : "border-emerald-500/12 bg-emerald-500/6 text-emerald-100";
 
   return (
-    <div className={`rounded-[22px] border px-4 py-4 ${toneClasses}`}>
+    <div className={`rounded-2xl border px-3.5 py-3.5 sm:rounded-[22px] sm:px-4 sm:py-4 ${toneClasses}`}>
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="rounded-[16px] border border-white/8 bg-black/15 p-2.5 text-foreground/80">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="rounded-[14px] border border-white/8 bg-black/15 p-2 text-foreground/80 sm:rounded-[16px] sm:p-2.5">
             <Icon className="h-4 w-4" />
           </div>
           <div>
@@ -245,7 +245,7 @@ function SummaryRow({
             <p className="text-xs text-muted-foreground">Current records</p>
           </div>
         </div>
-        <p className="text-2xl font-semibold tracking-[-0.04em] text-foreground">{value}</p>
+        <p className="text-xl font-semibold tracking-[-0.04em] text-foreground sm:text-2xl">{value}</p>
       </div>
     </div>
   );

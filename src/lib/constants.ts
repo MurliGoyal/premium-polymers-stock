@@ -43,7 +43,6 @@ export const MATERIAL_UNITS = [
 
 export const THICKNESS_UNITS = ["mm", "cm", "inch"] as const;
 export const SIZE_UNITS = ["mm", "cm", "inch", "foot"] as const;
-export const WEIGHT_UNITS = ["gm", "kg", "tonne", "lb"] as const;
 
 export const TRANSFER_PAGE_SIZE = 12;
 export const HISTORY_PAGE_SIZE = 12;

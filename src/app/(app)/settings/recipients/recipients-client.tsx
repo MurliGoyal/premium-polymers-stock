@@ -70,7 +70,7 @@ export function RecipientsClient({ recipients }: { recipients: RecipientData[] }
       <ResponsivePageHeader
         eyebrow="Settings"
         title="Recipients"
-        description="Reusable destinations for transfer flows, delivery logs, and downstream audits."
+        description="Manage transfer destinations used across all warehouses."
         badge={<Badge variant="secondary">{recipients.length} recipients</Badge>}
         actions={
           <Button type="button" onClick={() => setShowAdd(true)}>
@@ -95,7 +95,7 @@ export function RecipientsClient({ recipients }: { recipients: RecipientData[] }
           <>
             <div className="grid gap-3 p-4 md:grid-cols-2 xl:hidden">
               {recipients.map((recipient) => (
-                <Card key={recipient.id} className="rounded-[24px]">
+                <Card key={recipient.id} className="rounded-2xl sm:rounded-[24px]">
                   <CardContent className="space-y-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
