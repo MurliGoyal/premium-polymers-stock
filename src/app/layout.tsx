@@ -20,10 +20,8 @@ export const metadata: Metadata = {
   description: "Enterprise-grade raw material stock management system for Premium Polymers",
   metadataBase: getAppUrl(),
   icons: {
-    icon: [
-      { url: "/logo.png", type: "image/png" },
-      { url: "/favicon.ico", sizes: "any" }
-    ],
+    icon: "/logo.png",
+    shortcut: "/logo.png",
     apple: "/logo.png",
   },
 };

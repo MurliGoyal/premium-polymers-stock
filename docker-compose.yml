@@ -13,7 +13,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
 
   postgres:
     image: postgres:16
