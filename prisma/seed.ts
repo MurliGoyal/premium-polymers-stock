@@ -17,6 +17,7 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log("🌱 Seeding database...");
+  const stockManagementRole = "STOCK_MANAGEMENT" as Role;
 
   // ─── Users ──────────────────────────────────────────────────
   const passwordHash = await bcrypt.hash("admin123", 12);
@@ -29,23 +30,29 @@ async function main() {
 
   const stockManager = await prisma.user.upsert({
     where: { email: "stock@premiumpolymers.com" },
-    update: {},
+    update: {
+      role: stockManagementRole,
+      isActive: true,
+    },
     create: {
       name: "Amit Stock",
       email: "stock@premiumpolymers.com",
       passwordHash,
-      role: Role.STOCK_MANAGEMENT,
+      role: stockManagementRole,
     },
   });
 
   await prisma.user.upsert({
     where: { email: "operator@premiumpolymers.com" },
-    update: {},
+    update: {
+      role: stockManagementRole,
+      isActive: true,
+    },
     create: {
       name: "Amit Operator",
       email: "operator@premiumpolymers.com",
       passwordHash,
-      role: Role.STOCK_MANAGEMENT,
+      role: stockManagementRole,
     },
   });
 
