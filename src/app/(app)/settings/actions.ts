@@ -1,11 +1,12 @@
 "use server";
 
 import { Prisma } from "@prisma/client";
+import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { assertServerPermission } from "@/lib/auth";
 import { normalizeRecordName } from "@/lib/naming";
-import { categoryNameSchema, recipientNameSchema } from "@/lib/validation";
+import { categoryNameSchema, createUserSchema, recipientNameSchema } from "@/lib/validation";
 import { slugify } from "@/lib/utils";
 
 type CreatedEntityResult<T> = {
@@ -234,6 +235,30 @@ export async function getUsers() {
     select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });
+}
+
+export async function createUser(payload: unknown) {
+  await assertServerPermission("users:manage");
+  const data = createUserSchema.parse(payload);
+
+  const existingUser = await prisma.user.findUnique({ where: { email: data.email } });
+  if (existingUser) {
+    throw new Error("A user with this email already exists.");
+  }
+
+  const passwordHash = await hash(data.password, 12);
+
+  await prisma.user.create({
+    data: {
+      name: data.name,
+      email: data.email,
+      passwordHash,
+      role: data.role,
+      isActive: true,
+    },
+  });
+
+  revalidatePath("/settings/users");
 }
 
 export async function getOperationalDataSummary() {

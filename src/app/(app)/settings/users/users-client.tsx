@@ -1,21 +1,60 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Shield } from "lucide-react";
+import { Plus, Shield } from "lucide-react";
+import { toast } from "sonner";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getRoleColor, getRoleLabel } from "@/lib/rbac";
 import { formatDate } from "@/lib/utils";
+import { createUser } from "../actions";
 
 type UserData = { id: string; name: string; email: string; role: string; isActive: boolean; createdAt: string };
 
-export function UsersClient({ users }: { users: UserData[] }) {
+export function UsersClient({ users, canManage }: { users: UserData[]; canManage: boolean }) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [showAdd, setShowAdd] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("VIEWER");
+
+  const handleCreate = () => {
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        await createUser({
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          password,
+          role,
+        });
+        toast.success("User created successfully");
+        setShowAdd(false);
+        setName("");
+        setEmail("");
+        setPassword("");
+        setRole("VIEWER");
+        router.refresh();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to create user");
+      }
+    });
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-6xl space-y-5">
@@ -34,6 +73,12 @@ export function UsersClient({ users }: { users: UserData[] }) {
         title="Users"
         description="View team members and their assigned roles."
         badge={<Badge variant="secondary">{users.length} users</Badge>}
+        actions={canManage ? (
+          <Button type="button" onClick={() => setShowAdd(true)}>
+            <Plus className="h-4 w-4" />
+            Add user
+          </Button>
+        ) : undefined}
       />
 
       <Card className="overflow-hidden">
@@ -114,6 +159,76 @@ export function UsersClient({ users }: { users: UserData[] }) {
           </>
         )}
       </Card>
+
+      <Dialog open={showAdd && canManage} onOpenChange={setShowAdd}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add user</DialogTitle>
+            <DialogDescription>Create a new user account and assign a role.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="user-name">Name</Label>
+              <Input
+                id="user-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="John Doe"
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="user-email">Email</Label>
+              <Input
+                id="user-email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="john@premiumpolymers.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="user-password">Password</Label>
+              <Input
+                id="user-password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="At least 6 characters"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="user-role">Role</Label>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger id="user-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MANAGER">Manager (Admin)</SelectItem>
+                  <SelectItem value="STOCK_MANAGEMENT">Operator (Stock Management)</SelectItem>
+                  <SelectItem value="VIEWER">Viewer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAdd(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreate}
+              disabled={isPending || !name.trim() || !email.trim() || !password.trim()}
+            >
+              Create user
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }

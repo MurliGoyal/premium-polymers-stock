@@ -259,6 +259,7 @@ Open `http://localhost:3000`.
 
 - Manager: `manager@premiumpolymers.com` / `admin123`
 - Stock Management: `stock@premiumpolymers.com` / `admin123`
+- Operator: `operator@premiumpolymers.com` / `admin123`
 - Viewer: `viewer@premiumpolymers.com` / `admin123`
 
 These accounts are for local demo data only. Replace or rotate them for any shared or production environment.

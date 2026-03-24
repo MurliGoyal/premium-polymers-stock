@@ -99,3 +99,17 @@ export const transferFormSchema = z.object({
   notes: optionalText(400),
   referenceNumber: optionalText(80),
 });
+
+export const createUserSchema = z.object({
+  name: normalizedName("Name", 120),
+  email: z
+    .string({ error: "Email is required" })
+    .trim()
+    .toLowerCase()
+    .email("Enter a valid email address"),
+  password: z
+    .string({ error: "Password is required" })
+    .min(6, "Password must be at least 6 characters")
+    .max(120, "Password must be 120 characters or less"),
+  role: z.enum(["MANAGER", "STOCK_MANAGEMENT", "VIEWER"], { error: "Select a valid role" }),
+});

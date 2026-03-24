@@ -39,6 +39,17 @@ async function main() {
   });
 
   await prisma.user.upsert({
+    where: { email: "operator@premiumpolymers.com" },
+    update: {},
+    create: {
+      name: "Amit Operator",
+      email: "operator@premiumpolymers.com",
+      passwordHash,
+      role: Role.STOCK_MANAGEMENT,
+    },
+  });
+
+  await prisma.user.upsert({
     where: { email: "viewer@premiumpolymers.com" },
     update: {},
     create: { name: "Priya Viewer", email: "viewer@premiumpolymers.com", passwordHash, role: Role.VIEWER },
