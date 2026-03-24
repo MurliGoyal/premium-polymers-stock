@@ -52,7 +52,7 @@ type Summary = {
   };
 };
 
-export function SystemAdminClient({ summary }: { summary: Summary }) {
+export function SystemAdminClient({ summary, canManage }: { summary: Summary; canManage: boolean }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [confirmation, setConfirmation] = useState("");
@@ -107,8 +107,8 @@ export function SystemAdminClient({ summary }: { summary: Summary }) {
         eyebrow="Admin only"
         title="System admin"
         description="Danger zone for resetting operational inventory data. Users, recipients, categories, and warehouse definitions are preserved."
-        badge={<Badge variant="danger">Restricted</Badge>}
-        actions={
+        badge={<Badge variant={canManage ? "danger" : "secondary"}>{canManage ? "Restricted" : "Read only"}</Badge>}
+        actions={canManage ? (
           <Button
             type="button"
             variant="destructive"
@@ -118,7 +118,7 @@ export function SystemAdminClient({ summary }: { summary: Summary }) {
             <Trash2 className="h-4 w-4" />
             Delete operational data
           </Button>
-        }
+        ) : undefined}
       />
 
       <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
@@ -177,7 +177,7 @@ export function SystemAdminClient({ summary }: { summary: Summary }) {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen && canManage} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete all operational data?</DialogTitle>

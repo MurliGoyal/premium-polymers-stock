@@ -21,22 +21,21 @@ async function main() {
   // ─── Users ──────────────────────────────────────────────────
   const passwordHash = await bcrypt.hash("admin123", 12);
 
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@premiumpolymers.com" },
-    update: {},
-    create: { name: "Daryl Admin", email: "admin@premiumpolymers.com", passwordHash, role: Role.ADMIN },
-  });
-
   const manager = await prisma.user.upsert({
     where: { email: "manager@premiumpolymers.com" },
     update: {},
     create: { name: "Ravi Manager", email: "manager@premiumpolymers.com", passwordHash, role: Role.MANAGER },
   });
 
-  const operator = await prisma.user.upsert({
-    where: { email: "operator@premiumpolymers.com" },
+  const stockManager = await prisma.user.upsert({
+    where: { email: "stock@premiumpolymers.com" },
     update: {},
-    create: { name: "Amit Operator", email: "operator@premiumpolymers.com", passwordHash, role: Role.OPERATOR },
+    create: {
+      name: "Amit Stock",
+      email: "stock@premiumpolymers.com",
+      passwordHash,
+      role: Role.STOCK_MANAGEMENT,
+    },
   });
 
   await prisma.user.upsert({
@@ -54,10 +53,10 @@ async function main() {
     create: { code: "E-219", name: "Warehouse E-219 (Main Storage)", slug: "e-219" },
   });
 
-  const warehouseF12 = await prisma.warehouse.upsert({
-    where: { code: "F-12" },
+  const warehouseF11 = await prisma.warehouse.upsert({
+    where: { code: "F-11" },
     update: {},
-    create: { code: "F-12", name: "Warehouse F-12 (Secondary)", slug: "f-12" },
+    create: { code: "F-11", name: "Warehouse F-11 (Secondary)", slug: "f-11" },
   });
 
   console.log("  ✅ Warehouses seeded");
@@ -138,18 +137,18 @@ async function main() {
     { name: "Calcium Carbonate (CaCO3)", cat: "chemical-additive", unit: "kg", stock: 3200, min: 500, wh: warehouseE219.id, thickness: null, size: null, gsm: null },
     { name: "PE Stretch Wrap 23μ", cat: "packaging-material", unit: "roll", stock: 85, min: 30, wh: warehouseE219.id, thickness: 0.023, size: "500x200", gsm: 23 },
     { name: "Polypropylene Yarn 900D", cat: "fiber-yarn", unit: "kg", stock: 650, min: 200, wh: warehouseE219.id, thickness: null, size: null, gsm: null },
-    // Warehouse F-12
-    { name: "LLDPE Resin LL6201", cat: "polymer-resin", unit: "kg", stock: 1500, min: 400, wh: warehouseF12.id, thickness: null, size: null, gsm: null },
-    { name: "PVC Compound Rigid", cat: "polymer-resin", unit: "kg", stock: 900, min: 250, wh: warehouseF12.id, thickness: null, size: null, gsm: null },
-    { name: "Polyester Film 12μ", cat: "film-sheet", unit: "roll", stock: 8, min: 10, wh: warehouseF12.id, thickness: 0.012, size: "1200x3000", gsm: 17 },
-    { name: "Nylon 6 Chips", cat: "polymer-resin", unit: "kg", stock: 450, min: 150, wh: warehouseF12.id, thickness: null, size: null, gsm: null },
-    { name: "Epoxy Resin Clear", cat: "adhesive", unit: "litre", stock: 75, min: 20, wh: warehouseF12.id, thickness: null, size: null, gsm: null },
-    { name: "PE Foam Sheet 5mm", cat: "foam-material", unit: "sheet", stock: 200, min: 50, wh: warehouseF12.id, thickness: 5, size: "2000x1000", gsm: null },
-    { name: "SBR Rubber Compound", cat: "rubber-compound", unit: "kg", stock: 380, min: 100, wh: warehouseF12.id, thickness: null, size: null, gsm: null },
-    { name: "Paraffin Wax 58°C", cat: "wax-lubricant", unit: "kg", stock: 520, min: 100, wh: warehouseF12.id, thickness: null, size: null, gsm: null },
-    { name: "Anti-Block Agent MB", cat: "chemical-additive", unit: "kg", stock: 90, min: 40, wh: warehouseF12.id, thickness: null, size: null, gsm: null },
-    { name: "Recycled HDPE Flakes", cat: "recycled-polymer", unit: "kg", stock: 2200, min: 500, wh: warehouseF12.id, thickness: null, size: null, gsm: null },
-    { name: "Acrylic Coating Clear", cat: "coating-paint", unit: "litre", stock: 0, min: 30, wh: warehouseF12.id, thickness: null, size: null, gsm: null },
+    // Warehouse F-11
+    { name: "LLDPE Resin LL6201", cat: "polymer-resin", unit: "kg", stock: 1500, min: 400, wh: warehouseF11.id, thickness: null, size: null, gsm: null },
+    { name: "PVC Compound Rigid", cat: "polymer-resin", unit: "kg", stock: 900, min: 250, wh: warehouseF11.id, thickness: null, size: null, gsm: null },
+    { name: "Polyester Film 12μ", cat: "film-sheet", unit: "roll", stock: 8, min: 10, wh: warehouseF11.id, thickness: 0.012, size: "1200x3000", gsm: 17 },
+    { name: "Nylon 6 Chips", cat: "polymer-resin", unit: "kg", stock: 450, min: 150, wh: warehouseF11.id, thickness: null, size: null, gsm: null },
+    { name: "Epoxy Resin Clear", cat: "adhesive", unit: "litre", stock: 75, min: 20, wh: warehouseF11.id, thickness: null, size: null, gsm: null },
+    { name: "PE Foam Sheet 5mm", cat: "foam-material", unit: "sheet", stock: 200, min: 50, wh: warehouseF11.id, thickness: 5, size: "2000x1000", gsm: null },
+    { name: "SBR Rubber Compound", cat: "rubber-compound", unit: "kg", stock: 380, min: 100, wh: warehouseF11.id, thickness: null, size: null, gsm: null },
+    { name: "Paraffin Wax 58°C", cat: "wax-lubricant", unit: "kg", stock: 520, min: 100, wh: warehouseF11.id, thickness: null, size: null, gsm: null },
+    { name: "Anti-Block Agent MB", cat: "chemical-additive", unit: "kg", stock: 90, min: 40, wh: warehouseF11.id, thickness: null, size: null, gsm: null },
+    { name: "Recycled HDPE Flakes", cat: "recycled-polymer", unit: "kg", stock: 2200, min: 500, wh: warehouseF11.id, thickness: null, size: null, gsm: null },
+    { name: "Acrylic Coating Clear", cat: "coating-paint", unit: "litre", stock: 0, min: 30, wh: warehouseF11.id, thickness: null, size: null, gsm: null },
   ];
 
   const createdMaterials: { id: string; name: string; warehouseId: string; stock: number; min: number; unit: string }[] = [];
@@ -178,7 +177,7 @@ async function main() {
         sizeUnit: mat.size ? "mm" : null,
         gsm: mat.gsm,
         status,
-        createdById: admin.id,
+        createdById: manager.id,
       },
       create: {
         warehouseId: mat.wh,
@@ -194,7 +193,7 @@ async function main() {
         sizeUnit: mat.size ? "mm" : null,
         gsm: mat.gsm,
         status,
-        createdById: admin.id,
+        createdById: manager.id,
       },
     });
 
@@ -207,7 +206,7 @@ async function main() {
         warehouseId: mat.wh,
         activityType: ActivityType.CREATED,
         afterSnapshot: { name: mat.name, stock: mat.stock, unit: mat.unit },
-        performedById: admin.id,
+        performedById: manager.id,
       },
     });
 
@@ -221,7 +220,7 @@ async function main() {
         previousStock: 0,
         newStock: mat.stock,
         sourceType: "CREATION",
-        createdById: admin.id,
+        createdById: manager.id,
       },
     });
   }
@@ -230,21 +229,21 @@ async function main() {
 
   // ─── Sample Transfers ───────────────────────────────────────
   const transferData = [
-    { materialIdx: 0, recipientName: "Production Floor A", qty: 200, user: admin, ref: "TRF-2024-001" },
+    { materialIdx: 0, recipientName: "Production Floor A", qty: 200, user: manager, ref: "TRF-2024-001" },
     { materialIdx: 0, recipientName: "Extrusion Line 1", qty: 150, user: manager, ref: "TRF-2024-002" },
-    { materialIdx: 1, recipientName: "Production Floor B", qty: 300, user: operator, ref: "TRF-2024-003" },
+    { materialIdx: 1, recipientName: "Production Floor B", qty: 300, user: stockManager, ref: "TRF-2024-003" },
     { materialIdx: 4, recipientName: "Packaging Unit C", qty: 5, user: manager, ref: "TRF-2024-004" },
-    { materialIdx: 6, recipientName: "R&D Laboratory", qty: 50, user: admin, ref: "TRF-2024-005" },
-    { materialIdx: 9, recipientName: "Production Floor A", qty: 500, user: operator, ref: "TRF-2024-006" },
+    { materialIdx: 6, recipientName: "R&D Laboratory", qty: 50, user: manager, ref: "TRF-2024-005" },
+    { materialIdx: 9, recipientName: "Production Floor A", qty: 500, user: stockManager, ref: "TRF-2024-006" },
     { materialIdx: 11, recipientName: "Extrusion Line 1", qty: 100, user: manager, ref: "TRF-2024-007" },
-    { materialIdx: 12, recipientName: "Production Floor B", qty: 200, user: admin, ref: "TRF-2024-008" },
+    { materialIdx: 12, recipientName: "Production Floor B", qty: 200, user: manager, ref: "TRF-2024-008" },
     { materialIdx: 13, recipientName: "External Vendor - PolyTech", qty: 100, user: manager, ref: "TRF-2024-009" },
-    { materialIdx: 15, recipientName: "R&D Laboratory", qty: 50, user: operator, ref: "TRF-2024-010" },
-    { materialIdx: 17, recipientName: "Production Floor A", qty: 30, user: admin, ref: "TRF-2024-011" },
-    { materialIdx: 18, recipientName: "Quality Control Dept", qty: 80, user: admin, ref: "TRF-2024-012" },
+    { materialIdx: 15, recipientName: "R&D Laboratory", qty: 50, user: stockManager, ref: "TRF-2024-010" },
+    { materialIdx: 17, recipientName: "Production Floor A", qty: 30, user: manager, ref: "TRF-2024-011" },
+    { materialIdx: 18, recipientName: "Quality Control Dept", qty: 80, user: manager, ref: "TRF-2024-012" },
     { materialIdx: 19, recipientName: "Production Floor B", qty: 120, user: manager, ref: "TRF-2024-013" },
-    { materialIdx: 20, recipientName: "R&D Laboratory", qty: 20, user: operator, ref: "TRF-2024-014" },
-    { materialIdx: 21, recipientName: "Extrusion Line 1", qty: 500, user: admin, ref: "TRF-2024-015" },
+    { materialIdx: 20, recipientName: "R&D Laboratory", qty: 20, user: stockManager, ref: "TRF-2024-014" },
+    { materialIdx: 21, recipientName: "Extrusion Line 1", qty: 500, user: manager, ref: "TRF-2024-015" },
   ];
 
   for (const t of transferData) {

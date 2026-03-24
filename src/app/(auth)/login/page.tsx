@@ -126,7 +126,7 @@ export default function LoginPage() {
                       name="email"
                       type="email"
                       autoComplete="email"
-                      placeholder="admin@premiumpolymers.com"
+                      placeholder="manager@premiumpolymers.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-11"
@@ -178,7 +178,7 @@ export default function LoginPage() {
               <div className="mt-6 rounded-2xl border border-white/8 bg-white/[0.02] px-4 py-3">
                 <p className="text-center text-xs text-muted-foreground sm:text-[11px]">
                   Demo credentials:{" "}
-                  <span className="font-mono text-foreground/70">admin@premiumpolymers.com</span> /{" "}
+                  <span className="font-mono text-foreground/70">manager@premiumpolymers.com</span> /{" "}
                   <span className="font-mono text-foreground/70">admin123</span>
                 </p>
               </div>

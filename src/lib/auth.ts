@@ -67,6 +67,18 @@ export async function getServerAuthSession() {
   return getServerSession(authOptions);
 }
 
+function getAuthorizedHome(role: string) {
+  if (hasPermission(role, "dashboard:view")) {
+    return "/dashboard";
+  }
+
+  if (hasPermission(role, "warehouses:view")) {
+    return "/warehouses";
+  }
+
+  return "/login";
+}
+
 export async function requirePagePermission(permission?: Permission) {
   const session = await getServerAuthSession();
 
@@ -75,7 +87,7 @@ export async function requirePagePermission(permission?: Permission) {
   }
 
   if (permission && !hasPermission(session.user.role, permission)) {
-    redirect("/dashboard");
+    redirect(getAuthorizedHome(session.user.role));
   }
 
   return session.user;

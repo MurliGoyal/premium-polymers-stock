@@ -3,7 +3,7 @@ import { getUsers } from "../actions";
 import { UsersClient } from "./users-client";
 
 export default async function UsersPage() {
-  await requirePagePermission("users:manage");
+  await requirePagePermission("users:view");
   const users = await getUsers();
   return (
     <UsersClient

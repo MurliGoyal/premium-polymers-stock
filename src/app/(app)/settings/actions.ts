@@ -21,7 +21,7 @@ function isUniqueConstraintError(error: unknown) {
 
 // Categories
 export async function getCategories() {
-  await assertServerPermission("categories:manage");
+  await assertServerPermission("categories:view");
   return prisma.category.findMany({
     include: {
       _count: { select: { rawMaterials: true } },
@@ -167,7 +167,7 @@ export async function deleteSubcategory(id: string) {
 
 // Recipients
 export async function getRecipientsWithCount() {
-  await assertServerPermission("recipients:manage");
+  await assertServerPermission("recipients:view");
   return prisma.recipient.findMany({
     include: { _count: { select: { transfers: true } } },
     orderBy: { name: "asc" },
@@ -229,7 +229,7 @@ export async function deleteRecipient(id: string) {
 
 // Users
 export async function getUsers() {
-  await assertServerPermission("users:manage");
+  await assertServerPermission("users:view");
   return prisma.user.findMany({
     select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
     orderBy: { createdAt: "asc" },
@@ -237,7 +237,7 @@ export async function getUsers() {
 }
 
 export async function getOperationalDataSummary() {
-  await assertServerPermission("settings:manage");
+  await assertServerPermission("settings:view");
 
   const [
     rawMaterials,

@@ -34,7 +34,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: "Activity",
     items: [
-      { label: "Stock Adjustments", href: "/stock-adjustments", icon: SlidersHorizontal, permission: "stock_adjustments:manage" },
+      { label: "Stock Adjustments", href: "/stock-adjustments", icon: SlidersHorizontal, permission: "stock_adjustments:view" },
       { label: "Transfer History", href: "/transfer-history", icon: ArrowRightLeft, permission: "transfer_history:view" },
       { label: "Material History", href: "/raw-materials-history", icon: ClipboardList, permission: "raw_materials_history:view" },
     ],
@@ -42,10 +42,10 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: "Settings",
     items: [
-      { label: "Categories", href: "/settings/categories", icon: Tag, permission: "categories:manage" },
-      { label: "Recipients", href: "/settings/recipients", icon: UserCheck, permission: "recipients:manage" },
-      { label: "Users", href: "/settings/users", icon: Users, permission: "users:manage" },
-      { label: "System Admin", href: "/settings/system", icon: Shield, permission: "settings:manage" },
+      { label: "Categories", href: "/settings/categories", icon: Tag, permission: "categories:view" },
+      { label: "Recipients", href: "/settings/recipients", icon: UserCheck, permission: "recipients:view" },
+      { label: "Users", href: "/settings/users", icon: Users, permission: "users:view" },
+      { label: "System Admin", href: "/settings/system", icon: Shield, permission: "settings:view" },
     ],
   },
 ];

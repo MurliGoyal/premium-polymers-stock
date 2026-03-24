@@ -23,7 +23,7 @@ function revalidateViews(warehouseSlug: string) {
 }
 
 export async function getStockAdjustmentData() {
-  await assertServerPermission("stock_adjustments:manage");
+  await assertServerPermission("stock_adjustments:view");
 
   const [warehouses, materials] = await Promise.all([
     prisma.warehouse.findMany({

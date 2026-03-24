@@ -1,10 +1,17 @@
 import { requirePagePermission } from "@/lib/auth";
+import { hasPermission } from "@/lib/rbac";
 import { getStockAdjustmentData } from "./actions";
 import { StockAdjustmentsClient } from "./stock-adjustments-client";
 
 export default async function StockAdjustmentsPage() {
-  await requirePagePermission("stock_adjustments:manage");
+  const user = await requirePagePermission("stock_adjustments:view");
   const data = await getStockAdjustmentData();
 
-  return <StockAdjustmentsClient warehouses={data.warehouses} materials={data.materials} />;
+  return (
+    <StockAdjustmentsClient
+      warehouses={data.warehouses}
+      materials={data.materials}
+      canManage={hasPermission(user.role, "stock_adjustments:manage")}
+    />
+  );
 }

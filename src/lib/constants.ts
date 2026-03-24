@@ -13,9 +13,9 @@ export const WAREHOUSE_CATALOG = [
     gradient: "from-indigo-500/18 via-sky-500/10 to-transparent",
   },
   {
-    code: "F-12",
-    slug: "f-12",
-    name: "Warehouse F-12",
+    code: "F-11",
+    slug: "f-11",
+    name: "Warehouse F-11",
     subtitle: "Secondary additives and packaging zone",
     gradient: "from-teal-500/16 via-cyan-500/8 to-transparent",
   },

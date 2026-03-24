@@ -55,9 +55,11 @@ const itemVariants = {
 export function StockAdjustmentsClient({
   warehouses,
   materials,
+  canManage,
 }: {
   warehouses: WarehouseItem[];
   materials: MaterialItem[];
+  canManage: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -144,7 +146,11 @@ export function StockAdjustmentsClient({
         <ResponsivePageHeader
           eyebrow="Inventory management"
           title="Stock Adjustments"
-          description="Manually adjust raw material stock levels. Use this for opening stock, corrections, damaged goods, or any manual inventory changes."
+          description={
+            canManage
+              ? "Manually adjust raw material stock levels. Use this for opening stock, corrections, damaged goods, or any manual inventory changes."
+              : "Read-only stock overview. You can review stock levels and filters, but adjustments are disabled for your role."
+          }
           badge={
             <Badge variant="secondary">
               <SlidersHorizontal className="mr-1 h-3 w-3" />
@@ -222,9 +228,9 @@ export function StockAdjustmentsClient({
                         <span className="text-sm font-normal text-muted-foreground">{material.baseUnit}</span>
                       </p>
                     </div>
-                    <Button size="sm" onClick={() => openAdjust(material)}>
+                    <Button size="sm" onClick={() => canManage && openAdjust(material)} disabled={!canManage}>
                       <SlidersHorizontal className="mr-1 h-3.5 w-3.5" />
-                      Adjust
+                      {canManage ? "Adjust" : "View"}
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -237,7 +243,7 @@ export function StockAdjustmentsClient({
         )}
       </motion.div>
 
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      <Dialog open={showDialog && canManage} onOpenChange={setShowDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Adjust Stock</DialogTitle>

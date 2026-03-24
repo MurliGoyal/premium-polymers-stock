@@ -15,7 +15,7 @@ This app manages:
 The seeded demo is centered around two warehouses:
 
 - `E-219` for primary resin and film storage
-- `F-12` for secondary additives and packaging stock
+- `F-11` for secondary additives and packaging stock
 
 The data model itself is not limited to two warehouses, but several dashboard views and seeded defaults are optimized around those seeded codes.
 
@@ -69,7 +69,7 @@ The data model itself is not limited to two warehouses, but several dashboard vi
 ### Auth and Access Control
 
 - `src/lib/auth.ts` handles session lookup and permission assertions
-- `src/lib/rbac.ts` maps permissions across `ADMIN`, `MANAGER`, `OPERATOR`, and `VIEWER`
+- `src/lib/rbac.ts` maps permissions across `MANAGER`, `STOCK_MANAGEMENT`, and `VIEWER`
 - Protected pages redirect unauthenticated users to `/login`
 
 ## Repo Structure
@@ -257,9 +257,8 @@ Open `http://localhost:3000`.
 
 ## Seeded Demo Users
 
-- Admin: `admin@premiumpolymers.com` / `admin123`
 - Manager: `manager@premiumpolymers.com` / `admin123`
-- Operator: `operator@premiumpolymers.com` / `admin123`
+- Stock Management: `stock@premiumpolymers.com` / `admin123`
 - Viewer: `viewer@premiumpolymers.com` / `admin123`
 
 These accounts are for local demo data only. Replace or rotate them for any shared or production environment.

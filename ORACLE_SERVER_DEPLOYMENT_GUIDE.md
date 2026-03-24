@@ -207,7 +207,7 @@ docker compose run --rm app tsx prisma/seed.ts
 Notes:
 
 - `prisma generate` is already handled during the image build.
-- The seed creates demo users such as `admin@premiumpolymers.com` with password `admin123`. Change those passwords immediately after first login.
+- The seed creates demo users such as `manager@premiumpolymers.com` with password `admin123`. Change those passwords immediately after first login.
 
 ## 11. Start the App
 
@@ -233,7 +233,7 @@ http://YOUR_SERVER_IP:3001
 
 Demo login:
 
-- Email: `admin@premiumpolymers.com`
+- Email: `manager@premiumpolymers.com`
 - Password: `admin123`
 
 ## 13. Open Oracle and OS Firewalls

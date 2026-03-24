@@ -20,7 +20,7 @@ import { addCategory, deleteCategory, addSubcategory, deleteSubcategory } from "
 type SubcategoryData = { id: string; name: string; slug: string; materialCount: number };
 type CategoryData = { id: string; name: string; slug: string; materialCount: number; createdAt: string; subcategories: SubcategoryData[] };
 
-export function CategoriesClient({ categories }: { categories: CategoryData[] }) {
+export function CategoriesClient({ categories, canManage }: { categories: CategoryData[]; canManage: boolean }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [showAdd, setShowAdd] = useState(false);
@@ -124,12 +124,12 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
         title="Categories"
         description="Manage shared categories used to organize materials."
         badge={<Badge variant="secondary">{categories.length} categories</Badge>}
-        actions={
+        actions={canManage ? (
           <Button type="button" onClick={() => setShowAdd(true)}>
             <Plus className="h-4 w-4" />
             Add category
           </Button>
-        }
+        ) : undefined}
       />
 
       <Card className="overflow-hidden">
@@ -138,10 +138,12 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
             <Tag className="mb-4 h-12 w-12 text-muted-foreground/30" />
             <h3 className="text-lg font-semibold">No categories yet</h3>
             <p className="mt-1 text-sm text-muted-foreground">Create the first shared material category to organize new stock records.</p>
-            <Button type="button" onClick={() => setShowAdd(true)} className="mt-4">
-              <Plus className="h-4 w-4" />
-              Add category
-            </Button>
+            {canManage ? (
+              <Button type="button" onClick={() => setShowAdd(true)} className="mt-4">
+                <Plus className="h-4 w-4" />
+                Add category
+              </Button>
+            ) : null}
           </div>
         ) : (
           <>
@@ -158,17 +160,19 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
                     </div>
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <span>{formatDate(category.createdAt)}</span>
-                      <div className="flex items-center gap-1">
-                        <Button type="button" variant="ghost" size="sm" onClick={() => openAddSub(category.id)}>
-                          <Plus className="h-3.5 w-3.5" />
-                          Sub
-                        </Button>
-                        <DeleteButton
-                          disabled={category.materialCount > 0 || category.subcategories.length > 0}
-                          onDelete={() => openDeleteCat(category.id)}
-                          tooltip={category.subcategories.length > 0 ? "Delete subcategories first" : "Has linked materials"}
-                        />
-                      </div>
+                      {canManage ? (
+                        <div className="flex items-center gap-1">
+                          <Button type="button" variant="ghost" size="sm" onClick={() => openAddSub(category.id)}>
+                            <Plus className="h-3.5 w-3.5" />
+                            Sub
+                          </Button>
+                          <DeleteButton
+                            disabled={category.materialCount > 0 || category.subcategories.length > 0}
+                            onDelete={() => openDeleteCat(category.id)}
+                            tooltip={category.subcategories.length > 0 ? "Delete subcategories first" : "Has linked materials"}
+                          />
+                        </div>
+                      ) : null}
                     </div>
                     {category.subcategories.length > 0 ? (
                       <div className="space-y-2">
@@ -188,12 +192,14 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
                                   <p className="text-sm font-medium">{sub.name}</p>
                                   <p className="text-xs text-muted-foreground">{sub.materialCount} materials</p>
                                 </div>
-                                <DeleteButton
-                                  disabled={sub.materialCount > 0}
-                                  onDelete={() => openDeleteSub(sub.id)}
-                                  tooltip="Has linked materials"
-                                  compact
-                                />
+                                {canManage ? (
+                                  <DeleteButton
+                                    disabled={sub.materialCount > 0}
+                                    onDelete={() => openDeleteSub(sub.id)}
+                                    tooltip="Has linked materials"
+                                    compact
+                                  />
+                                ) : null}
                               </div>
                             ))}
                           </div>
@@ -242,18 +248,20 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{formatDate(category.createdAt)}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button type="button" variant="ghost" size="sm" onClick={() => openAddSub(category.id)}>
-                              <Plus className="h-3.5 w-3.5" />
-                              Sub
-                            </Button>
-                            <DeleteButton
-                              compact
-                              disabled={category.materialCount > 0 || category.subcategories.length > 0}
-                              onDelete={() => openDeleteCat(category.id)}
-                              tooltip={category.subcategories.length > 0 ? "Delete subcategories first" : "Has linked materials"}
-                            />
-                          </div>
+                          {canManage ? (
+                            <div className="flex items-center gap-1">
+                              <Button type="button" variant="ghost" size="sm" onClick={() => openAddSub(category.id)}>
+                                <Plus className="h-3.5 w-3.5" />
+                                Sub
+                              </Button>
+                              <DeleteButton
+                                compact
+                                disabled={category.materialCount > 0 || category.subcategories.length > 0}
+                                onDelete={() => openDeleteCat(category.id)}
+                                tooltip={category.subcategories.length > 0 ? "Delete subcategories first" : "Has linked materials"}
+                              />
+                            </div>
+                          ) : null}
                         </TableCell>
                       </TableRow>
                       {expandedCategories.has(category.id) && category.subcategories.map((sub) => (
@@ -268,12 +276,14 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
                           <TableCell />
                           <TableCell />
                           <TableCell>
-                            <DeleteButton
-                              compact
-                              disabled={sub.materialCount > 0}
-                              onDelete={() => openDeleteSub(sub.id)}
-                              tooltip="Has linked materials"
-                            />
+                            {canManage ? (
+                              <DeleteButton
+                                compact
+                                disabled={sub.materialCount > 0}
+                                onDelete={() => openDeleteSub(sub.id)}
+                                tooltip="Has linked materials"
+                              />
+                            ) : null}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -286,7 +296,7 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
         )}
       </Card>
 
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+      <Dialog open={showAdd && canManage} onOpenChange={setShowAdd}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add category</DialogTitle>
@@ -317,7 +327,7 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showAddSub} onOpenChange={setShowAddSub}>
+      <Dialog open={showAddSub && canManage} onOpenChange={setShowAddSub}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add subcategory</DialogTitle>
@@ -348,7 +358,7 @@ export function CategoriesClient({ categories }: { categories: CategoryData[] })
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+      <Dialog open={!!deleteId && canManage} onOpenChange={() => setDeleteId(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete {deleteType}?</DialogTitle>

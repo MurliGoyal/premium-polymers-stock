@@ -19,7 +19,7 @@ import { addRecipient, deleteRecipient } from "../actions";
 
 type RecipientData = { id: string; name: string; transferCount: number; createdAt: string };
 
-export function RecipientsClient({ recipients }: { recipients: RecipientData[] }) {
+export function RecipientsClient({ recipients, canManage }: { recipients: RecipientData[]; canManage: boolean }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [showAdd, setShowAdd] = useState(false);
@@ -72,12 +72,12 @@ export function RecipientsClient({ recipients }: { recipients: RecipientData[] }
         title="Recipients"
         description="Manage transfer destinations used across all warehouses."
         badge={<Badge variant="secondary">{recipients.length} recipients</Badge>}
-        actions={
+        actions={canManage ? (
           <Button type="button" onClick={() => setShowAdd(true)}>
             <Plus className="h-4 w-4" />
             Add recipient
           </Button>
-        }
+        ) : undefined}
       />
 
       <Card className="overflow-hidden">
@@ -86,10 +86,12 @@ export function RecipientsClient({ recipients }: { recipients: RecipientData[] }
             <UserCheck className="mb-4 h-12 w-12 text-muted-foreground/30" />
             <h3 className="text-lg font-semibold">No recipients yet</h3>
             <p className="mt-1 text-sm text-muted-foreground">Create reusable destinations for transfer and delivery workflows.</p>
-            <Button type="button" onClick={() => setShowAdd(true)} className="mt-4">
-              <Plus className="h-4 w-4" />
-              Add recipient
-            </Button>
+            {canManage ? (
+              <Button type="button" onClick={() => setShowAdd(true)} className="mt-4">
+                <Plus className="h-4 w-4" />
+                Add recipient
+              </Button>
+            ) : null}
           </div>
         ) : (
           <>
@@ -104,12 +106,14 @@ export function RecipientsClient({ recipients }: { recipients: RecipientData[] }
                       </div>
                       <Badge variant="secondary">{recipient.transferCount} transfers</Badge>
                     </div>
-                    <div className="flex justify-end">
-                      <DeleteRecipientButton
-                        disabled={recipient.transferCount > 0}
-                        onDelete={() => setDeleteId(recipient.id)}
-                      />
-                    </div>
+                    {canManage ? (
+                      <div className="flex justify-end">
+                        <DeleteRecipientButton
+                          disabled={recipient.transferCount > 0}
+                          onDelete={() => setDeleteId(recipient.id)}
+                        />
+                      </div>
+                    ) : null}
                   </CardContent>
                 </Card>
               ))}
@@ -134,11 +138,13 @@ export function RecipientsClient({ recipients }: { recipients: RecipientData[] }
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{formatDate(recipient.createdAt)}</TableCell>
                       <TableCell>
-                        <DeleteRecipientButton
-                          compact
-                          disabled={recipient.transferCount > 0}
-                          onDelete={() => setDeleteId(recipient.id)}
-                        />
+                        {canManage ? (
+                          <DeleteRecipientButton
+                            compact
+                            disabled={recipient.transferCount > 0}
+                            onDelete={() => setDeleteId(recipient.id)}
+                          />
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -149,7 +155,7 @@ export function RecipientsClient({ recipients }: { recipients: RecipientData[] }
         )}
       </Card>
 
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+      <Dialog open={showAdd && canManage} onOpenChange={setShowAdd}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add recipient</DialogTitle>
@@ -180,7 +186,7 @@ export function RecipientsClient({ recipients }: { recipients: RecipientData[] }
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+      <Dialog open={!!deleteId && canManage} onOpenChange={() => setDeleteId(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete recipient?</DialogTitle>
