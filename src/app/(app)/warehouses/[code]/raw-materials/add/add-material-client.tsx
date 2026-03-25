@@ -511,7 +511,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes / description</Label>
+              <Label htmlFor="notes">Vendor Name</Label>
               <Textarea
                 id="notes"
                 rows={4}
