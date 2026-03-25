@@ -467,6 +467,7 @@ export function TransferHistoryClient({
                       <DetailBlock label="Thickness" value={formatOptionalMeasurement(snapshot.thicknessValue, snapshot.thicknessUnit)} />
                       <DetailBlock label="Size" value={formatOptionalMeasurement(snapshot.sizeValue, snapshot.sizeUnit)} />
                       <DetailBlock label="GSM" value={String(snapshot.gsm ?? "-")} />
+                      <DetailBlock label="Micron" value={String(snapshot.micron ?? "-")} />
                     </div>
                     {snapshot.notes ? (
                       <div>

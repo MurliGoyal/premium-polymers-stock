@@ -8,7 +8,7 @@ import { Controller, type DefaultValues, useForm, useWatch } from "react-hook-fo
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Plus, RotateCcw, Save, X } from "lucide-react";
+import { ChevronDown, Plus, RotateCcw, Save, X } from "lucide-react";
 import { MATERIAL_UNITS, SIZE_UNITS, THICKNESS_UNITS } from "@/lib/constants";
 import { rawMaterialFormSchema } from "@/lib/validation";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
@@ -43,6 +43,7 @@ const defaultValues = (warehouseId: string): DefaultValues<RawMaterialFormValues
   sizeValue: "",
   sizeUnit: undefined,
   gsm: undefined,
+  micron: undefined,
   subcategoryId: "",
   notes: "",
 });
@@ -59,6 +60,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
   const [rollGsm, setRollGsm] = useState("");
   const [rollWidthValue, setRollWidthValue] = useState("");
   const [rollWidthUnit, setRollWidthUnit] = useState<(typeof SIZE_UNITS)[number]>("mm");
+  const [isRollCalculatorOpenMobile, setIsRollCalculatorOpenMobile] = useState(false);
 
   const form = useForm<RawMaterialFormValues>({
     resolver: zodResolver(rawMaterialFormSchema),
@@ -445,7 +447,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
 
               <div className="grid gap-5 sm:grid-cols-[1fr,180px]">
                 <div className="space-y-2">
-                  <Label htmlFor="sizeValue">Size</Label>
+                  <Label htmlFor="sizeValue">Size / Roll Size / Roll Width</Label>
                   <Input id="sizeValue" placeholder="e.g. 1000x5000" {...register("sizeValue")} />
                   <p className="text-xs text-muted-foreground">Use a compact dimension notation such as length x width or length x width x depth.</p>
                 </div>
@@ -490,6 +492,22 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
                 <p className="text-xs text-muted-foreground">Useful for films, sheets, coated materials, and paper-like inputs.</p>
                 {errors.gsm ? <p className="text-xs text-destructive">{errors.gsm.message}</p> : null}
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="micron">Micron</Label>
+                <Input
+                  id="micron"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Optional Micron"
+                  {...register("micron", {
+                    setValueAs: (value) => (value === "" ? undefined : Number(value)),
+                  })}
+                />
+                <p className="text-xs text-muted-foreground">Used for micron-based thickness classification independent of the Thickness field.</p>
+                {errors.micron ? <p className="text-xs text-destructive">{errors.micron.message}</p> : null}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -507,13 +525,30 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
         </Card>
 
         <Card className="rounded-2xl border bg-card/95 shadow-sm shadow-slate-950/5 sm:rounded-[28px]">
-          <CardHeader>
-            <CardTitle>Roll calculator</CardTitle>
+          <CardHeader className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle>Roll calculator</CardTitle>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="md:hidden"
+                onClick={() => setIsRollCalculatorOpenMobile((current) => !current)}
+                aria-expanded={isRollCalculatorOpenMobile}
+                aria-controls="roll-calculator-content"
+              >
+                {isRollCalculatorOpenMobile ? "Hide" : "Show"}
+                <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${isRollCalculatorOpenMobile ? "rotate-180" : ""}`} />
+              </Button>
+            </div>
             <CardDescription>
               Estimate roll length in meters from product weight, GSM, and width. The result uses the absolute value and is rounded to 2 decimal places.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
+          <CardContent
+            id="roll-calculator-content"
+            className={`${isRollCalculatorOpenMobile ? "block" : "hidden"} space-y-5 md:block`}
+          >
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-[1fr,1fr,1fr,180px]">
               <div className="space-y-2">
                 <Label htmlFor="rollWeightKg">Product weight (kg)</Label>
@@ -544,7 +579,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="rollWidthValue">Product width</Label>
+                <Label htmlFor="rollWidthValue">Size / Roll Size / Roll Width</Label>
                 <Input
                   id="rollWidthValue"
                   type="number"
@@ -558,7 +593,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
               </div>
 
               <div className="space-y-2">
-                <Label>Width unit</Label>
+                <Label>Size / Roll Size / Roll Width unit</Label>
                 <Select value={rollWidthUnit} onValueChange={(value) => setRollWidthUnit(value as (typeof SIZE_UNITS)[number])}>
                   <SelectTrigger>
                     <SelectValue placeholder="Unit" />

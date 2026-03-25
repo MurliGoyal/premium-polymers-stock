@@ -15,6 +15,7 @@ type MaterialSnapshotInput = {
   sizeValue?: string | null;
   sizeUnit?: string | null;
   gsm?: number | null;
+  micron?: number | null;
   notes?: string | null;
   status: MaterialStatus;
 };
@@ -60,6 +61,7 @@ export function createMaterialSnapshot(material: MaterialSnapshotInput) {
     sizeValue: material.sizeValue ?? null,
     sizeUnit: material.sizeUnit ?? null,
     gsm: material.gsm ?? null,
+    micron: material.micron ?? null,
     notes: material.notes ?? null,
     status: material.status,
   };

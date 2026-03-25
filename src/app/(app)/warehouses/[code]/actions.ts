@@ -96,6 +96,7 @@ export async function getWarehouseData(warehouseRef: string) {
       sizeValue: material.sizeValue,
       sizeUnit: material.sizeUnit,
       gsm: material.gsm,
+      micron: material.micron,
       notes: material.notes,
       status: material.status,
       createdBy: material.createdBy?.name || "System",
@@ -176,6 +177,7 @@ export async function createRawMaterial(payload: unknown) {
             sizeValue: data.sizeValue ?? null,
             sizeUnit: data.sizeUnit ?? null,
             gsm: data.gsm ?? null,
+            micron: data.micron ?? null,
             notes: data.notes ?? null,
             status,
             createdById: user.id,
@@ -195,6 +197,7 @@ export async function createRawMaterial(payload: unknown) {
           sizeValue: data.sizeValue,
           sizeUnit: data.sizeUnit ?? null,
           gsm: data.gsm ?? null,
+          micron: data.micron ?? null,
           notes: data.notes,
           status,
         });
@@ -356,6 +359,7 @@ export async function performTransfer(payload: unknown): Promise<TransferActionR
           sizeValue: material.sizeValue,
           sizeUnit: material.sizeUnit,
           gsm: material.gsm,
+          micron: material.micron,
           notes: material.notes,
           status: material.status,
         });

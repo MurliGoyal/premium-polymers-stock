@@ -151,6 +151,7 @@ model RawMaterial {
   sizeValue      String?        @map("size_value")
   sizeUnit       String?        @map("size_unit")
   gsm            Float?
+  micron         Float?
   notes          String?
   status         MaterialStatus @default(IN_STOCK)
   createdById    String?        @map("created_by")

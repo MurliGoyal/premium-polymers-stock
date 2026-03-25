@@ -4,7 +4,7 @@ import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Minus, Package, Plus, Replace, Search, SlidersHorizontal } from "lucide-react";
+import { Minus, Package, Pencil, Plus, Replace, Search, SlidersHorizontal } from "lucide-react";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { SIZE_UNITS, THICKNESS_UNITS } from "@/lib/constants";
 import { formatNumber, getStatusColor, getStatusLabel } from "@/lib/utils";
-import { adjustStock } from "./actions";
+import { adjustStock, updateRawMaterialSpecifications } from "./actions";
 
 type MaterialItem = {
   id: string;
@@ -31,6 +32,13 @@ type MaterialItem = {
   currentStock: number;
   minimumStock: number;
   baseUnit: string;
+  thicknessValue: number | null;
+  thicknessUnit: string | null;
+  sizeValue: string | null;
+  sizeUnit: string | null;
+  gsm: number | null;
+  micron: number | null;
+  notes: string | null;
   status: string;
   category: string;
 };
@@ -56,10 +64,12 @@ export function StockAdjustmentsClient({
   warehouses,
   materials,
   canManage,
+  canEditMaterials,
 }: {
   warehouses: WarehouseItem[];
   materials: MaterialItem[];
   canManage: boolean;
+  canEditMaterials: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -71,6 +81,15 @@ export function StockAdjustmentsClient({
   const [adjustmentType, setAdjustmentType] = useState<"set" | "add" | "subtract">("set");
   const [quantity, setQuantity] = useState("");
   const [reason, setReason] = useState("");
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<MaterialItem | null>(null);
+  const [editThicknessValue, setEditThicknessValue] = useState("");
+  const [editThicknessUnit, setEditThicknessUnit] = useState("none");
+  const [editSizeValue, setEditSizeValue] = useState("");
+  const [editSizeUnit, setEditSizeUnit] = useState("none");
+  const [editGsm, setEditGsm] = useState("");
+  const [editMicron, setEditMicron] = useState("");
+  const [editNotes, setEditNotes] = useState("");
 
   const filteredMaterials = useMemo(() => {
     const normalizedSearch = deferredSearch.trim().toLowerCase();
@@ -94,8 +113,20 @@ export function StockAdjustmentsClient({
     setShowDialog(true);
   };
 
+  const openEditSpecifications = (material: MaterialItem) => {
+    setEditingMaterial(material);
+    setEditThicknessValue(material.thicknessValue !== null ? String(material.thicknessValue) : "");
+    setEditThicknessUnit(material.thicknessUnit ?? "none");
+    setEditSizeValue(material.sizeValue ?? "");
+    setEditSizeUnit(material.sizeUnit ?? "none");
+    setEditGsm(material.gsm !== null ? String(material.gsm) : "");
+    setEditMicron(material.micron !== null ? String(material.micron) : "");
+    setEditNotes(material.notes ?? "");
+    setShowEditDialog(true);
+  };
+
   const handleSubmit = () => {
-    if (!selectedMaterial || !quantity || !reason.trim()) return;
+    if (!selectedMaterial || !quantity) return;
     const parsedQty = Number(quantity);
     if (!Number.isFinite(parsedQty) || parsedQty < 0) {
       toast.error("Enter a valid quantity");
@@ -109,7 +140,7 @@ export function StockAdjustmentsClient({
           warehouseId: selectedMaterial.warehouseId,
           adjustmentType,
           quantity: parsedQty,
-          reason: reason.trim(),
+          reason: reason.trim() || undefined,
         });
 
         if (!result.ok) {
@@ -139,6 +170,70 @@ export function StockAdjustmentsClient({
       case "subtract": return Math.max(0, selectedMaterial.currentStock - qty);
     }
   }, [selectedMaterial, quantity, adjustmentType]);
+
+  const handleSaveSpecifications = () => {
+    if (!editingMaterial) return;
+
+    const trimmedThicknessValue = editThicknessValue.trim();
+    const parsedThicknessValue = trimmedThicknessValue === "" ? undefined : Number(trimmedThicknessValue);
+    if (parsedThicknessValue !== undefined && (!Number.isFinite(parsedThicknessValue) || parsedThicknessValue < 0)) {
+      toast.error("Thickness must be a valid non-negative number");
+      return;
+    }
+
+    const trimmedGsm = editGsm.trim();
+    const parsedGsm = trimmedGsm === "" ? undefined : Number(trimmedGsm);
+    if (parsedGsm !== undefined && (!Number.isFinite(parsedGsm) || parsedGsm < 0)) {
+      toast.error("GSM must be a valid non-negative number");
+      return;
+    }
+
+    const trimmedMicron = editMicron.trim();
+    const parsedMicron = trimmedMicron === "" ? undefined : Number(trimmedMicron);
+    if (parsedMicron !== undefined && (!Number.isFinite(parsedMicron) || parsedMicron < 0)) {
+      toast.error("Micron must be a valid non-negative number");
+      return;
+    }
+
+    const normalizedSizeValue = editSizeValue.trim();
+
+    if (parsedThicknessValue !== undefined && editThicknessUnit === "none") {
+      toast.error("Select a thickness unit");
+      return;
+    }
+
+    if (normalizedSizeValue && editSizeUnit === "none") {
+      toast.error("Select a size unit");
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const result = await updateRawMaterialSpecifications({
+          rawMaterialId: editingMaterial.id,
+          warehouseId: editingMaterial.warehouseId,
+          thicknessValue: parsedThicknessValue,
+          thicknessUnit: editThicknessUnit === "none" ? undefined : editThicknessUnit,
+          sizeValue: normalizedSizeValue || undefined,
+          sizeUnit: editSizeUnit === "none" ? undefined : editSizeUnit,
+          gsm: parsedGsm,
+          micron: parsedMicron,
+          notes: editNotes.trim() || undefined,
+        });
+
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+
+        toast.success(`Updated specifications for ${editingMaterial.name}`);
+        setShowEditDialog(false);
+        router.refresh();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to update specifications");
+      }
+    });
+  };
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-4 sm:space-y-5">
@@ -228,10 +323,21 @@ export function StockAdjustmentsClient({
                         <span className="text-sm font-normal text-muted-foreground">{material.baseUnit}</span>
                       </p>
                     </div>
-                    <Button size="sm" onClick={() => canManage && openAdjust(material)} disabled={!canManage}>
-                      <SlidersHorizontal className="mr-1 h-3.5 w-3.5" />
-                      {canManage ? "Adjust" : "View"}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" onClick={() => canManage && openAdjust(material)} disabled={!canManage}>
+                        <SlidersHorizontal className="mr-1 h-3.5 w-3.5" />
+                        {canManage ? "Adjust" : "View"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => canEditMaterials && openEditSpecifications(material)}
+                        disabled={!canEditMaterials}
+                      >
+                        <Pencil className="mr-1 h-3.5 w-3.5" />
+                        Edit
+                      </Button>
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Min: {formatNumber(material.minimumStock)} {material.baseUnit}
@@ -317,7 +423,7 @@ export function StockAdjustmentsClient({
 
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="reason">
-                  Reason
+                  Reason (optional)
                 </label>
                 <Textarea
                   id="reason"
@@ -337,9 +443,145 @@ export function StockAdjustmentsClient({
             <Button
               type="button"
               onClick={handleSubmit}
-              disabled={isPending || !quantity || !reason.trim()}
+              disabled={isPending || !quantity}
             >
               {isPending ? "Adjusting…" : "Confirm adjustment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEditDialog && canEditMaterials} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Raw Material Specs</DialogTitle>
+            <DialogDescription>
+              {editingMaterial
+                ? `${editingMaterial.name} — update thickness, size, GSM, and notes.`
+                : "Select a material to edit"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingMaterial ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr,150px]">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="edit-thickness-value">
+                    Thickness
+                  </label>
+                  <Input
+                    id="edit-thickness-value"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Optional thickness"
+                    value={editThicknessValue}
+                    onChange={(event) => setEditThicknessValue(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="edit-thickness-unit">
+                    Thickness unit
+                  </label>
+                  <Select value={editThicknessUnit} onValueChange={setEditThicknessUnit}>
+                    <SelectTrigger id="edit-thickness-unit">
+                      <SelectValue placeholder="Unit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No unit</SelectItem>
+                      {THICKNESS_UNITS.map((unit) => (
+                        <SelectItem key={unit} value={unit}>
+                          {unit}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr,150px]">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="edit-size-value">
+                    Size
+                  </label>
+                  <Input
+                    id="edit-size-value"
+                    placeholder="e.g. 1000x5000"
+                    value={editSizeValue}
+                    onChange={(event) => setEditSizeValue(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="edit-size-unit">
+                    Size unit
+                  </label>
+                  <Select value={editSizeUnit} onValueChange={setEditSizeUnit}>
+                    <SelectTrigger id="edit-size-unit">
+                      <SelectValue placeholder="Unit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No unit</SelectItem>
+                      {SIZE_UNITS.map((unit) => (
+                        <SelectItem key={unit} value={unit}>
+                          {unit}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="edit-gsm">
+                  GSM
+                </label>
+                <Input
+                  id="edit-gsm"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Optional GSM"
+                  value={editGsm}
+                  onChange={(event) => setEditGsm(event.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="edit-micron">
+                  Micron
+                </label>
+                <Input
+                  id="edit-micron"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Optional Micron"
+                  value={editMicron}
+                  onChange={(event) => setEditMicron(event.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="edit-notes">
+                  Notes
+                </label>
+                <Textarea
+                  id="edit-notes"
+                  placeholder="Optional notes"
+                  value={editNotes}
+                  onChange={(event) => setEditNotes(event.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSaveSpecifications} disabled={isPending}>
+              {isPending ? "Saving…" : "Save specifications"}
             </Button>
           </DialogFooter>
         </DialogContent>

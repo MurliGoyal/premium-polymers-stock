@@ -605,6 +605,7 @@ function buildSnapshotFields(
     { label: "Thickness", getValue: (snapshot: Record<string, unknown> | null) => formatOptionalMeasurement(snapshot?.thicknessValue, snapshot?.thicknessUnit) },
     { label: "Size", getValue: (snapshot: Record<string, unknown> | null) => formatOptionalMeasurement(snapshot?.sizeValue, snapshot?.sizeUnit) },
     { label: "GSM", getValue: (snapshot: Record<string, unknown> | null) => formatSnapshotText(snapshot?.gsm) },
+    { label: "Micron", getValue: (snapshot: Record<string, unknown> | null) => formatSnapshotText(snapshot?.micron) },
     { label: "Notes", getValue: (snapshot: Record<string, unknown> | null) => formatSnapshotText(snapshot?.notes) },
   ];
 

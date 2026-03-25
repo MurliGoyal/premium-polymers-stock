@@ -12,6 +12,7 @@ export default async function StockAdjustmentsPage() {
       warehouses={data.warehouses}
       materials={data.materials}
       canManage={hasPermission(user.role, "stock_adjustments:manage")}
+      canEditMaterials={hasPermission(user.role, "raw_materials:edit")}
     />
   );
 }

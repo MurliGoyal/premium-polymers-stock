@@ -31,9 +31,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { resetOperationalData } from "../actions";
+import { deleteAllCategories, deleteAllRecipients, resetOperationalData } from "../actions";
 
 const CONFIRMATION_PHRASE = "DELETE INVENTORY";
+const DELETE_ALL_CATEGORIES_PHRASE = "DELETE ALL CATEGORIES";
+const DELETE_ALL_RECIPIENTS_PHRASE = "DELETE ALL RECIPIENTS";
 
 type Summary = {
   deletable: {
@@ -57,6 +59,10 @@ export function SystemAdminClient({ summary, canManage }: { summary: Summary; ca
   const [isPending, startTransition] = useTransition();
   const [confirmation, setConfirmation] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [categoryConfirmation, setCategoryConfirmation] = useState("");
+  const [recipientConfirmation, setRecipientConfirmation] = useState("");
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [recipientDialogOpen, setRecipientDialogOpen] = useState(false);
 
   const handleReset = () => {
     startTransition(async () => {
@@ -72,6 +78,42 @@ export function SystemAdminClient({ summary, canManage }: { summary: Summary; ca
         router.refresh();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to clear operational data.");
+      }
+    });
+  };
+
+  const handleDeleteAllCategories = () => {
+    startTransition(async () => {
+      try {
+        const result = await deleteAllCategories(categoryConfirmation);
+        toast.success(
+          result.totalDeleted > 0
+            ? `Deleted ${result.categoriesDeleted} categories and ${result.subcategoriesDeleted} subcategories.`
+            : "No categories or subcategories were present to delete."
+        );
+        setCategoryConfirmation("");
+        setCategoryDialogOpen(false);
+        router.refresh();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to delete categories.");
+      }
+    });
+  };
+
+  const handleDeleteAllRecipients = () => {
+    startTransition(async () => {
+      try {
+        const result = await deleteAllRecipients(recipientConfirmation);
+        toast.success(
+          result.recipientsDeleted > 0
+            ? `Deleted ${result.recipientsDeleted} recipients.`
+            : "No recipients were present to delete."
+        );
+        setRecipientConfirmation("");
+        setRecipientDialogOpen(false);
+        router.refresh();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to delete recipients.");
       }
     });
   };
@@ -174,6 +216,28 @@ export function SystemAdminClient({ summary, canManage }: { summary: Summary; ca
               <Badge variant="secondary">No operational data to delete</Badge>
             ) : null}
           </div>
+          {canManage ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setCategoryDialogOpen(true)}
+                disabled={summary.preserved.categories === 0}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete all categories
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setRecipientDialogOpen(true)}
+                disabled={summary.preserved.recipients === 0}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete all recipients
+              </Button>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -206,6 +270,80 @@ export function SystemAdminClient({ summary, canManage }: { summary: Summary; ca
               variant="destructive"
               onClick={handleReset}
               disabled={isPending || confirmation.trim() !== CONFIRMATION_PHRASE}
+            >
+              <Trash2 className="h-4 w-4" />
+              Confirm delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={categoryDialogOpen && canManage} onOpenChange={setCategoryDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete all categories and subcategories?</DialogTitle>
+            <DialogDescription>
+              This is permanent. Type <span className="font-semibold text-foreground">{DELETE_ALL_CATEGORIES_PHRASE}</span> to
+              remove all categories.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label htmlFor="category-reset-confirmation" className="text-sm font-medium text-foreground">
+              Confirmation phrase
+            </label>
+            <Input
+              id="category-reset-confirmation"
+              value={categoryConfirmation}
+              onChange={(event) => setCategoryConfirmation(event.target.value)}
+              placeholder={DELETE_ALL_CATEGORIES_PHRASE}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCategoryDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAllCategories}
+              disabled={isPending || categoryConfirmation.trim() !== DELETE_ALL_CATEGORIES_PHRASE}
+            >
+              <Trash2 className="h-4 w-4" />
+              Confirm delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={recipientDialogOpen && canManage} onOpenChange={setRecipientDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete all recipients?</DialogTitle>
+            <DialogDescription>
+              This is permanent. Type <span className="font-semibold text-foreground">{DELETE_ALL_RECIPIENTS_PHRASE}</span> to
+              remove all recipients.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label htmlFor="recipient-reset-confirmation" className="text-sm font-medium text-foreground">
+              Confirmation phrase
+            </label>
+            <Input
+              id="recipient-reset-confirmation"
+              value={recipientConfirmation}
+              onChange={(event) => setRecipientConfirmation(event.target.value)}
+              placeholder={DELETE_ALL_RECIPIENTS_PHRASE}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRecipientDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAllRecipients}
+              disabled={isPending || recipientConfirmation.trim() !== DELETE_ALL_RECIPIENTS_PHRASE}
             >
               <Trash2 className="h-4 w-4" />
               Confirm delete

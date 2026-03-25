@@ -51,6 +51,7 @@ type WarehouseDetailData = {
     sizeValue: string | null;
     sizeUnit: string | null;
     gsm: number | null;
+    micron: number | null;
     notes: string | null;
     status: string;
     createdBy: string;
@@ -631,9 +632,9 @@ function MetricCard({
 }
 
 function formatSpecs(material: WarehouseDetailData["materials"][number]) {
-  const gsmSpec = material.gsm ? { label: `GSM ${material.gsm}`, bold: true } : null;
-  const micronSpec = material.thicknessValue
-    ? { label: `Micron ${formatQuantity(material.thicknessValue, material.thicknessUnit)}`, bold: true }
+  const gsmSpec = material.gsm !== null ? { label: `GSM ${material.gsm}`, bold: true } : null;
+  const micronSpec = material.micron !== null
+    ? { label: `Micron ${formatNumber(material.micron)}`, bold: true }
     : null;
   const otherSpecs = [
     material.sizeValue ? { label: `Size ${material.sizeValue}${material.sizeUnit ? ` ${material.sizeUnit}` : ""}`, bold: false } : null,

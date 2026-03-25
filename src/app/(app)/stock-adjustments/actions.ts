@@ -12,7 +12,7 @@ import { assertServerPermission } from "@/lib/auth";
 import { createMaterialSnapshot, resolveMaterialStatus } from "@/lib/inventory";
 import { prisma } from "@/lib/prisma";
 import { quantityToNumber, quantityToString, toDecimal } from "@/lib/quantities";
-import { stockAdjustmentFormSchema } from "@/lib/validation";
+import { rawMaterialSpecificationUpdateSchema, stockAdjustmentFormSchema } from "@/lib/validation";
 
 function revalidateViews(warehouseSlug: string) {
   revalidatePath("/dashboard");
@@ -38,6 +38,13 @@ export async function getStockAdjustmentData() {
         currentStock: true,
         minimumStock: true,
         baseUnit: true,
+        thicknessValue: true,
+        thicknessUnit: true,
+        sizeValue: true,
+        sizeUnit: true,
+        gsm: true,
+        micron: true,
+        notes: true,
         status: true,
         category: { select: { name: true } },
         warehouse: { select: { code: true } },
@@ -56,6 +63,13 @@ export async function getStockAdjustmentData() {
       currentStock: quantityToNumber(m.currentStock),
       minimumStock: quantityToNumber(m.minimumStock),
       baseUnit: m.baseUnit,
+      thicknessValue: m.thicknessValue,
+      thicknessUnit: m.thicknessUnit,
+      sizeValue: m.sizeValue,
+      sizeUnit: m.sizeUnit,
+      gsm: m.gsm,
+      micron: m.micron,
+      notes: m.notes,
       status: m.status,
       category: m.category.name,
     })),
@@ -120,6 +134,7 @@ export async function adjustStock(payload: unknown): Promise<AdjustStockResult> 
     sizeValue: material.sizeValue,
     sizeUnit: material.sizeUnit,
     gsm: material.gsm,
+    micron: material.micron,
     notes: material.notes,
     status: material.status,
   });
@@ -176,6 +191,108 @@ export async function adjustStock(payload: unknown): Promise<AdjustStockResult> 
           },
         });
       }
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+  );
+
+  revalidateViews(material.warehouse.slug);
+  return { ok: true };
+}
+
+export type UpdateRawMaterialSpecificationsResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+export async function updateRawMaterialSpecifications(payload: unknown): Promise<UpdateRawMaterialSpecificationsResult> {
+  const user = await assertServerPermission("raw_materials:edit");
+  const data = rawMaterialSpecificationUpdateSchema.parse(payload);
+
+  const material = await prisma.rawMaterial.findUnique({
+    where: { id: data.rawMaterialId },
+    include: {
+      category: { select: { id: true, name: true } },
+      warehouse: { select: { code: true, name: true, slug: true } },
+    },
+  });
+
+  if (!material || material.warehouseId !== data.warehouseId) {
+    return { ok: false, message: "Raw material not found in the selected warehouse." };
+  }
+
+  const beforeSnapshot = createMaterialSnapshot({
+    id: material.id,
+    name: material.name,
+    warehouse: material.warehouse,
+    category: material.category,
+    baseUnit: material.baseUnit,
+    currentStock: material.currentStock,
+    minimumStock: material.minimumStock,
+    thicknessValue: material.thicknessValue,
+    thicknessUnit: material.thicknessUnit,
+    sizeValue: material.sizeValue,
+    sizeUnit: material.sizeUnit,
+    gsm: material.gsm,
+    micron: material.micron,
+    notes: material.notes,
+    status: material.status,
+  });
+
+  const nextThicknessValue = data.thicknessValue ?? null;
+  const nextThicknessUnit = data.thicknessUnit ?? null;
+  const nextSizeValue = data.sizeValue ?? null;
+  const nextSizeUnit = data.sizeUnit ?? null;
+  const nextGsm = data.gsm ?? null;
+  const nextMicron = data.micron ?? null;
+  const nextNotes = data.notes ?? null;
+
+  const hasChanges =
+    material.thicknessValue !== nextThicknessValue ||
+    material.thicknessUnit !== nextThicknessUnit ||
+    material.sizeValue !== nextSizeValue ||
+    material.sizeUnit !== nextSizeUnit ||
+    material.gsm !== nextGsm ||
+    material.micron !== nextMicron ||
+    material.notes !== nextNotes;
+
+  if (!hasChanges) {
+    return { ok: true };
+  }
+
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.rawMaterial.update({
+        where: { id: material.id },
+        data: {
+          thicknessValue: nextThicknessValue,
+          thicknessUnit: nextThicknessUnit,
+          sizeValue: nextSizeValue,
+          sizeUnit: nextSizeUnit,
+          gsm: nextGsm,
+          micron: nextMicron,
+          notes: nextNotes,
+        },
+      });
+
+      await tx.rawMaterialActivityLog.create({
+        data: {
+          rawMaterialId: material.id,
+          warehouseId: material.warehouseId,
+          activityType: ActivityType.METADATA_CHANGED,
+          beforeSnapshot,
+          afterSnapshot: {
+            ...beforeSnapshot,
+            thicknessValue: nextThicknessValue,
+            thicknessUnit: nextThicknessUnit,
+            sizeValue: nextSizeValue,
+            sizeUnit: nextSizeUnit,
+            gsm: nextGsm,
+            micron: nextMicron,
+            notes: nextNotes,
+          },
+          sourceType: "MANUAL_EDIT",
+          performedById: user.id,
+        },
+      });
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
   );

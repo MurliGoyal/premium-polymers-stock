@@ -15,6 +15,8 @@ type CreatedEntityResult<T> = {
 };
 
 const OPERATIONAL_DELETE_CONFIRMATION = "DELETE INVENTORY";
+const DELETE_ALL_CATEGORIES_CONFIRMATION = "DELETE ALL CATEGORIES";
+const DELETE_ALL_RECIPIENTS_CONFIRMATION = "DELETE ALL RECIPIENTS";
 
 function isUniqueConstraintError(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
@@ -226,6 +228,56 @@ export async function deleteRecipient(id: string) {
   if (count > 0) throw new Error("Cannot delete recipient with existing transfers");
   await prisma.recipient.delete({ where: { id } });
   revalidatePath("/settings/recipients");
+}
+
+export async function deleteAllCategories(confirmationText: string) {
+  await assertServerPermission("settings:manage");
+
+  if (confirmationText.trim() !== DELETE_ALL_CATEGORIES_CONFIRMATION) {
+    throw new Error(`Type ${DELETE_ALL_CATEGORIES_CONFIRMATION} to confirm this action.`);
+  }
+
+  const linkedMaterials = await prisma.rawMaterial.count();
+  if (linkedMaterials > 0) {
+    throw new Error("Cannot delete categories while raw materials exist. Clear inventory data first.");
+  }
+
+  const [subcategoriesDeleted, categoriesDeleted] = await prisma.$transaction([
+    prisma.subcategory.deleteMany(),
+    prisma.category.deleteMany(),
+  ]);
+
+  revalidatePath("/settings/categories");
+  revalidatePath("/settings/system");
+  revalidatePath("/warehouses");
+
+  return {
+    subcategoriesDeleted: subcategoriesDeleted.count,
+    categoriesDeleted: categoriesDeleted.count,
+    totalDeleted: subcategoriesDeleted.count + categoriesDeleted.count,
+  };
+}
+
+export async function deleteAllRecipients(confirmationText: string) {
+  await assertServerPermission("settings:manage");
+
+  if (confirmationText.trim() !== DELETE_ALL_RECIPIENTS_CONFIRMATION) {
+    throw new Error(`Type ${DELETE_ALL_RECIPIENTS_CONFIRMATION} to confirm this action.`);
+  }
+
+  const linkedTransfers = await prisma.transfer.count();
+  if (linkedTransfers > 0) {
+    throw new Error("Cannot delete recipients while transfer history exists. Clear operational data first.");
+  }
+
+  const recipientsDeleted = await prisma.recipient.deleteMany();
+
+  revalidatePath("/settings/recipients");
+  revalidatePath("/settings/system");
+
+  return {
+    recipientsDeleted: recipientsDeleted.count,
+  };
 }
 
 // Users

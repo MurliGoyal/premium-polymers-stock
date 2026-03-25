@@ -56,6 +56,7 @@ export const rawMaterialFormSchema = z
     sizeValue: optionalText(80),
     sizeUnit: z.enum(SIZE_UNITS).optional().nullable(),
     gsm: z.number().finite().min(0).optional().nullable(),
+    micron: z.number().finite().min(0).optional().nullable(),
     subcategoryId: z.string().trim().optional().nullable(),
     notes: optionalText(400),
   })
@@ -75,6 +76,19 @@ export const rawMaterialFormSchema = z
         message: "Select a size unit",
       });
     }
+
+    if (value.gsm == null && value.micron == null) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["gsm"],
+        message: "Enter GSM or Micron",
+      });
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["micron"],
+        message: "Enter GSM or Micron",
+      });
+    }
   });
 
 export const stockAdjustmentFormSchema = z.object({
@@ -85,8 +99,38 @@ export const stockAdjustmentFormSchema = z.object({
     .number({ error: "Quantity is required" })
     .finite("Quantity must be a valid number")
     .min(0, "Quantity cannot be negative"),
-  reason: trimmedString("Reason", 400),
+  reason: optionalText(400),
 });
+
+export const rawMaterialSpecificationUpdateSchema = z
+  .object({
+    rawMaterialId: trimmedString("Raw material"),
+    warehouseId: trimmedString("Warehouse"),
+    thicknessValue: z.number().finite().min(0).optional().nullable(),
+    thicknessUnit: z.enum(THICKNESS_UNITS).optional().nullable(),
+    sizeValue: optionalText(80),
+    sizeUnit: z.enum(SIZE_UNITS).optional().nullable(),
+    gsm: z.number().finite().min(0).optional().nullable(),
+    micron: z.number().finite().min(0).optional().nullable(),
+    notes: optionalText(400),
+  })
+  .superRefine((value, context) => {
+    if (value.thicknessValue && !value.thicknessUnit) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["thicknessUnit"],
+        message: "Select a thickness unit",
+      });
+    }
+
+    if (value.sizeValue && !value.sizeUnit) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["sizeUnit"],
+        message: "Select a size unit",
+      });
+    }
+  });
 
 export const transferFormSchema = z.object({
   warehouseId: trimmedString("Warehouse"),
