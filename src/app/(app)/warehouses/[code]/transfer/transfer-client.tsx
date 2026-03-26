@@ -24,7 +24,7 @@ import { createRecipient, getMaterialsForTransfer, performTransfer } from "../ac
 
 type Props = {
   warehouse: { id: string; code: string; name: string; slug: string };
-  materials: Array<{ id: string; name: string; currentStock: number; baseUnit: string; minimumStock: number }>;
+  materials: Array<{ id: string; name: string; displayName: string; currentStock: number; baseUnit: string; minimumStock: number }>;
   recipients: Array<{ id: string; name: string }>;
 };
 
@@ -92,7 +92,7 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
     () =>
       materialsState.map((material) => ({
         value: material.id,
-        label: material.name,
+        label: material.displayName,
         description: `${formatNumber(material.currentStock)} ${material.baseUnit} available`,
       })),
     [materialsState]

@@ -12,6 +12,7 @@ import { assertServerPermission } from "@/lib/auth";
 import { createMaterialSnapshot, resolveMaterialStatus } from "@/lib/inventory";
 import { prisma } from "@/lib/prisma";
 import { quantityToNumber, quantityToString, toDecimal } from "@/lib/quantities";
+import { buildRawMaterialNormalizedKey } from "@/lib/raw-materials";
 import { rawMaterialSpecificationUpdateSchema, stockAdjustmentFormSchema } from "@/lib/validation";
 
 function revalidateViews(warehouseSlug: string) {
@@ -244,6 +245,15 @@ export async function updateRawMaterialSpecifications(payload: unknown): Promise
   const nextGsm = data.gsm ?? null;
   const nextMicron = data.micron ?? null;
   const nextNotes = data.notes ?? null;
+  const nextNormalizedName = buildRawMaterialNormalizedKey({
+    name: material.name,
+    thicknessValue: nextThicknessValue,
+    thicknessUnit: nextThicknessUnit,
+    sizeValue: nextSizeValue,
+    sizeUnit: nextSizeUnit,
+    gsm: nextGsm,
+    micron: nextMicron,
+  });
 
   const hasChanges =
     material.thicknessValue !== nextThicknessValue ||
@@ -258,29 +268,26 @@ export async function updateRawMaterialSpecifications(payload: unknown): Promise
     return { ok: true };
   }
 
-  await prisma.$transaction(
-    async (tx) => {
-      await tx.rawMaterial.update({
-        where: { id: material.id },
-        data: {
-          thicknessValue: nextThicknessValue,
-          thicknessUnit: nextThicknessUnit,
-          sizeValue: nextSizeValue,
-          sizeUnit: nextSizeUnit,
-          gsm: nextGsm,
-          micron: nextMicron,
-          notes: nextNotes,
-        },
-      });
+  try {
+    await prisma.$transaction(
+      async (tx) => {
+        const conflictingMaterial = await tx.rawMaterial.findFirst({
+          where: {
+            warehouseId: material.warehouseId,
+            normalizedName: nextNormalizedName,
+            NOT: { id: material.id },
+          },
+          select: { id: true },
+        });
 
-      await tx.rawMaterialActivityLog.create({
-        data: {
-          rawMaterialId: material.id,
-          warehouseId: material.warehouseId,
-          activityType: ActivityType.METADATA_CHANGED,
-          beforeSnapshot,
-          afterSnapshot: {
-            ...beforeSnapshot,
+        if (conflictingMaterial) {
+          throw new Error("These specifications would duplicate another raw material with the same name in this warehouse.");
+        }
+
+        await tx.rawMaterial.update({
+          where: { id: material.id },
+          data: {
+            normalizedName: nextNormalizedName,
             thicknessValue: nextThicknessValue,
             thicknessUnit: nextThicknessUnit,
             sizeValue: nextSizeValue,
@@ -289,13 +296,42 @@ export async function updateRawMaterialSpecifications(payload: unknown): Promise
             micron: nextMicron,
             notes: nextNotes,
           },
-          sourceType: "MANUAL_EDIT",
-          performedById: user.id,
-        },
-      });
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
-  );
+        });
+
+        await tx.rawMaterialActivityLog.create({
+          data: {
+            rawMaterialId: material.id,
+            warehouseId: material.warehouseId,
+            activityType: ActivityType.METADATA_CHANGED,
+            beforeSnapshot,
+            afterSnapshot: {
+              ...beforeSnapshot,
+              thicknessValue: nextThicknessValue,
+              thicknessUnit: nextThicknessUnit,
+              sizeValue: nextSizeValue,
+              sizeUnit: nextSizeUnit,
+              gsm: nextGsm,
+              micron: nextMicron,
+              notes: nextNotes,
+            },
+            sourceType: "MANUAL_EDIT",
+            performedById: user.id,
+          },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return { ok: false, message: "These specifications would duplicate another raw material with the same name in this warehouse." };
+    }
+
+    if (error instanceof Error) {
+      return { ok: false, message: error.message };
+    }
+
+    throw error;
+  }
 
   revalidateViews(material.warehouse.slug);
   return { ok: true };

@@ -13,6 +13,7 @@ import { createMaterialSnapshot, daysAgo, resolveMaterialStatus } from "@/lib/in
 import { normalizeRecordName } from "@/lib/naming";
 import { prisma } from "@/lib/prisma";
 import { quantityToNumber, quantityToString, serializeQuantity, sumQuantities, toDecimal } from "@/lib/quantities";
+import { buildRawMaterialNormalizedKey, formatRawMaterialDisplayName } from "@/lib/raw-materials";
 import {
   categoryNameSchema,
   rawMaterialFormSchema,
@@ -129,7 +130,15 @@ function revalidateWarehouseViews(warehouseSlug: string) {
 export async function createRawMaterial(payload: unknown) {
   const user = await assertServerPermission("raw_materials:create");
   const data = rawMaterialFormSchema.parse(payload);
-  const normalizedName = normalizeRecordName(data.name);
+  const normalizedName = buildRawMaterialNormalizedKey({
+    name: data.name,
+    thicknessValue: data.thicknessValue ?? null,
+    thicknessUnit: data.thicknessUnit ?? null,
+    sizeValue: data.sizeValue ?? null,
+    sizeUnit: data.sizeUnit ?? null,
+    gsm: data.gsm ?? null,
+    micron: data.micron ?? null,
+  });
 
   const [warehouse, category] = await Promise.all([
     prisma.warehouse.findUnique({ where: { id: data.warehouseId } }),
@@ -152,16 +161,13 @@ export async function createRawMaterial(payload: unknown) {
         const existingMaterial = await tx.rawMaterial.findFirst({
           where: {
             warehouseId: warehouse.id,
-            OR: [
-              { normalizedName },
-              { name: { equals: data.name, mode: "insensitive" } },
-            ],
+            normalizedName,
           },
           select: { id: true },
         });
 
         if (existingMaterial) {
-          throw new Error("A raw material with this name already exists in the selected warehouse.");
+          throw new Error("A raw material with the same name and specifications already exists in the selected warehouse.");
         }
 
         const createdMaterial = await tx.rawMaterial.create({
@@ -248,7 +254,7 @@ export async function createRawMaterial(payload: unknown) {
     return { success: true, id: material.id };
   } catch (error) {
     if (isUniqueConstraintError(error)) {
-      throw new Error("A raw material with this name already exists in the selected warehouse.");
+      throw new Error("A raw material with the same name and specifications already exists in the selected warehouse.");
     }
 
     throw error;
@@ -346,34 +352,66 @@ export async function addRawMaterialThickness(payload: unknown) {
     status: material.status,
   });
 
-  await prisma.$transaction(
-    async (tx) => {
-      await tx.rawMaterial.update({
-        where: { id: material.id },
-        data: {
-          thicknessValue: data.thicknessValue,
-          thicknessUnit: data.thicknessUnit,
-        },
-      });
+  const nextNormalizedName = buildRawMaterialNormalizedKey({
+    name: material.name,
+    thicknessValue: data.thicknessValue,
+    thicknessUnit: data.thicknessUnit,
+    sizeValue: material.sizeValue,
+    sizeUnit: material.sizeUnit,
+    gsm: material.gsm,
+    micron: material.micron,
+  });
 
-      await tx.rawMaterialActivityLog.create({
-        data: {
-          rawMaterialId: material.id,
-          warehouseId: material.warehouseId,
-          activityType: ActivityType.METADATA_CHANGED,
-          beforeSnapshot,
-          afterSnapshot: {
-            ...beforeSnapshot,
+  try {
+    await prisma.$transaction(
+      async (tx) => {
+        const conflictingMaterial = await tx.rawMaterial.findFirst({
+          where: {
+            warehouseId: material.warehouseId,
+            normalizedName: nextNormalizedName,
+            NOT: { id: material.id },
+          },
+          select: { id: true },
+        });
+
+        if (conflictingMaterial) {
+          throw new Error("This thickness would duplicate another raw material with the same name and specifications.");
+        }
+
+        await tx.rawMaterial.update({
+          where: { id: material.id },
+          data: {
+            normalizedName: nextNormalizedName,
             thicknessValue: data.thicknessValue,
             thicknessUnit: data.thicknessUnit,
           },
-          sourceType: "THICKNESS_ADD",
-          performedById: user.id,
-        },
-      });
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
-  );
+        });
+
+        await tx.rawMaterialActivityLog.create({
+          data: {
+            rawMaterialId: material.id,
+            warehouseId: material.warehouseId,
+            activityType: ActivityType.METADATA_CHANGED,
+            beforeSnapshot,
+            afterSnapshot: {
+              ...beforeSnapshot,
+              thicknessValue: data.thicknessValue,
+              thicknessUnit: data.thicknessUnit,
+            },
+            sourceType: "THICKNESS_ADD",
+            performedById: user.id,
+          },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      throw new Error("This thickness would duplicate another raw material with the same name and specifications.");
+    }
+
+    throw error;
+  }
 
   revalidateWarehouseViews(material.warehouse.slug);
   return { success: true };
@@ -644,13 +682,34 @@ export async function getMaterialsForTransfer(warehouseId: string) {
   await assertServerPermission("transfers:view");
   const materials = await prisma.rawMaterial.findMany({
     where: { warehouseId, currentStock: { gt: 0 } },
-    select: { id: true, name: true, currentStock: true, baseUnit: true, minimumStock: true },
-    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      currentStock: true,
+      baseUnit: true,
+      minimumStock: true,
+      thicknessValue: true,
+      thicknessUnit: true,
+      sizeValue: true,
+      sizeUnit: true,
+      gsm: true,
+      micron: true,
+    },
+    orderBy: [{ name: "asc" }, { gsm: "asc" }, { micron: "asc" }, { sizeValue: "asc" }],
   });
 
   return materials.map((material) => ({
     id: material.id,
     name: material.name,
+    displayName: formatRawMaterialDisplayName({
+      name: material.name,
+      thicknessValue: material.thicknessValue,
+      thicknessUnit: material.thicknessUnit,
+      sizeValue: material.sizeValue,
+      sizeUnit: material.sizeUnit,
+      gsm: material.gsm,
+      micron: material.micron,
+    }),
     currentStock: quantityToNumber(material.currentStock),
     baseUnit: material.baseUnit,
     minimumStock: quantityToNumber(material.minimumStock),

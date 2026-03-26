@@ -36,8 +36,9 @@ export default async function RawMaterialsHistoryPage({ searchParams }: { search
   const initialWarehouseFilter =
     warehouses.find((warehouse) => warehouse.code.toLowerCase() === requestedWarehouse?.toLowerCase())?.code ?? "all";
   const activityTypes = [...new Set(activities.map((activity) => activity.activityType))];
+  const materialNames = [...new Set(materials.map((material) => material.name))];
   const initialMaterialFilter = getMatchingOptionValue(
-    materials.map((material) => material.name),
+    materialNames,
     resolvedSearchParams.material
   );
   const initialCategoryFilter = getMatchingOptionValue(
@@ -83,7 +84,7 @@ export default async function RawMaterialsHistoryPage({ searchParams }: { search
       activities={data}
       warehouses={warehouses.map((w) => w.code)}
       categories={categories.map((category) => category.name)}
-      materials={materials.map((material) => material.name)}
+      materials={materialNames}
       users={users.map((user) => user.name)}
       initialWarehouseFilter={initialWarehouseFilter}
       initialMaterialFilter={initialMaterialFilter}

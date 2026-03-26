@@ -1,10 +1,8 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, Role, MaterialStatus, ActivityType, TransactionType, NotificationType } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
-
-function normalizeRecordName(value: string) {
-  return value.trim().replace(/\s+/g, " ").toLowerCase();
-}
+import { normalizeRecordName } from "@/lib/naming";
+import { buildRawMaterialNormalizedKey } from "@/lib/raw-materials";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -173,7 +171,15 @@ async function main() {
 
   for (const mat of materialsData) {
     const status = mat.stock <= 0 ? MaterialStatus.OUT_OF_STOCK : mat.stock <= mat.min ? MaterialStatus.LOW_STOCK : MaterialStatus.IN_STOCK;
-    const normalizedName = normalizeRecordName(mat.name);
+    const normalizedName = buildRawMaterialNormalizedKey({
+      name: mat.name,
+      thicknessValue: mat.thickness,
+      thicknessUnit: mat.thickness ? "mm" : null,
+      sizeValue: mat.size,
+      sizeUnit: mat.size ? "mm" : null,
+      gsm: mat.gsm,
+      micron: null,
+    });
 
     const m = await prisma.rawMaterial.upsert({
       where: {

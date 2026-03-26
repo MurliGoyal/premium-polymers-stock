@@ -218,7 +218,9 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                   aria-required="true"
                   className={errors.name ? "border-destructive" : ""}
                 />
-                <p className="text-xs text-muted-foreground">Use the vendor or specification identifier your warehouse team recognizes.</p>
+                <p className="text-xs text-muted-foreground">
+                  Use the vendor or specification identifier your warehouse team recognizes. The same name can be reused when GSM, micron, thickness, or size is different.
+                </p>
                 {errors.name ? <p className="text-xs text-destructive">{errors.name.message}</p> : null}
               </div>
 

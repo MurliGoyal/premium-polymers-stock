@@ -32,8 +32,9 @@ export default async function TransferHistoryPage({ searchParams }: { searchPara
     : resolvedSearchParams.warehouse;
   const initialWarehouseFilter =
     warehouses.find((warehouse) => warehouse.code.toLowerCase() === requestedWarehouse?.toLowerCase())?.code ?? "all";
+  const materialNames = [...new Set(materials.map((material) => material.name))];
   const initialMaterialFilter = getMatchingOptionValue(
-    materials.map((material) => material.name),
+    materialNames,
     resolvedSearchParams.material
   );
   const initialRecipientFilter = getMatchingOptionValue(
@@ -77,7 +78,7 @@ export default async function TransferHistoryPage({ searchParams }: { searchPara
       warehouses={warehouses.map((w) => w.code)}
       recipients={recipients.map((r) => r.name)}
       categories={categories.map((category) => category.name)}
-      materials={materials.map((material) => material.name)}
+      materials={materialNames}
       initialWarehouseFilter={initialWarehouseFilter}
       initialMaterialFilter={initialMaterialFilter}
       initialRecipientFilter={initialRecipientFilter}
