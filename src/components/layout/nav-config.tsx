@@ -1,7 +1,9 @@
 import {
   ArrowRightLeft,
   ClipboardList,
+  History,
   LayoutDashboard,
+  Package,
   Shield,
   SlidersHorizontal,
   Tag,
@@ -37,6 +39,13 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Stock Adjustments", href: "/stock-adjustments", icon: SlidersHorizontal, permission: "stock_adjustments:view" },
       { label: "Transfer History", href: "/transfer-history", icon: ArrowRightLeft, permission: "transfer_history:view" },
       { label: "Material History", href: "/raw-materials-history", icon: ClipboardList, permission: "raw_materials_history:view" },
+    ],
+  },
+  {
+    label: "Finished Goods",
+    items: [
+      { label: "Finished Goods", href: "/finished-goods", icon: Package, permission: "finished_goods:view" },
+      { label: "Stock History", href: "/finished-goods-history", icon: History, permission: "finished_goods_history:view" },
     ],
   },
   {

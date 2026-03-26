@@ -14,8 +14,13 @@
     "lint": "eslint",
     "check": "pnpm lint && pnpm build",
     "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "db:import:finished-goods": "tsx scripts/import-finished-goods.ts",
+    "db:setup:finished-goods:local": "pnpm db:migrate && pnpm db:import:finished-goods",
+    "db:setup:finished-goods:server": "pnpm db:migrate:deploy && pnpm db:import:finished-goods"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

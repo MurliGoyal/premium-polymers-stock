@@ -64,6 +64,7 @@ model User {
   transfersCreated    Transfer[]              @relation("TransferCreatedBy")
   activityLogs        RawMaterialActivityLog[] @relation("ActivityPerformedBy")
   stockTransactions   StockTransaction[]      @relation("TransactionCreatedBy")
+  fgActivityLogs      FinishedGoodActivityLog[] @relation("FGActivityPerformedBy")
 
   @@map("users")
 }
@@ -255,6 +256,56 @@ model StockTransaction {
   @@index([rawMaterialId])
   @@index([createdAt])
   @@map("stock_transactions")
+}
+
+// ─── Finished Goods ─────────────────────────────────────────
+
+enum FinishedGoodActivityType {
+  PRODUCTION
+  DISPATCH
+  STOCK_ADJUSTED
+}
+
+model FinishedGood {
+  id             String         @id @default(cuid())
+  warehouseCode  String         @map("warehouse_code")
+  name           String
+  normalizedName String?        @unique @map("normalized_name")
+  baseUnit       String         @map("base_unit")
+  diameterValue  Float?         @map("diameter_value")
+  diameterUnit   String?        @map("diameter_unit")
+  currentStock   Decimal        @default(0) @db.Decimal(18, 3) @map("current_stock")
+  status         MaterialStatus @default(IN_STOCK)
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  activityLogs FinishedGoodActivityLog[]
+
+  @@index([warehouseCode])
+  @@index([status])
+  @@map("finished_goods")
+}
+
+model FinishedGoodActivityLog {
+  id              String                   @id @default(cuid())
+  finishedGoodId  String                   @map("finished_good_id")
+  warehouseCode   String                   @map("warehouse_code")
+  activityType    FinishedGoodActivityType @map("activity_type")
+  quantityChange  Decimal                  @db.Decimal(18, 3) @map("quantity_change")
+  previousStock   Decimal                  @db.Decimal(18, 3) @map("previous_stock")
+  newStock        Decimal                  @db.Decimal(18, 3) @map("new_stock")
+  notes           String?
+  performedById   String?                  @map("performed_by")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+
+  finishedGood FinishedGood @relation(fields: [finishedGoodId], references: [id], onDelete: Cascade)
+  performedBy  User?        @relation("FGActivityPerformedBy", fields: [performedById], references: [id])
+
+  @@index([finishedGoodId])
+  @@index([warehouseCode])
+  @@index([activityType])
+  @@index([createdAt])
+  @@map("finished_good_activity_logs")
 }
 
 // ─── Notifications ──────────────────────────────────────────

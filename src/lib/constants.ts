@@ -47,3 +47,6 @@ export const SIZE_UNITS = ["mm", "cm", "inch", "foot"] as const;
 export const TRANSFER_PAGE_SIZE = 12;
 export const HISTORY_PAGE_SIZE = 12;
 export const WAREHOUSE_MATERIAL_PAGE_SIZE = 10;
+export const FINISHED_GOODS_PAGE_SIZE = 12;
+
+export const FINISHED_GOODS_WAREHOUSE_CODE = "F-12";

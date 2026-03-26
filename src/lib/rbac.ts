@@ -15,6 +15,9 @@ export type Permission =
   | "recipients:manage"
   | "stock_adjustments:view"
   | "stock_adjustments:manage"
+  | "finished_goods:view"
+  | "finished_goods:manage"
+  | "finished_goods_history:view"
   | "users:view"
   | "users:manage"
   | "settings:view"
@@ -26,6 +29,7 @@ const rolePermissions: Record<string, Permission[]> = {
     "raw_materials:view", "raw_materials:create", "raw_materials:edit", "raw_materials:delete",
     "transfers:view", "transfers:create", "transfer_history:view", "raw_materials_history:view",
     "stock_adjustments:view", "stock_adjustments:manage",
+    "finished_goods:view", "finished_goods:manage", "finished_goods_history:view",
     "categories:view", "categories:manage",
     "recipients:view", "recipients:manage",
     "users:view", "users:manage",
@@ -34,12 +38,14 @@ const rolePermissions: Record<string, Permission[]> = {
   STOCK_MANAGEMENT: [
     "warehouses:view",
     "raw_materials:view",
+    "finished_goods:view", "finished_goods:manage", "finished_goods_history:view",
   ],
   VIEWER: [
     "dashboard:view", "warehouses:view",
     "raw_materials:view", "transfers:view",
     "transfer_history:view", "raw_materials_history:view",
     "stock_adjustments:view",
+    "finished_goods:view", "finished_goods_history:view",
     "categories:view",
     "recipients:view",
     "users:view",
