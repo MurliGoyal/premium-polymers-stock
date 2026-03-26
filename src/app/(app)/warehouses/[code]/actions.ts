@@ -20,6 +20,7 @@ import {
   transferFormSchema,
 } from "@/lib/validation";
 import { slugify } from "@/lib/utils";
+import { z } from "zod";
 
 type CreatedEntityResult<T> = {
   created: boolean;
@@ -97,6 +98,7 @@ export async function getWarehouseData(warehouseRef: string) {
       sizeUnit: material.sizeUnit,
       gsm: material.gsm,
       micron: material.micron,
+      vendorName: material.vendorName,
       notes: material.notes,
       status: material.status,
       createdBy: material.createdBy?.name || "System",
@@ -168,7 +170,7 @@ export async function createRawMaterial(payload: unknown) {
             name: data.name,
             normalizedName,
             categoryId: category.id,
-            subcategoryId: data.subcategoryId || null,
+            vendorName: data.vendorName ?? null,
             baseUnit: data.baseUnit,
             currentStock: data.currentStock,
             minimumStock: data.minimumStock,
@@ -189,6 +191,7 @@ export async function createRawMaterial(payload: unknown) {
           name: data.name,
           warehouse: { code: warehouse.code, name: warehouse.name },
           category: { id: category.id, name: category.name },
+          vendorName: data.vendorName ?? null,
           baseUnit: data.baseUnit,
           currentStock: data.currentStock,
           minimumStock: data.minimumStock,
@@ -299,6 +302,81 @@ export async function createCategory(name: string): Promise<CategoryActionResult
       entity: { id: concurrentCategory.id, name: concurrentCategory.name, slug: concurrentCategory.slug },
     };
   }
+}
+
+const addThicknessSchema = z.object({
+  warehouseId: z.string().trim().min(1),
+  rawMaterialId: z.string().trim().min(1),
+  thicknessValue: z.number().finite().min(0),
+  thicknessUnit: z.string().trim().min(1).max(30),
+});
+
+export async function addRawMaterialThickness(payload: unknown) {
+  const user = await assertServerPermission("raw_materials:edit");
+  const data = addThicknessSchema.parse(payload);
+
+  const material = await prisma.rawMaterial.findUnique({
+    where: { id: data.rawMaterialId },
+    include: {
+      category: { select: { id: true, name: true } },
+      warehouse: { select: { code: true, name: true, slug: true } },
+    },
+  });
+
+  if (!material || material.warehouseId !== data.warehouseId) {
+    throw new Error("Raw material not found in the selected warehouse.");
+  }
+
+  const beforeSnapshot = createMaterialSnapshot({
+    id: material.id,
+    name: material.name,
+    warehouse: material.warehouse,
+    category: material.category,
+    vendorName: material.vendorName,
+    baseUnit: material.baseUnit,
+    currentStock: material.currentStock,
+    minimumStock: material.minimumStock,
+    thicknessValue: material.thicknessValue,
+    thicknessUnit: material.thicknessUnit,
+    sizeValue: material.sizeValue,
+    sizeUnit: material.sizeUnit,
+    gsm: material.gsm,
+    micron: material.micron,
+    notes: material.notes,
+    status: material.status,
+  });
+
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.rawMaterial.update({
+        where: { id: material.id },
+        data: {
+          thicknessValue: data.thicknessValue,
+          thicknessUnit: data.thicknessUnit,
+        },
+      });
+
+      await tx.rawMaterialActivityLog.create({
+        data: {
+          rawMaterialId: material.id,
+          warehouseId: material.warehouseId,
+          activityType: ActivityType.METADATA_CHANGED,
+          beforeSnapshot,
+          afterSnapshot: {
+            ...beforeSnapshot,
+            thicknessValue: data.thicknessValue,
+            thicknessUnit: data.thicknessUnit,
+          },
+          sourceType: "THICKNESS_ADD",
+          performedById: user.id,
+        },
+      });
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+  );
+
+  revalidateWarehouseViews(material.warehouse.slug);
+  return { success: true };
 }
 
 export async function performTransfer(payload: unknown): Promise<TransferActionResult> {

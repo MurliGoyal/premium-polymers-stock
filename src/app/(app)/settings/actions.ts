@@ -28,10 +28,6 @@ export async function getCategories() {
   return prisma.category.findMany({
     include: {
       _count: { select: { rawMaterials: true } },
-      subcategories: {
-        include: { _count: { select: { rawMaterials: true } } },
-        orderBy: { name: "asc" },
-      },
     },
     orderBy: { name: "asc" },
   });
@@ -101,68 +97,6 @@ export async function deleteCategory(id: string) {
     }
 
     throw new Error("Cannot delete category with existing materials");
-  }
-
-  revalidatePath("/settings/categories");
-}
-
-// Subcategories
-export async function addSubcategory(
-  categoryId: string,
-  name: string
-): Promise<CreatedEntityResult<{ id: string; name: string; slug: string }>> {
-  await assertServerPermission("categories:manage");
-  const parsedName = categoryNameSchema.parse(name);
-  const normalizedName = normalizeRecordName(parsedName);
-  const slug = slugify(parsedName);
-
-  const category = await prisma.category.findUnique({ where: { id: categoryId } });
-  if (!category) throw new Error("Category not found");
-
-  const existing = await prisma.subcategory.findFirst({
-    where: {
-      categoryId,
-      OR: [{ normalizedName }, { slug }, { name: { equals: parsedName, mode: "insensitive" } }],
-    },
-  });
-
-  if (existing) {
-    return { created: false, entity: { id: existing.id, name: existing.name, slug: existing.slug } };
-  }
-
-  try {
-    const subcategory = await prisma.subcategory.create({
-      data: { name: parsedName, normalizedName, slug, categoryId },
-    });
-    revalidatePath("/settings/categories");
-    revalidatePath("/warehouses");
-    return { created: true, entity: { id: subcategory.id, name: subcategory.name, slug: subcategory.slug } };
-  } catch (error) {
-    if (!isUniqueConstraintError(error)) throw error;
-    const concurrent = await prisma.subcategory.findFirst({
-      where: { categoryId, OR: [{ normalizedName }, { slug }] },
-    });
-    if (!concurrent) throw error;
-    return { created: false, entity: { id: concurrent.id, name: concurrent.name, slug: concurrent.slug } };
-  }
-}
-
-export async function deleteSubcategory(id: string) {
-  await assertServerPermission("categories:manage");
-  const deleted = await prisma.subcategory.deleteMany({
-    where: {
-      id,
-      rawMaterials: { none: {} },
-    },
-  });
-
-  if (deleted.count === 0) {
-    const subcategory = await prisma.subcategory.findUnique({ where: { id }, select: { id: true } });
-    if (!subcategory) {
-      throw new Error("Subcategory not found");
-    }
-
-    throw new Error("Cannot delete subcategory with existing materials");
   }
 
   revalidatePath("/settings/categories");
@@ -242,19 +176,15 @@ export async function deleteAllCategories(confirmationText: string) {
     throw new Error("Cannot delete categories while raw materials exist. Clear inventory data first.");
   }
 
-  const [subcategoriesDeleted, categoriesDeleted] = await prisma.$transaction([
-    prisma.subcategory.deleteMany(),
-    prisma.category.deleteMany(),
-  ]);
+  const categoriesDeleted = await prisma.category.deleteMany();
 
   revalidatePath("/settings/categories");
   revalidatePath("/settings/system");
   revalidatePath("/warehouses");
 
   return {
-    subcategoriesDeleted: subcategoriesDeleted.count,
     categoriesDeleted: categoriesDeleted.count,
-    totalDeleted: subcategoriesDeleted.count + categoriesDeleted.count,
+    totalDeleted: categoriesDeleted.count,
   };
 }
 
@@ -308,6 +238,30 @@ export async function createUser(payload: unknown) {
       role: data.role,
       isActive: true,
     },
+  });
+
+  revalidatePath("/settings/users");
+}
+
+export async function deleteUser(userId: string) {
+  const currentUser = await assertServerPermission("users:manage");
+
+  if (currentUser.id === userId) {
+    throw new Error("You cannot delete your own account.");
+  }
+
+  const targetUser = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+  if (!targetUser) {
+    throw new Error("User not found.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.rawMaterial.updateMany({ where: { createdById: userId }, data: { createdById: null } });
+    await tx.transfer.updateMany({ where: { createdById: userId }, data: { createdById: null } });
+    await tx.rawMaterialActivityLog.updateMany({ where: { performedById: userId }, data: { performedById: null } });
+    await tx.stockTransaction.updateMany({ where: { createdById: userId }, data: { createdById: null } });
+    await tx.finishedGoodActivityLog.updateMany({ where: { performedById: userId }, data: { performedById: null } });
+    await tx.user.delete({ where: { id: userId } });
   });
 
   revalidatePath("/settings/users");

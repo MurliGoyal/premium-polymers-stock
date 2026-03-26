@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -18,12 +18,14 @@ import {
   Warehouse,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { ResponsiveFiltersSheet } from "@/components/shared/responsive-filters-sheet";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -36,6 +38,7 @@ import {
 } from "@/lib/drilldowns";
 import { hasPermission } from "@/lib/rbac";
 import { cn, formatDate, formatNumber, getStatusColor, getStatusLabel } from "@/lib/utils";
+import { addRawMaterialThickness } from "./actions";
 
 type WarehouseDetailData = {
   warehouse: { id: string; code: string; name: string; slug: string };
@@ -43,6 +46,7 @@ type WarehouseDetailData = {
     id: string;
     name: string;
     category: string;
+    vendorName: string | null;
     baseUnit: string;
     currentStock: number;
     minimumStock: number;
@@ -97,6 +101,7 @@ export function WarehouseDetailClient({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const { warehouse, materials, stats } = data;
   const [search, setSearch] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<WarehouseStatusFilter>(initialStatusFilter);
@@ -109,7 +114,11 @@ export function WarehouseDetailClient({
   const deferredSearch = useDeferredValue(search);
 
   const canCreateMaterials = hasPermission(userRole, "raw_materials:create");
+  const canEditMaterials = hasPermission(userRole, "raw_materials:edit");
   const canCreateTransfers = hasPermission(userRole, "transfers:create");
+  const [thicknessMaterial, setThicknessMaterial] = useState<WarehouseDetailData["materials"][number] | null>(null);
+  const [thicknessValue, setThicknessValue] = useState("");
+  const [thicknessUnit, setThicknessUnit] = useState("mm");
   const defaultWarehouseHref = getWarehouseDetailHref(warehouse.slug);
   const recentTransfersHref = getTransferHistoryRangeHref("last-7-days", { warehouse: warehouse.code });
   const statCards = [
@@ -208,6 +217,33 @@ export function WarehouseDetailClient({
 
     setSortField(field);
     setSortDir("desc");
+  };
+
+  const handleAddThickness = () => {
+    if (!thicknessMaterial) return;
+    const parsedValue = Number(thicknessValue);
+    if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+      toast.error("Thickness must be a valid non-negative number");
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        await addRawMaterialThickness({
+          warehouseId: warehouse.id,
+          rawMaterialId: thicknessMaterial.id,
+          thicknessValue: parsedValue,
+          thicknessUnit,
+        });
+        toast.success(`Thickness added for ${thicknessMaterial.name}`);
+        setThicknessMaterial(null);
+        setThicknessValue("");
+        setThicknessUnit("mm");
+        router.refresh();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to add thickness");
+      }
+    });
   };
 
   const filters = (
@@ -458,6 +494,22 @@ export function WarehouseDetailClient({
                       ) : null}
 
                       <div className="grid grid-cols-2 gap-2">
+                        {canEditMaterials && material.thicknessValue === null ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            aria-label="Add thickness"
+                            title="Add thickness"
+                            onClick={() => {
+                              setThicknessMaterial(material);
+                              setThicknessValue("");
+                              setThicknessUnit("mm");
+                            }}
+                          >
+                            <Plus className="h-4 w-4" />
+                            <span className="sr-only sm:not-sr-only sm:ml-1">Add thickness</span>
+                          </Button>
+                        ) : null}
                         {canCreateTransfers ? (
                           <Button asChild variant="outline">
                             <Link href={`/warehouses/${warehouse.slug}/transfer`}>Transfer</Link>
@@ -543,6 +595,22 @@ export function WarehouseDetailClient({
                         <TableCell className="text-sm text-muted-foreground">{formatDate(material.updatedAt)}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-2">
+                            {canEditMaterials && material.thicknessValue === null ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                aria-label="Add thickness"
+                                onClick={() => {
+                                  setThicknessMaterial(material);
+                                  setThicknessValue("");
+                                  setThicknessUnit("mm");
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                                Add thickness
+                              </Button>
+                            ) : null}
                             {canCreateTransfers ? (
                               <Button asChild variant="outline" size="sm">
                                 <Link href={`/warehouses/${warehouse.slug}/transfer`}>Transfer</Link>
@@ -570,6 +638,58 @@ export function WarehouseDetailClient({
           )}
         </Card>
       </motion.div>
+
+      <Dialog open={!!thicknessMaterial} onOpenChange={(open) => !open && setThicknessMaterial(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add thickness</DialogTitle>
+            <DialogDescription>
+              Add thickness and unit for {thicknessMaterial?.name ?? "the selected material"}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-[1fr,140px]">
+            <div className="space-y-2">
+              <label htmlFor="add-thickness-value" className="text-sm font-medium text-foreground">
+                Thickness
+              </label>
+              <Input
+                id="add-thickness-value"
+                type="number"
+                min="0"
+                step="0.01"
+                value={thicknessValue}
+                onChange={(event) => setThicknessValue(event.target.value)}
+                placeholder="e.g. 2.5"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="add-thickness-unit" className="text-sm font-medium text-foreground">
+                Unit
+              </label>
+              <Select value={thicknessUnit} onValueChange={setThicknessUnit}>
+                <SelectTrigger id="add-thickness-unit">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mm">mm</SelectItem>
+                  <SelectItem value="cm">cm</SelectItem>
+                  <SelectItem value="inch">inch</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setThicknessMaterial(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddThickness} disabled={isPending || !thicknessValue.trim()}>
+              <Plus className="h-4 w-4" />
+              Add thickness
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
@@ -632,15 +752,19 @@ function MetricCard({
 }
 
 function formatSpecs(material: WarehouseDetailData["materials"][number]) {
+  const thicknessSpec = material.thicknessValue !== null
+    ? { label: `Thickness ${formatNumber(material.thicknessValue)}${material.thicknessUnit ? ` ${material.thicknessUnit}` : ""}`, bold: true }
+    : null;
   const gsmSpec = material.gsm !== null ? { label: `GSM ${material.gsm}`, bold: true } : null;
   const micronSpec = material.micron !== null
     ? { label: `Micron ${formatNumber(material.micron)}`, bold: true }
     : null;
   const otherSpecs = [
+    material.vendorName ? { label: `Vendor ${material.vendorName}`, bold: false } : null,
     material.sizeValue ? { label: `Size ${material.sizeValue}${material.sizeUnit ? ` ${material.sizeUnit}` : ""}`, bold: false } : null,
   ];
 
-  const allSpecs = [gsmSpec, micronSpec, ...otherSpecs].filter(Boolean) as { label: string; bold: boolean }[];
+  const allSpecs = [gsmSpec, micronSpec, thicknessSpec, ...otherSpecs].filter(Boolean) as { label: string; bold: boolean }[];
 
   if (allSpecs.length === 0) return <span>No dimensional metadata</span>;
 

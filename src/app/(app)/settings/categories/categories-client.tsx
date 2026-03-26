@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { ChevronDown, ChevronRight, Plus, Tag, Trash2 } from "lucide-react";
+import { Plus, Tag, Trash2 } from "lucide-react";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDate } from "@/lib/utils";
-import { addCategory, deleteCategory, addSubcategory, deleteSubcategory } from "../actions";
+import { addCategory, deleteCategory } from "../actions";
 
-type SubcategoryData = { id: string; name: string; slug: string; materialCount: number };
-type CategoryData = { id: string; name: string; slug: string; materialCount: number; createdAt: string; subcategories: SubcategoryData[] };
+type CategoryData = { id: string; name: string; slug: string; materialCount: number; createdAt: string };
 
 export function CategoriesClient({ categories, canManage }: { categories: CategoryData[]; canManage: boolean }) {
   const router = useRouter();
@@ -26,20 +24,6 @@ export function CategoriesClient({ categories, canManage }: { categories: Catego
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [deleteType, setDeleteType] = useState<"category" | "subcategory">("category");
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [showAddSub, setShowAddSub] = useState(false);
-  const [subCategoryId, setSubCategoryId] = useState<string | null>(null);
-  const [newSubName, setNewSubName] = useState("");
-
-  const toggleExpand = (id: string) => {
-    setExpandedCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
 
   const handleAdd = () => {
     if (!newName.trim()) return;
@@ -56,32 +40,11 @@ export function CategoriesClient({ categories, canManage }: { categories: Catego
     });
   };
 
-  const handleAddSub = () => {
-    if (!newSubName.trim() || !subCategoryId) return;
-    startTransition(async () => {
-      try {
-        const result = await addSubcategory(subCategoryId, newSubName.trim());
-        toast.success(result.created ? "Subcategory added" : "Subcategory already existed");
-        setNewSubName("");
-        setShowAddSub(false);
-        setSubCategoryId(null);
-        router.refresh();
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to add subcategory");
-      }
-    });
-  };
-
   const handleDelete = (id: string) => {
     startTransition(async () => {
       try {
-        if (deleteType === "subcategory") {
-          await deleteSubcategory(id);
-          toast.success("Subcategory deleted");
-        } else {
-          await deleteCategory(id);
-          toast.success("Category deleted");
-        }
+        await deleteCategory(id);
+        toast.success("Category deleted");
         setDeleteId(null);
         router.refresh();
       } catch (err: unknown) {
@@ -89,22 +52,6 @@ export function CategoriesClient({ categories, canManage }: { categories: Catego
         setDeleteId(null);
       }
     });
-  };
-
-  const openAddSub = (categoryId: string) => {
-    setSubCategoryId(categoryId);
-    setNewSubName("");
-    setShowAddSub(true);
-  };
-
-  const openDeleteSub = (id: string) => {
-    setDeleteType("subcategory");
-    setDeleteId(id);
-  };
-
-  const openDeleteCat = (id: string) => {
-    setDeleteType("category");
-    setDeleteId(id);
   };
 
   return (
@@ -147,10 +94,10 @@ export function CategoriesClient({ categories, canManage }: { categories: Catego
           </div>
         ) : (
           <>
-            <div className="grid gap-3 p-4 md:grid-cols-2 xl:hidden">
+            <div className="grid gap-3 p-4 xl:hidden">
               {categories.map((category) => (
                 <Card key={category.id} className="rounded-2xl sm:rounded-[24px]">
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-base font-semibold">{category.name}</p>
@@ -161,51 +108,18 @@ export function CategoriesClient({ categories, canManage }: { categories: Catego
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <span>{formatDate(category.createdAt)}</span>
                       {canManage ? (
-                        <div className="flex items-center gap-1">
-                          <Button type="button" variant="ghost" size="sm" onClick={() => openAddSub(category.id)}>
-                            <Plus className="h-3.5 w-3.5" />
-                            Sub
-                          </Button>
-                          <DeleteButton
-                            disabled={category.materialCount > 0 || category.subcategories.length > 0}
-                            onDelete={() => openDeleteCat(category.id)}
-                            tooltip={category.subcategories.length > 0 ? "Delete subcategories first" : "Has linked materials"}
-                          />
-                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteId(category.id)}
+                          disabled={category.materialCount > 0}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
                       ) : null}
                     </div>
-                    {category.subcategories.length > 0 ? (
-                      <div className="space-y-2">
-                        <button
-                          type="button"
-                          onClick={() => toggleExpand(category.id)}
-                          className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-                        >
-                          {expandedCategories.has(category.id) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                          {category.subcategories.length} subcategories
-                        </button>
-                        {expandedCategories.has(category.id) ? (
-                          <div className="space-y-1.5 pl-4">
-                            {category.subcategories.map((sub) => (
-                              <div key={sub.id} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
-                                <div>
-                                  <p className="text-sm font-medium">{sub.name}</p>
-                                  <p className="text-xs text-muted-foreground">{sub.materialCount} materials</p>
-                                </div>
-                                {canManage ? (
-                                  <DeleteButton
-                                    disabled={sub.materialCount > 0}
-                                    onDelete={() => openDeleteSub(sub.id)}
-                                    tooltip="Has linked materials"
-                                    compact
-                                  />
-                                ) : null}
-                              </div>
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
                   </CardContent>
                 </Card>
               ))}
@@ -218,76 +132,34 @@ export function CategoriesClient({ categories, canManage }: { categories: Catego
                     <TableHead>Name</TableHead>
                     <TableHead>Slug</TableHead>
                     <TableHead>Materials</TableHead>
-                    <TableHead>Subcategories</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="w-[120px]" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {categories.map((category) => (
-                    <Fragment key={category.id}>
-                      <TableRow key={category.id}>
-                        <TableCell>
-                          <button
+                    <TableRow key={category.id}>
+                      <TableCell className="font-medium">{category.name}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{category.slug}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{category.materialCount}</Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(category.createdAt)}</TableCell>
+                      <TableCell>
+                        {canManage ? (
+                          <Button
                             type="button"
-                            onClick={() => category.subcategories.length > 0 && toggleExpand(category.id)}
-                            className="flex items-center gap-1.5 font-medium"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteId(category.id)}
+                            disabled={category.materialCount > 0}
+                            aria-label={category.materialCount > 0 ? "Has linked materials" : "Delete"}
                           >
-                            {category.subcategories.length > 0 ? (
-                              expandedCategories.has(category.id) ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                            ) : <span className="w-3.5" />}
-                            {category.name}
-                          </button>
-                        </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{category.slug}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{category.materialCount}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{category.subcategories.length}</Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{formatDate(category.createdAt)}</TableCell>
-                        <TableCell>
-                          {canManage ? (
-                            <div className="flex items-center gap-1">
-                              <Button type="button" variant="ghost" size="sm" onClick={() => openAddSub(category.id)}>
-                                <Plus className="h-3.5 w-3.5" />
-                                Sub
-                              </Button>
-                              <DeleteButton
-                                compact
-                                disabled={category.materialCount > 0 || category.subcategories.length > 0}
-                                onDelete={() => openDeleteCat(category.id)}
-                                tooltip={category.subcategories.length > 0 ? "Delete subcategories first" : "Has linked materials"}
-                              />
-                            </div>
-                          ) : null}
-                        </TableCell>
-                      </TableRow>
-                      {expandedCategories.has(category.id) && category.subcategories.map((sub) => (
-                        <TableRow key={sub.id} className="bg-muted/10">
-                          <TableCell className="pl-12">
-                            <span className="text-sm">{sub.name}</span>
-                          </TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">{sub.slug}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{sub.materialCount}</Badge>
-                          </TableCell>
-                          <TableCell />
-                          <TableCell />
-                          <TableCell>
-                            {canManage ? (
-                              <DeleteButton
-                                compact
-                                disabled={sub.materialCount > 0}
-                                onDelete={() => openDeleteSub(sub.id)}
-                                tooltip="Has linked materials"
-                              />
-                            ) : null}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </Fragment>
+                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
                   ))}
                 </TableBody>
               </Table>
@@ -327,41 +199,10 @@ export function CategoriesClient({ categories, canManage }: { categories: Catego
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showAddSub && canManage} onOpenChange={setShowAddSub}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add subcategory</DialogTitle>
-            <DialogDescription>Create a subcategory under the selected category.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <label htmlFor="new-subcategory" className="text-sm font-medium text-foreground">
-              Subcategory name
-            </label>
-            <Input
-              id="new-subcategory"
-              value={newSubName}
-              onChange={(event) => setNewSubName(event.target.value)}
-              placeholder="High Density"
-              autoFocus
-              onKeyDown={(event) => event.key === "Enter" && handleAddSub()}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddSub(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddSub} disabled={!newSubName.trim() || isPending}>
-              <Tag className="h-4 w-4" />
-              Add
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={!!deleteId && canManage} onOpenChange={() => setDeleteId(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete {deleteType}?</DialogTitle>
+            <DialogTitle>Delete category?</DialogTitle>
             <DialogDescription>This action cannot be undone.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -375,42 +216,5 @@ export function CategoriesClient({ categories, canManage }: { categories: Catego
         </DialogContent>
       </Dialog>
     </motion.div>
-  );
-}
-
-function DeleteButton({
-  compact,
-  disabled,
-  onDelete,
-  tooltip = "Has linked materials",
-}: {
-  compact?: boolean;
-  disabled: boolean;
-  onDelete: () => void;
-  tooltip?: string;
-}) {
-  const button = (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      onClick={onDelete}
-      disabled={disabled}
-      className={compact ? "h-9 w-9" : "h-10 w-10"}
-      aria-label={disabled ? tooltip : "Delete"}
-    >
-      <Trash2 className="h-4 w-4 text-muted-foreground" />
-    </Button>
-  );
-
-  if (!disabled) return button;
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span>{button}</span>
-      </TooltipTrigger>
-      <TooltipContent>{tooltip}</TooltipContent>
-    </Tooltip>
   );
 }

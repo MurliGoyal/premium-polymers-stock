@@ -400,8 +400,8 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
 
             <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="referenceNumber">Reference / slip number</Label>
-                <Input id="referenceNumber" placeholder="e.g. TRF-2026-041" {...register("referenceNumber")} />
+                <Label htmlFor="referenceNumber">Reference / slip number (optional)</Label>
+                <Input id="referenceNumber" placeholder="Optional, e.g. TRF-2026-041" {...register("referenceNumber")} />
                 {errors.referenceNumber ? <p className="text-xs text-destructive">{errors.referenceNumber.message}</p> : null}
               </div>
               <div className="space-y-2">

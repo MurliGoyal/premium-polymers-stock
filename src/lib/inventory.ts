@@ -7,6 +7,7 @@ type MaterialSnapshotInput = {
   name: string;
   warehouse: { code: string; name: string };
   category: { id: string; name: string };
+  vendorName?: string | null;
   baseUnit: string;
   currentStock: QuantityValue;
   minimumStock: QuantityValue;
@@ -53,6 +54,7 @@ export function createMaterialSnapshot(material: MaterialSnapshotInput) {
     name: material.name,
     warehouse: material.warehouse,
     category: material.category,
+    vendorName: material.vendorName ?? null,
     baseUnit: material.baseUnit,
     currentStock: quantityToString(material.currentStock),
     minimumStock: quantityToString(material.minimumStock),

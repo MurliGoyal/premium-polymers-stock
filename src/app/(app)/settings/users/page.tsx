@@ -9,6 +9,7 @@ export default async function UsersPage() {
   return (
     <UsersClient
       canManage={hasPermission(user.role, "users:manage")}
+      currentUserId={user.id}
       users={users.map((u) => ({
         id: u.id,
         name: u.name,

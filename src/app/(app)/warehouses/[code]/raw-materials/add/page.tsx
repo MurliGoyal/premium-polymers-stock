@@ -13,19 +13,23 @@ export default async function AddRawMaterialPage({ params }: { params: Promise<{
   });
   if (!warehouse) notFound();
 
-  const categories = await prisma.category.findMany({
-    include: { subcategories: { orderBy: { name: "asc" } } },
-    orderBy: { name: "asc" },
-  });
+  const [categories, vendorRows] = await Promise.all([
+    prisma.category.findMany({
+      orderBy: { name: "asc" },
+    }),
+    prisma.rawMaterial.findMany({
+      where: { vendorName: { not: null } },
+      select: { vendorName: true },
+      distinct: ["vendorName"],
+      orderBy: { vendorName: "asc" },
+    }),
+  ]);
 
   return (
     <AddMaterialClient
       warehouse={{ id: warehouse.id, code: warehouse.code, name: warehouse.name, slug: warehouse.slug }}
-      categories={categories.map((c) => ({
-        id: c.id,
-        name: c.name,
-        subcategories: c.subcategories.map((s) => ({ id: s.id, name: s.name })),
-      }))}
+      categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+      vendorNames={vendorRows.map((row) => row.vendorName).filter((name): name is string => Boolean(name))}
     />
   );
 }

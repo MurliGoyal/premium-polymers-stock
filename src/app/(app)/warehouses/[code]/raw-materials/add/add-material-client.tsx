@@ -21,20 +21,20 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createCategory, createRawMaterial } from "../../actions";
-import { addSubcategory } from "@/app/(app)/settings/actions";
 
 type Props = {
   warehouse: { id: string; code: string; name: string; slug: string };
-  categories: Array<{ id: string; name: string; subcategories: Array<{ id: string; name: string }> }>;
+  categories: Array<{ id: string; name: string }>;
+  vendorNames: string[];
 };
 
 type RawMaterialFormValues = z.input<typeof rawMaterialFormSchema>;
-const EMPTY_SUBCATEGORY_OPTION = "__none__";
 
 const defaultValues = (warehouseId: string): DefaultValues<RawMaterialFormValues> => ({
   warehouseId,
   name: "",
   categoryId: "",
+  vendorName: "",
   baseUnit: "",
   currentStock: undefined,
   minimumStock: undefined,
@@ -44,18 +44,15 @@ const defaultValues = (warehouseId: string): DefaultValues<RawMaterialFormValues
   sizeUnit: undefined,
   gsm: undefined,
   micron: undefined,
-  subcategoryId: "",
   notes: "",
 });
 
-export function AddMaterialClient({ warehouse, categories: initialCategories }: Props) {
+export function AddMaterialClient({ warehouse, categories: initialCategories, vendorNames }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [categories, setCategories] = useState(initialCategories);
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [showNewSubcategory, setShowNewSubcategory] = useState(false);
-  const [newSubcategoryName, setNewSubcategoryName] = useState("");
   const [rollWeightKg, setRollWeightKg] = useState("");
   const [rollGsm, setRollGsm] = useState("");
   const [rollWidthValue, setRollWidthValue] = useState("");
@@ -80,13 +77,22 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
 
   const currentStock = useWatch({ control, name: "currentStock" });
   const minimumStock = useWatch({ control, name: "minimumStock" });
-  const selectedCategoryId = useWatch({ control, name: "categoryId" });
+  const vendorName = useWatch({ control, name: "vendorName" });
+  const knownVendorNames = useMemo(
+    () => [...new Set(vendorNames.map((name) => name.trim()).filter(Boolean))],
+    [vendorNames]
+  );
+  const filteredVendorNames = useMemo(() => {
+    const normalizedQuery = (vendorName ?? "").trim().toLowerCase();
 
-  const subcategoriesForCategory = useMemo(() => {
-    if (!selectedCategoryId) return [];
-    const cat = categories.find((c) => c.id === selectedCategoryId);
-    return cat?.subcategories ?? [];
-  }, [categories, selectedCategoryId]);
+    if (!normalizedQuery) {
+      return knownVendorNames.slice(0, 8);
+    }
+
+    return knownVendorNames
+      .filter((name) => name.toLowerCase().includes(normalizedQuery))
+      .slice(0, 8);
+  }, [knownVendorNames, vendorName]);
 
   const onSubmit = handleSubmit((values, event) => {
     const submitter =
@@ -106,7 +112,6 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
           setRollGsm("");
           setRollWidthValue("");
           setRollWidthUnit("mm");
-          setNewSubcategoryName("");
           return;
         }
 
@@ -125,42 +130,15 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
       const alreadyPresent = categories.some((category) => category.id === result.entity.id);
       const nextCategories = alreadyPresent
         ? categories
-        : [...categories, { id: result.entity.id, name: result.entity.name, subcategories: [] }].sort((a, b) => a.name.localeCompare(b.name));
+        : [...categories, { id: result.entity.id, name: result.entity.name }].sort((a, b) => a.name.localeCompare(b.name));
 
       setCategories(nextCategories);
       setValue("categoryId", result.entity.id, { shouldValidate: true });
-      setValue("subcategoryId", "", { shouldValidate: true });
       setNewCategoryName("");
       setShowNewCategory(false);
       toast.success(result.created ? "Category added" : "Category already existed and was selected");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to add category");
-    }
-  };
-
-  const handleAddSubcategory = async () => {
-    if (!newSubcategoryName.trim() || !selectedCategoryId) return;
-
-    try {
-      const result = await addSubcategory(selectedCategoryId, newSubcategoryName.trim());
-      const catIndex = categories.findIndex((c) => c.id === selectedCategoryId);
-      if (catIndex !== -1) {
-        const alreadyPresent = categories[catIndex].subcategories.some((s) => s.id === result.entity.id);
-        if (!alreadyPresent) {
-          const updated = [...categories];
-          updated[catIndex] = {
-            ...updated[catIndex],
-            subcategories: [...updated[catIndex].subcategories, { id: result.entity.id, name: result.entity.name }].sort((a, b) => a.name.localeCompare(b.name)),
-          };
-          setCategories(updated);
-        }
-      }
-      setValue("subcategoryId", result.entity.id, { shouldValidate: true });
-      setNewSubcategoryName("");
-      setShowNewSubcategory(false);
-      toast.success(result.created ? "Subcategory added" : "Subcategory already existed and was selected");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to add subcategory");
     }
   };
 
@@ -213,7 +191,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
       <ResponsivePageHeader
         eyebrow="Warehouse context"
         title="Add raw material"
-        description="Add a new material record to this warehouse."
+        description="Add a new material record to this warehouse, including optional thickness and material specs."
         badge={<Badge variant="secondary">{warehouse.code}</Badge>}
       />
 
@@ -222,7 +200,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
           <CardHeader>
             <CardTitle>Core stock definition</CardTitle>
             <CardDescription>
-              Required fields are validated on both client and server. Every save creates inventory and audit entries.
+              Enter the main stock fields first. Required fields are validated on both client and server, and every save creates inventory and audit entries.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -281,47 +259,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
               </div>
             </div>
 
-            {subcategoriesForCategory.length > 0 || selectedCategoryId ? (
-              <div className="grid gap-5 md:grid-cols-[1.4fr,1fr]">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Subcategory</Label>
-                    {selectedCategoryId ? (
-                      <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewSubcategory(true)}>
-                        <Plus className="mr-1 h-3.5 w-3.5" />
-                        Add subcategory
-                      </Button>
-                    ) : null}
-                  </div>
-                  <Controller
-                    control={control}
-                    name="subcategoryId"
-                    render={({ field }) => (
-                      <Select
-                        value={field.value ?? ""}
-                        onValueChange={(value) => field.onChange(value === EMPTY_SUBCATEGORY_OPTION ? "" : value)}
-                        disabled={!selectedCategoryId || subcategoriesForCategory.length === 0}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={subcategoriesForCategory.length === 0 ? "No subcategories" : "Select a subcategory (optional)"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={EMPTY_SUBCATEGORY_OPTION}>None</SelectItem>
-                          {subcategoriesForCategory.map((sub) => (
-                            <SelectItem key={sub.id} value={sub.id}>
-                              {sub.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  <p className="text-xs text-muted-foreground">Optional grouping within the selected category.</p>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-5 md:grid-cols-3">
               <div className="space-y-2">
                 <Label>
                   Unit <span aria-hidden="true">*</span>
@@ -353,8 +291,79 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="gsm">GSM</Label>
+                <Input
+                  id="gsm"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Optional GSM"
+                  {...register("gsm", {
+                    setValueAs: (value) => (value === "" ? undefined : Number(value)),
+                  })}
+                />
+                <p className="text-xs text-muted-foreground">Optional GSM for film, sheet, paper, and coated material tracking.</p>
+                {errors.gsm ? <p className="text-xs text-destructive">{errors.gsm.message}</p> : null}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="micron">Micron</Label>
+                <Input
+                  id="micron"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Optional Micron"
+                  {...register("micron", {
+                    setValueAs: (value) => (value === "" ? undefined : Number(value)),
+                  })}
+                />
+                <p className="text-xs text-muted-foreground">Optional micron value when your warehouse tracks material grade that way.</p>
+                {errors.micron ? <p className="text-xs text-destructive">{errors.micron.message}</p> : null}
+              </div>
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="thicknessValue">Thickness</Label>
+                <div className="grid grid-cols-[1fr,110px] gap-2">
+                  <Input
+                    id="thicknessValue"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Optional"
+                    {...register("thicknessValue", {
+                      setValueAs: (value) => (value === "" ? undefined : Number(value)),
+                    })}
+                  />
+                  <Controller
+                    control={control}
+                    name="thicknessUnit"
+                    render={({ field }) => (
+                      <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                        <SelectTrigger className={errors.thicknessUnit ? "border-destructive" : ""}>
+                          <SelectValue placeholder="Unit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {THICKNESS_UNITS.map((unit) => (
+                            <SelectItem key={unit} value={unit}>
+                              {unit}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Optional thickness for films, laminates, and sheet materials.</p>
+                {errors.thicknessValue ? <p className="text-xs text-destructive">{errors.thicknessValue.message}</p> : null}
+                {errors.thicknessUnit ? <p className="text-xs text-destructive">{errors.thicknessUnit.message}</p> : null}
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="currentStock">
-                  Current stock <span aria-hidden="true">*</span>
+                  Total stock <span aria-hidden="true">*</span>
                   <span className="sr-only">required</span>
                 </Label>
                 <Input
@@ -370,7 +379,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
                   aria-required="true"
                   className={errors.currentStock ? "border-destructive" : ""}
                 />
-                <p className="text-xs text-muted-foreground">Opening stock becomes the first inventory transaction for this material.</p>
+                <p className="text-xs text-muted-foreground">Total available stock at creation time.</p>
                 {errors.currentStock ? <p className="text-xs text-destructive">{errors.currentStock.message}</p> : null}
               </div>
 
@@ -402,54 +411,15 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
         <Card className="rounded-2xl border bg-card/95 shadow-sm shadow-slate-950/5 sm:rounded-[28px]">
           <CardHeader>
             <CardTitle>Material specifications</CardTitle>
-            <CardDescription>Optional dimensional metadata improves traceability for sheets, rolls, resins, and additives.</CardDescription>
+            <CardDescription>Capture roll size, vendor details, and additional notes for stronger traceability.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid gap-5 md:grid-cols-2">
               <div className="grid gap-5 sm:grid-cols-[1fr,180px]">
                 <div className="space-y-2">
-                  <Label htmlFor="thicknessValue">Thickness</Label>
-                  <Input
-                    id="thicknessValue"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="Optional thickness"
-                    {...register("thicknessValue", {
-                      setValueAs: (value) => (value === "" ? undefined : Number(value)),
-                    })}
-                  />
-                  {errors.thicknessValue ? <p className="text-xs text-destructive">{errors.thicknessValue.message}</p> : null}
-                </div>
-                <div className="space-y-2">
-                  <Label>Thickness unit</Label>
-                  <Controller
-                    control={control}
-                    name="thicknessUnit"
-                    render={({ field }) => (
-                      <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                        <SelectTrigger className={errors.thicknessUnit ? "border-destructive" : ""}>
-                          <SelectValue placeholder="Unit" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {THICKNESS_UNITS.map((unit) => (
-                            <SelectItem key={unit} value={unit}>
-                              {unit}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.thicknessUnit ? <p className="text-xs text-destructive">{errors.thicknessUnit.message}</p> : null}
-                </div>
-              </div>
-
-              <div className="grid gap-5 sm:grid-cols-[1fr,180px]">
-                <div className="space-y-2">
-                  <Label htmlFor="sizeValue">Size / Roll Size / Roll Width</Label>
+                  <Label htmlFor="sizeValue">Roll size / Roll width</Label>
                   <Input id="sizeValue" placeholder="e.g. 1000x5000" {...register("sizeValue")} />
-                  <p className="text-xs text-muted-foreground">Use a compact dimension notation such as length x width or length x width x depth.</p>
+                  <p className="text-xs text-muted-foreground">Use format like width x length or the shop-floor notation you already use.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Size unit</Label>
@@ -474,51 +444,53 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
                   {errors.sizeUnit ? <p className="text-xs text-destructive">{errors.sizeUnit.message}</p> : null}
                 </div>
               </div>
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="gsm">GSM</Label>
-                <Input
-                  id="gsm"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="Optional GSM"
-                  {...register("gsm", {
-                    setValueAs: (value) => (value === "" ? undefined : Number(value)),
-                  })}
-                />
-                <p className="text-xs text-muted-foreground">Useful for films, sheets, coated materials, and paper-like inputs.</p>
-                {errors.gsm ? <p className="text-xs text-destructive">{errors.gsm.message}</p> : null}
-              </div>
 
               <div className="space-y-2">
-                <Label htmlFor="micron">Micron</Label>
+                <Label htmlFor="vendorName">Vendor name</Label>
                 <Input
-                  id="micron"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="Optional Micron"
-                  {...register("micron", {
-                    setValueAs: (value) => (value === "" ? undefined : Number(value)),
-                  })}
+                  id="vendorName"
+                  placeholder="Search, select, or type vendor name"
+                  {...register("vendorName")}
                 />
-                <p className="text-xs text-muted-foreground">Used for micron-based thickness classification independent of the Thickness field.</p>
-                {errors.micron ? <p className="text-xs text-destructive">{errors.micron.message}</p> : null}
+                {filteredVendorNames.length > 0 ? (
+                  <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-2">
+                    <div className="mb-2 flex flex-wrap gap-2">
+                      {filteredVendorNames.map((knownVendorName) => (
+                        <Button
+                          key={knownVendorName}
+                          type="button"
+                          variant={knownVendorName === vendorName ? "secondary" : "outline"}
+                          size="sm"
+                          onClick={() =>
+                            setValue("vendorName", knownVendorName, {
+                              shouldDirty: true,
+                              shouldTouch: true,
+                              shouldValidate: true,
+                            })
+                          }
+                        >
+                          {knownVendorName}
+                        </Button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Known vendor names are reusable. Type a new one if it is not listed.</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No saved vendor matches yet. Type a new vendor name and it will be available next time.</p>
+                )}
+                {errors.vendorName ? <p className="text-xs text-destructive">{errors.vendorName.message}</p> : null}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Vendor Name</Label>
+              <Label htmlFor="notes">Notes</Label>
               <Textarea
                 id="notes"
                 rows={4}
-                placeholder="Material handling notes, vendor details, internal storage guidance, or special remarks"
+                placeholder="Material handling notes, internal storage guidance, or special remarks"
                 {...register("notes")}
               />
-              <p className="text-xs text-muted-foreground">Notes are saved into the audit trail snapshot for future transfer review.</p>
+              <p className="text-xs text-muted-foreground">Notes are optional and saved to the audit trail snapshot.</p>
               {errors.notes ? <p className="text-xs text-destructive">{errors.notes.message}</p> : null}
             </div>
           </CardContent>
@@ -683,38 +655,6 @@ export function AddMaterialClient({ warehouse, categories: initialCategories }: 
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showNewSubcategory} onOpenChange={setShowNewSubcategory}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add new subcategory</DialogTitle>
-            <DialogDescription>Create a subcategory under the selected category.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 py-2">
-            <Label htmlFor="newSubcategory">Subcategory name</Label>
-            <Input
-              id="newSubcategory"
-              autoFocus
-              value={newSubcategoryName}
-              onChange={(event) => setNewSubcategoryName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  void handleAddSubcategory();
-                }
-              }}
-              placeholder="e.g. High Density"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewSubcategory(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => void handleAddSubcategory()} disabled={!newSubcategoryName.trim()}>
-              Add subcategory
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </motion.div>
   );
 }

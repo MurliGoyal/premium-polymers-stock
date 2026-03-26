@@ -30,9 +30,9 @@ Fix critical bugs identified across the Premium Polymers inventory management sy
 **Issue**: The `peakTransferDay` calculation uses `transferTrendData[0]` as fallback, but if the array is empty, this will be `undefined`. Accessing `peakTransferDay.date` or `peakTransferDay.label` on undefined will cause a crash.
 **Impact**: Dashboard crashes when there are no transfer records.
 
-### Bug 6: Missing Validation for Category/Subcategory Deletion
+### Bug 6: Missing Validation for Category Deletion
 **File**: `src/app/(app)/settings/actions.ts`
-**Issue**: The `deleteCategory` and `deleteSubcategory` functions check for materials using the ID but don't check for materials in a transaction. If a material is created between the count check and the delete, the deletion could succeed while materials exist.
+**Issue**: The `deleteCategory` function checks for materials using the ID but doesn't check for materials in a transaction. If a material is created between the count check and the delete, the deletion could succeed while materials exist.
 **Impact**: Orphaned materials with deleted categories.
 
 ### Bug 7: Unhandled Promise Rejection in Form Submission
@@ -61,7 +61,7 @@ No new types are required. Existing types are sufficient.
 - `refreshAvailability` modified in `transfer-client.tsx` to prevent concurrent calls
 - Date validation added to `transfer-history-client.tsx`
 - Null check added for `peakTransferDay` in `dashboard-client.tsx`
-- Transaction added to `deleteCategory` and `deleteSubcategory` in `settings/actions.ts`
+- Transaction added to `deleteCategory` in `settings/actions.ts`
 
 ## Classes
 No class modifications required.
@@ -80,7 +80,7 @@ No new dependencies required.
 1. Fix missing import in warehouse-detail-client.tsx (critical - causes crashes)
 2. Fix null reference in dashboard-client.tsx (critical - causes crashes)
 3. Fix race condition in transfer-client.tsx (high - data consistency)
-4. Add transaction safety for category/subcategory deletion (high - data integrity)
+4. Add transaction safety for category deletion (high - data integrity)
 5. Add date validation in transfer-history-client.tsx (medium - user experience)
 6. Fix submission mode handling in add-material-client.tsx (medium - user experience)
 7. Fix timeout cleanup in transfer-client.tsx (low - memory optimization)

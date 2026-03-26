@@ -15,12 +15,6 @@ export default async function CategoriesPage() {
         slug: c.slug,
         materialCount: c._count.rawMaterials,
         createdAt: c.createdAt.toISOString(),
-        subcategories: c.subcategories.map((s) => ({
-          id: s.id,
-          name: s.name,
-          slug: s.slug,
-          materialCount: s._count.rawMaterials,
-        })),
       }))}
     />
   );

@@ -88,8 +88,8 @@ export function SystemAdminClient({ summary, canManage }: { summary: Summary; ca
         const result = await deleteAllCategories(categoryConfirmation);
         toast.success(
           result.totalDeleted > 0
-            ? `Deleted ${result.categoriesDeleted} categories and ${result.subcategoriesDeleted} subcategories.`
-            : "No categories or subcategories were present to delete."
+            ? `Deleted ${result.categoriesDeleted} categories.`
+            : "No categories were present to delete."
         );
         setCategoryConfirmation("");
         setCategoryDialogOpen(false);
@@ -281,7 +281,7 @@ export function SystemAdminClient({ summary, canManage }: { summary: Summary; ca
       <Dialog open={categoryDialogOpen && canManage} onOpenChange={setCategoryDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete all categories and subcategories?</DialogTitle>
+            <DialogTitle>Delete all categories?</DialogTitle>
             <DialogDescription>
               This is permanent. Type <span className="font-semibold text-foreground">{DELETE_ALL_CATEGORIES_PHRASE}</span> to
               remove all categories.

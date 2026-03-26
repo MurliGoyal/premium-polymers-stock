@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Shield } from "lucide-react";
+import { Plus, Shield, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
@@ -17,11 +17,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getRoleColor, getRoleLabel } from "@/lib/rbac";
 import { formatDate } from "@/lib/utils";
-import { createUser } from "../actions";
+import { createUser, deleteUser } from "../actions";
 
 type UserData = { id: string; name: string; email: string; role: string; isActive: boolean; createdAt: string };
 
-export function UsersClient({ users, canManage }: { users: UserData[]; canManage: boolean }) {
+export function UsersClient({ users, canManage, currentUserId }: { users: UserData[]; canManage: boolean; currentUserId: string }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [showAdd, setShowAdd] = useState(false);
@@ -29,6 +29,7 @@ export function UsersClient({ users, canManage }: { users: UserData[]; canManage
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("VIEWER");
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
 
   const handleCreate = () => {
     if (!name.trim() || !email.trim() || !password.trim()) {
@@ -52,6 +53,21 @@ export function UsersClient({ users, canManage }: { users: UserData[]; canManage
         router.refresh();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to create user");
+      }
+    });
+  };
+
+  const handleDelete = () => {
+    if (!deleteUserId) return;
+
+    startTransition(async () => {
+      try {
+        await deleteUser(deleteUserId);
+        toast.success("User deleted successfully");
+        setDeleteUserId(null);
+        router.refresh();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to delete user");
       }
     });
   };
@@ -118,6 +134,20 @@ export function UsersClient({ users, canManage }: { users: UserData[]; canManage
                       </Badge>
                       <Badge variant="outline">{formatDate(user.createdAt)}</Badge>
                     </div>
+                    {canManage ? (
+                      <div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={user.id === currentUserId}
+                          onClick={() => setDeleteUserId(user.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      </div>
+                    ) : null}
                   </CardContent>
                 </Card>
               ))}
@@ -132,6 +162,7 @@ export function UsersClient({ users, canManage }: { users: UserData[]; canManage
                     <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
+                    <TableHead className="w-[90px]" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -151,6 +182,19 @@ export function UsersClient({ users, canManage }: { users: UserData[]; canManage
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{formatDate(user.createdAt)}</TableCell>
+                      <TableCell>
+                        {canManage ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={user.id === currentUserId}
+                            onClick={() => setDeleteUserId(user.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        ) : null}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -225,6 +269,23 @@ export function UsersClient({ users, canManage }: { users: UserData[]; canManage
               disabled={isPending || !name.trim() || !email.trim() || !password.trim()}
             >
               Create user
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteUserId && canManage} onOpenChange={() => setDeleteUserId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete user?</DialogTitle>
+            <DialogDescription>This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteUserId(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

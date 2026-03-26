@@ -25,6 +25,17 @@ const normalizedName = (label: string, max = 120) =>
     .transform(collapseWhitespace)
     .refine((value) => !CONTROL_CHARACTER_PATTERN.test(value), `${label} contains unsupported control characters`);
 
+const optionalNormalizedName = (label: string, max = 120) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((value) => collapseWhitespace(value))
+    .transform((value) => (value.length ? value : undefined))
+    .refine((value) => value === undefined || !CONTROL_CHARACTER_PATTERN.test(value), `${label} contains unsupported control characters`)
+    .nullable()
+    .optional();
+
 const positiveNumber = (label: string) =>
   z
     .number({ error: `${label} must be a number` })
@@ -40,6 +51,7 @@ export const rawMaterialFormSchema = z
     warehouseId: trimmedString("Warehouse"),
     name: rawMaterialNameSchema,
     categoryId: trimmedString("Category"),
+    vendorName: optionalNormalizedName("Vendor name", 120),
     baseUnit: z
       .string({ error: "Unit is required" })
       .trim()
@@ -57,7 +69,6 @@ export const rawMaterialFormSchema = z
     sizeUnit: z.enum(SIZE_UNITS).optional().nullable(),
     gsm: z.number().finite().min(0).optional().nullable(),
     micron: z.number().finite().min(0).optional().nullable(),
-    subcategoryId: z.string().trim().optional().nullable(),
     notes: optionalText(400),
   })
   .superRefine((value, context) => {
