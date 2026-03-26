@@ -1,8 +1,47 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, Role, MaterialStatus, ActivityType, TransactionType, NotificationType } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
-import { normalizeRecordName } from "@/lib/naming";
-import { buildRawMaterialNormalizedKey } from "@/lib/raw-materials";
+
+function collapseWhitespace(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function normalizeRecordName(value: string) {
+  return collapseWhitespace(value).toLowerCase();
+}
+
+function normalizeOptionalTextSegment(value?: string | null) {
+  const normalized = collapseWhitespace(value ?? "").toLowerCase();
+  return normalized || "na";
+}
+
+function normalizeOptionalNumberSegment(value?: number | null) {
+  return value === undefined || value === null ? "na" : String(value);
+}
+
+function buildRawMaterialNormalizedKey(material: {
+  name: string;
+  thicknessValue?: number | null;
+  thicknessUnit?: string | null;
+  sizeValue?: string | null;
+  sizeUnit?: string | null;
+  gsm?: number | null;
+  micron?: number | null;
+}) {
+  const hasThicknessValue = material.thicknessValue !== undefined && material.thicknessValue !== null;
+  const normalizedSizeValue = collapseWhitespace(material.sizeValue ?? "");
+  const hasSizeValue = normalizedSizeValue.length > 0;
+
+  return [
+    normalizeRecordName(material.name),
+    `gsm=${normalizeOptionalNumberSegment(material.gsm)}`,
+    `micron=${normalizeOptionalNumberSegment(material.micron)}`,
+    `thickness=${normalizeOptionalNumberSegment(hasThicknessValue ? material.thicknessValue : null)}`,
+    `thickness-unit=${normalizeOptionalTextSegment(hasThicknessValue ? material.thicknessUnit : null)}`,
+    `size=${normalizeOptionalTextSegment(hasSizeValue ? normalizedSizeValue : null)}`,
+    `size-unit=${normalizeOptionalTextSegment(hasSizeValue ? material.sizeUnit : null)}`,
+  ].join("::");
+}
 
 const connectionString = process.env.DATABASE_URL;
 

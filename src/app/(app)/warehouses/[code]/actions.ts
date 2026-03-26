@@ -417,6 +417,33 @@ export async function addRawMaterialThickness(payload: unknown) {
   return { success: true };
 }
 
+export type RawMaterialDeleteResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+export async function deleteRawMaterial(payload: {
+  warehouseId: string;
+  rawMaterialId: string;
+}): Promise<RawMaterialDeleteResult> {
+  await assertServerPermission("raw_materials:delete");
+
+  const material = await prisma.rawMaterial.findUnique({
+    where: { id: payload.rawMaterialId },
+    include: {
+      warehouse: { select: { id: true, slug: true } },
+    },
+  });
+
+  if (!material || material.warehouse.id !== payload.warehouseId) {
+    return { ok: false, message: "Raw material not found in this warehouse." };
+  }
+
+  await prisma.rawMaterial.delete({ where: { id: material.id } });
+
+  revalidateWarehouseViews(material.warehouse.slug);
+  return { ok: true };
+}
+
 export async function performTransfer(payload: unknown): Promise<TransferActionResult> {
   const user = await assertServerPermission("transfers:create");
   const data = transferFormSchema.parse(payload);

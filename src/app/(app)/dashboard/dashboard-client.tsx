@@ -333,7 +333,6 @@ export function DashboardClient({
                   <motion.button
                     key={option.key}
                     type="button"
-                    aria-pressed={isActive}
                     role="tab"
                     aria-selected={isActive}
                     aria-label={`Show ${option.label} chart`}

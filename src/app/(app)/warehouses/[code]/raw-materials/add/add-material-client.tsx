@@ -4,7 +4,12 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, type DefaultValues, useForm, useWatch } from "react-hook-form";
+import {
+  Controller,
+  type DefaultValues,
+  useForm,
+  useWatch,
+} from "react-hook-form";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -14,11 +19,30 @@ import { rawMaterialFormSchema } from "@/lib/validation";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createCategory, createRawMaterial } from "../../actions";
 
@@ -30,7 +54,9 @@ type Props = {
 
 type RawMaterialFormValues = z.input<typeof rawMaterialFormSchema>;
 
-const defaultValues = (warehouseId: string): DefaultValues<RawMaterialFormValues> => ({
+const defaultValues = (
+  warehouseId: string,
+): DefaultValues<RawMaterialFormValues> => ({
   warehouseId,
   name: "",
   categoryId: "",
@@ -47,7 +73,11 @@ const defaultValues = (warehouseId: string): DefaultValues<RawMaterialFormValues
   notes: "",
 });
 
-export function AddMaterialClient({ warehouse, categories: initialCategories, vendorNames }: Props) {
+export function AddMaterialClient({
+  warehouse,
+  categories: initialCategories,
+  vendorNames,
+}: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [categories, setCategories] = useState(initialCategories);
@@ -56,8 +86,10 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
   const [rollWeightKg, setRollWeightKg] = useState("");
   const [rollGsm, setRollGsm] = useState("");
   const [rollWidthValue, setRollWidthValue] = useState("");
-  const [rollWidthUnit, setRollWidthUnit] = useState<(typeof SIZE_UNITS)[number]>("mm");
-  const [isRollCalculatorOpenMobile, setIsRollCalculatorOpenMobile] = useState(false);
+  const [rollWidthUnit, setRollWidthUnit] =
+    useState<(typeof SIZE_UNITS)[number]>("mm");
+  const [isRollCalculatorOpenMobile, setIsRollCalculatorOpenMobile] =
+    useState(false);
 
   const form = useForm<RawMaterialFormValues>({
     resolver: zodResolver(rawMaterialFormSchema),
@@ -80,7 +112,7 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
   const vendorName = useWatch({ control, name: "vendorName" });
   const knownVendorNames = useMemo(
     () => [...new Set(vendorNames.map((name) => name.trim()).filter(Boolean))],
-    [vendorNames]
+    [vendorNames],
   );
   const filteredVendorNames = useMemo(() => {
     const normalizedQuery = (vendorName ?? "").trim().toLowerCase();
@@ -97,9 +129,11 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
   const onSubmit = handleSubmit((values, event) => {
     const submitter =
       event && "nativeEvent" in event
-        ? ((event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null)
+        ? ((event.nativeEvent as SubmitEvent)
+            .submitter as HTMLButtonElement | null)
         : null;
-    const mode = submitter?.value === "saveAndAddAnother" ? "saveAndAddAnother" : "save";
+    const mode =
+      submitter?.value === "saveAndAddAnother" ? "saveAndAddAnother" : "save";
 
     startTransition(async () => {
       try {
@@ -117,7 +151,11 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
 
         router.push(`/warehouses/${warehouse.slug}`);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to create raw material");
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to create raw material",
+        );
       }
     });
   });
@@ -127,18 +165,29 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
 
     try {
       const result = await createCategory(newCategoryName.trim());
-      const alreadyPresent = categories.some((category) => category.id === result.entity.id);
+      const alreadyPresent = categories.some(
+        (category) => category.id === result.entity.id,
+      );
       const nextCategories = alreadyPresent
         ? categories
-        : [...categories, { id: result.entity.id, name: result.entity.name }].sort((a, b) => a.name.localeCompare(b.name));
+        : [
+            ...categories,
+            { id: result.entity.id, name: result.entity.name },
+          ].sort((a, b) => a.name.localeCompare(b.name));
 
       setCategories(nextCategories);
       setValue("categoryId", result.entity.id, { shouldValidate: true });
       setNewCategoryName("");
       setShowNewCategory(false);
-      toast.success(result.created ? "Category added" : "Category already existed and was selected");
+      toast.success(
+        result.created
+          ? "Category added"
+          : "Category already existed and was selected",
+      );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to add category");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to add category",
+      );
     }
   };
 
@@ -147,8 +196,8 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
       ? currentStock <= 0
         ? "Will start as out of stock"
         : currentStock <= minimumStock
-        ? "Will start as low stock"
-        : "Will start as in stock"
+          ? "Will start as low stock"
+          : "Will start as in stock"
       : "Set stock values to preview status";
 
   const rollLengthMeters = useMemo(() => {
@@ -156,7 +205,11 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
     const gsm = Number(rollGsm);
     const widthValue = Number(rollWidthValue);
 
-    if (!Number.isFinite(weightKg) || !Number.isFinite(gsm) || !Number.isFinite(widthValue)) {
+    if (
+      !Number.isFinite(weightKg) ||
+      !Number.isFinite(gsm) ||
+      !Number.isFinite(widthValue)
+    ) {
       return null;
     }
 
@@ -164,24 +217,39 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
       return null;
     }
 
-    const widthInMeters = convertWidthToMeters(Math.abs(widthValue), rollWidthUnit);
+    const widthInMeters = convertWidthToMeters(
+      Math.abs(widthValue),
+      rollWidthUnit,
+    );
 
     if (!Number.isFinite(widthInMeters) || widthInMeters === 0) {
       return null;
     }
 
-    const calculatedLength = Math.abs((Math.abs(weightKg) * 1000) / (Math.abs(gsm) * widthInMeters));
+    const calculatedLength = Math.abs(
+      (Math.abs(weightKg) * 1000) / (Math.abs(gsm) * widthInMeters),
+    );
     return calculatedLength.toFixed(2);
   }, [rollGsm, rollWeightKg, rollWidthUnit, rollWidthValue]);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-4xl space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mx-auto max-w-4xl space-y-6"
+    >
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href="/warehouses" className="transition-colors hover:text-foreground">
+        <Link
+          href="/warehouses"
+          className="transition-colors hover:text-foreground"
+        >
           Warehouses
         </Link>
         <span>/</span>
-        <Link href={`/warehouses/${warehouse.slug}`} className="transition-colors hover:text-foreground">
+        <Link
+          href={`/warehouses/${warehouse.slug}`}
+          className="transition-colors hover:text-foreground"
+        >
           {warehouse.code}
         </Link>
         <span>/</span>
@@ -200,7 +268,9 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
           <CardHeader>
             <CardTitle>Core stock definition</CardTitle>
             <CardDescription>
-              Enter the main stock fields first. Required fields are validated on both client and server, and every save creates inventory and audit entries.
+              Enter the main stock fields first. Required fields are validated
+              on both client and server, and every save creates inventory and
+              audit entries.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -219,9 +289,15 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                   className={errors.name ? "border-destructive" : ""}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Use the vendor or specification identifier your warehouse team recognizes. The same name can be reused when GSM, micron, thickness, or size is different.
+                  Use the vendor or specification identifier your warehouse team
+                  recognizes. The same name can be reused when GSM, micron,
+                  thickness, or size is different.
                 </p>
-                {errors.name ? <p className="text-xs text-destructive">{errors.name.message}</p> : null}
+                {errors.name ? (
+                  <p className="text-xs text-destructive">
+                    {errors.name.message}
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-2">
@@ -230,7 +306,12 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                     Category <span aria-hidden="true">*</span>
                     <span className="sr-only">required</span>
                   </Label>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewCategory(true)}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowNewCategory(true)}
+                  >
                     <Plus className="mr-1 h-3.5 w-3.5" />
                     Add category
                   </Button>
@@ -239,10 +320,15 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                   control={control}
                   name="categoryId"
                   render={({ field }) => (
-                    <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                    >
                       <SelectTrigger
                         aria-required="true"
-                        className={errors.categoryId ? "border-destructive" : ""}
+                        className={
+                          errors.categoryId ? "border-destructive" : ""
+                        }
                       >
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
@@ -256,12 +342,19 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                     </Select>
                   )}
                 />
-                <p className="text-xs text-muted-foreground">Categories are shared across both warehouses and available for future materials.</p>
-                {errors.categoryId ? <p className="text-xs text-destructive">{errors.categoryId.message}</p> : null}
+                <p className="text-xs text-muted-foreground">
+                  Categories are shared across both warehouses and available for
+                  future materials.
+                </p>
+                {errors.categoryId ? (
+                  <p className="text-xs text-destructive">
+                    {errors.categoryId.message}
+                  </p>
+                ) : null}
               </div>
             </div>
 
-            <div className="grid gap-5 md:grid-cols-3">
+            <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>
                   Unit <span aria-hidden="true">*</span>
@@ -271,7 +364,10 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                   control={control}
                   name="baseUnit"
                   render={({ field }) => (
-                    <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                    >
                       <SelectTrigger
                         aria-required="true"
                         className={errors.baseUnit ? "border-destructive" : ""}
@@ -288,44 +384,17 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                     </Select>
                   )}
                 />
-                <p className="text-xs text-muted-foreground">Choose the normalized unit used for all transfers and analytics.</p>
-                {errors.baseUnit ? <p className="text-xs text-destructive">{errors.baseUnit.message}</p> : null}
+                <p className="text-xs text-muted-foreground">
+                  Choose the normalized unit used for all transfers and
+                  analytics.
+                </p>
+                {errors.baseUnit ? (
+                  <p className="text-xs text-destructive">
+                    {errors.baseUnit.message}
+                  </p>
+                ) : null}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="gsm">GSM</Label>
-                <Input
-                  id="gsm"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="Optional GSM"
-                  {...register("gsm", {
-                    setValueAs: (value) => (value === "" ? undefined : Number(value)),
-                  })}
-                />
-                <p className="text-xs text-muted-foreground">Optional GSM for film, sheet, paper, and coated material tracking.</p>
-                {errors.gsm ? <p className="text-xs text-destructive">{errors.gsm.message}</p> : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="micron">Micron</Label>
-                <Input
-                  id="micron"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="Optional Micron"
-                  {...register("micron", {
-                    setValueAs: (value) => (value === "" ? undefined : Number(value)),
-                  })}
-                />
-                <p className="text-xs text-muted-foreground">Optional micron value when your warehouse tracks material grade that way.</p>
-                {errors.micron ? <p className="text-xs text-destructive">{errors.micron.message}</p> : null}
-              </div>
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="thicknessValue">Thickness</Label>
                 <div className="grid grid-cols-[1fr,110px] gap-2">
@@ -336,15 +405,23 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                     step="0.01"
                     placeholder="Optional"
                     {...register("thicknessValue", {
-                      setValueAs: (value) => (value === "" ? undefined : Number(value)),
+                      setValueAs: (value) =>
+                        value === "" ? undefined : Number(value),
                     })}
                   />
                   <Controller
                     control={control}
                     name="thicknessUnit"
                     render={({ field }) => (
-                      <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                        <SelectTrigger className={errors.thicknessUnit ? "border-destructive" : ""}>
+                      <Select
+                        value={field.value ?? ""}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger
+                          className={
+                            errors.thicknessUnit ? "border-destructive" : ""
+                          }
+                        >
                           <SelectValue placeholder="Unit" />
                         </SelectTrigger>
                         <SelectContent>
@@ -358,11 +435,23 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                     )}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">Optional thickness for films, laminates, and sheet materials.</p>
-                {errors.thicknessValue ? <p className="text-xs text-destructive">{errors.thicknessValue.message}</p> : null}
-                {errors.thicknessUnit ? <p className="text-xs text-destructive">{errors.thicknessUnit.message}</p> : null}
+                <p className="text-xs text-muted-foreground">
+                  Optional thickness for films, laminates, and sheet materials.
+                </p>
+                {errors.thicknessValue ? (
+                  <p className="text-xs text-destructive">
+                    {errors.thicknessValue.message}
+                  </p>
+                ) : null}
+                {errors.thicknessUnit ? (
+                  <p className="text-xs text-destructive">
+                    {errors.thicknessUnit.message}
+                  </p>
+                ) : null}
               </div>
+            </div>
 
+            <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="currentStock">
                   Total stock <span aria-hidden="true">*</span>
@@ -375,14 +464,21 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                   step="0.01"
                   placeholder="0"
                   {...register("currentStock", {
-                    setValueAs: (value) => (value === "" ? Number.NaN : Number(value)),
+                    setValueAs: (value) =>
+                      value === "" ? Number.NaN : Number(value),
                   })}
                   required
                   aria-required="true"
                   className={errors.currentStock ? "border-destructive" : ""}
                 />
-                <p className="text-xs text-muted-foreground">Total available stock at creation time.</p>
-                {errors.currentStock ? <p className="text-xs text-destructive">{errors.currentStock.message}</p> : null}
+                <p className="text-xs text-muted-foreground">
+                  Total available stock at creation time.
+                </p>
+                {errors.currentStock ? (
+                  <p className="text-xs text-destructive">
+                    {errors.currentStock.message}
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-2">
@@ -397,14 +493,82 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                   step="0.01"
                   placeholder="0"
                   {...register("minimumStock", {
-                    setValueAs: (value) => (value === "" ? Number.NaN : Number(value)),
+                    setValueAs: (value) =>
+                      value === "" ? Number.NaN : Number(value),
                   })}
                   required
                   aria-required="true"
                   className={errors.minimumStock ? "border-destructive" : ""}
                 />
-                <p className="text-xs text-muted-foreground">{stockHealthLabel}</p>
-                {errors.minimumStock ? <p className="text-xs text-destructive">{errors.minimumStock.message}</p> : null}
+                <p className="text-xs text-muted-foreground">
+                  {stockHealthLabel}
+                </p>
+                {errors.minimumStock ? (
+                  <p className="text-xs text-destructive">
+                    {errors.minimumStock.message}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border bg-card/95 shadow-sm shadow-slate-950/5 sm:rounded-[28px]">
+          <CardHeader>
+            <CardTitle>Material grade</CardTitle>
+            <CardDescription>
+              Track GSM and micron values for film, sheet, paper, and coated
+              material grading. Both fields are optional and independent.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="gsm">GSM</Label>
+                <Input
+                  id="gsm"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="e.g. 80"
+                  {...register("gsm", {
+                    setValueAs: (value) =>
+                      value === "" ? undefined : Number(value),
+                  })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Grams per square meter — used for film, sheet, paper, and
+                  coated materials.
+                </p>
+                {errors.gsm ? (
+                  <p className="text-xs text-destructive">
+                    {errors.gsm.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="micron">Micron</Label>
+                <Input
+                  id="micron"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="e.g. 50"
+                  {...register("micron", {
+                    setValueAs: (value) =>
+                      value === "" ? undefined : Number(value),
+                  })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Thickness in micrometres — common for plastic films and
+                  thin-gauge materials.
+                </p>
+                {errors.micron ? (
+                  <p className="text-xs text-destructive">
+                    {errors.micron.message}
+                  </p>
+                ) : null}
               </div>
             </div>
           </CardContent>
@@ -413,15 +577,25 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
         <Card className="rounded-2xl border bg-card/95 shadow-sm shadow-slate-950/5 sm:rounded-[28px]">
           <CardHeader>
             <CardTitle>Material specifications</CardTitle>
-            <CardDescription>Capture roll size, vendor details, and additional notes for stronger traceability.</CardDescription>
+            <CardDescription>
+              Capture roll size, vendor details, and additional notes for
+              stronger traceability.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid gap-5 md:grid-cols-2">
               <div className="grid gap-5 sm:grid-cols-[1fr,180px]">
                 <div className="space-y-2">
                   <Label htmlFor="sizeValue">Roll size / Roll width</Label>
-                  <Input id="sizeValue" placeholder="e.g. 1000x5000" {...register("sizeValue")} />
-                  <p className="text-xs text-muted-foreground">Use format like width x length or the shop-floor notation you already use.</p>
+                  <Input
+                    id="sizeValue"
+                    placeholder="e.g. 1000x5000"
+                    {...register("sizeValue")}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Use format like width x length or the shop-floor notation
+                    you already use.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Size unit</Label>
@@ -429,8 +603,15 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                     control={control}
                     name="sizeUnit"
                     render={({ field }) => (
-                      <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                        <SelectTrigger className={errors.sizeUnit ? "border-destructive" : ""}>
+                      <Select
+                        value={field.value ?? ""}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger
+                          className={
+                            errors.sizeUnit ? "border-destructive" : ""
+                          }
+                        >
                           <SelectValue placeholder="Unit" />
                         </SelectTrigger>
                         <SelectContent>
@@ -443,7 +624,11 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                       </Select>
                     )}
                   />
-                  {errors.sizeUnit ? <p className="text-xs text-destructive">{errors.sizeUnit.message}</p> : null}
+                  {errors.sizeUnit ? (
+                    <p className="text-xs text-destructive">
+                      {errors.sizeUnit.message}
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
@@ -461,7 +646,11 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                         <Button
                           key={knownVendorName}
                           type="button"
-                          variant={knownVendorName === vendorName ? "secondary" : "outline"}
+                          variant={
+                            knownVendorName === vendorName
+                              ? "secondary"
+                              : "outline"
+                          }
                           size="sm"
                           onClick={() =>
                             setValue("vendorName", knownVendorName, {
@@ -475,12 +664,22 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                         </Button>
                       ))}
                     </div>
-                    <p className="text-xs text-muted-foreground">Known vendor names are reusable. Type a new one if it is not listed.</p>
+                    <p className="text-xs text-muted-foreground">
+                      Known vendor names are reusable. Type a new one if it is
+                      not listed.
+                    </p>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground">No saved vendor matches yet. Type a new vendor name and it will be available next time.</p>
+                  <p className="text-xs text-muted-foreground">
+                    No saved vendor matches yet. Type a new vendor name and it
+                    will be available next time.
+                  </p>
                 )}
-                {errors.vendorName ? <p className="text-xs text-destructive">{errors.vendorName.message}</p> : null}
+                {errors.vendorName ? (
+                  <p className="text-xs text-destructive">
+                    {errors.vendorName.message}
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -492,8 +691,14 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                 placeholder="Material handling notes, internal storage guidance, or special remarks"
                 {...register("notes")}
               />
-              <p className="text-xs text-muted-foreground">Notes are optional and saved to the audit trail snapshot.</p>
-              {errors.notes ? <p className="text-xs text-destructive">{errors.notes.message}</p> : null}
+              <p className="text-xs text-muted-foreground">
+                Notes are optional and saved to the audit trail snapshot.
+              </p>
+              {errors.notes ? (
+                <p className="text-xs text-destructive">
+                  {errors.notes.message}
+                </p>
+              ) : null}
             </div>
           </CardContent>
         </Card>
@@ -507,16 +712,22 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                 variant="ghost"
                 size="sm"
                 className="md:hidden"
-                onClick={() => setIsRollCalculatorOpenMobile((current) => !current)}
+                onClick={() =>
+                  setIsRollCalculatorOpenMobile((current) => !current)
+                }
                 aria-expanded={isRollCalculatorOpenMobile}
                 aria-controls="roll-calculator-content"
               >
                 {isRollCalculatorOpenMobile ? "Hide" : "Show"}
-                <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${isRollCalculatorOpenMobile ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  className={`ml-1 h-4 w-4 transition-transform ${isRollCalculatorOpenMobile ? "rotate-180" : ""}`}
+                />
               </Button>
             </div>
             <CardDescription>
-              Estimate roll length in meters from product weight, GSM, and width. The result uses the absolute value and is rounded to 2 decimal places.
+              Estimate roll length in meters from product weight, GSM, and
+              width. The result uses the absolute value and is rounded to 2
+              decimal places.
             </CardDescription>
           </CardHeader>
           <CardContent
@@ -535,7 +746,9 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                   value={rollWeightKg}
                   onChange={(event) => setRollWeightKg(event.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">Enter the total roll weight in kilograms.</p>
+                <p className="text-xs text-muted-foreground">
+                  Enter the total roll weight in kilograms.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -549,11 +762,15 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                   value={rollGsm}
                   onChange={(event) => setRollGsm(event.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">Use GSM in grams per square meter.</p>
+                <p className="text-xs text-muted-foreground">
+                  Use GSM in grams per square meter.
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="rollWidthValue">Size / Roll Size / Roll Width</Label>
+                <Label htmlFor="rollWidthValue">
+                  Size / Roll Size / Roll Width
+                </Label>
                 <Input
                   id="rollWidthValue"
                   type="number"
@@ -563,12 +780,19 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                   value={rollWidthValue}
                   onChange={(event) => setRollWidthValue(event.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">Enter the roll width using the selected unit.</p>
+                <p className="text-xs text-muted-foreground">
+                  Enter the roll width using the selected unit.
+                </p>
               </div>
 
               <div className="space-y-2">
                 <Label>Size / Roll Size / Roll Width unit</Label>
-                <Select value={rollWidthUnit} onValueChange={(value) => setRollWidthUnit(value as (typeof SIZE_UNITS)[number])}>
+                <Select
+                  value={rollWidthUnit}
+                  onValueChange={(value) =>
+                    setRollWidthUnit(value as (typeof SIZE_UNITS)[number])
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Unit" />
                   </SelectTrigger>
@@ -580,17 +804,22 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">Width is converted to meters before calculating roll length.</p>
+                <p className="text-xs text-muted-foreground">
+                  Width is converted to meters before calculating roll length.
+                </p>
               </div>
             </div>
 
             <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4 sm:rounded-[24px] sm:p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Roll length</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Roll length
+              </p>
               <p className="mt-3 text-3xl font-semibold tracking-[-0.04em]">
                 {rollLengthMeters ? `${rollLengthMeters} m` : "--"}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Formula: roll length = abs((weight in kg × 1000) / (gsm × width in meters)).
+                Formula: roll length = abs((weight in kg × 1000) / (gsm × width
+                in meters)).
               </p>
             </div>
           </CardContent>
@@ -615,7 +844,12 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
                 <RotateCcw className="mr-1.5 h-4 w-4" />
                 Save & add another
               </Button>
-              <Button type="submit" disabled={isPending} name="submissionMode" value="save">
+              <Button
+                type="submit"
+                disabled={isPending}
+                name="submissionMode"
+                value="save"
+              >
                 <Save className="mr-1.5 h-4 w-4" />
                 {isPending ? "Saving..." : "Save material"}
               </Button>
@@ -628,7 +862,10 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add new category</DialogTitle>
-            <DialogDescription>Create a reusable category and attach it to this material without leaving the form.</DialogDescription>
+            <DialogDescription>
+              Create a reusable category and attach it to this material without
+              leaving the form.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
             <Label htmlFor="newCategory">Category name</Label>
@@ -650,18 +887,23 @@ export function AddMaterialClient({ warehouse, categories: initialCategories, ve
             <Button variant="outline" onClick={() => setShowNewCategory(false)}>
               Cancel
             </Button>
-            <Button onClick={() => void handleAddCategory()} disabled={!newCategoryName.trim()}>
+            <Button
+              onClick={() => void handleAddCategory()}
+              disabled={!newCategoryName.trim()}
+            >
               Add category
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </motion.div>
   );
 }
 
-function convertWidthToMeters(value: number, unit: (typeof SIZE_UNITS)[number]) {
+function convertWidthToMeters(
+  value: number,
+  unit: (typeof SIZE_UNITS)[number],
+) {
   switch (unit) {
     case "mm":
       return value / 1000;
