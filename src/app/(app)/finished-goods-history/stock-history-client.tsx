@@ -55,6 +55,12 @@ type IndexedActivity = ActivityRecord & {
   dateKey: string;
 };
 
+type OverviewDetail = {
+  title: string;
+  subtitle: string;
+  items: Array<{ label: string; value: string }>;
+};
+
 type RangePresetKey = "all" | "today" | "this-week" | "last-week" | "this-month";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -263,6 +269,7 @@ export function StockHistoryClient({
   const [toDate, setToDate] = useState(initialToDate);
   const [page, setPage] = useState(1);
   const [selectedActivity, setSelectedActivity] = useState<ActivityRecord | null>(null);
+  const [selectedOverview, setSelectedOverview] = useState<OverviewDetail | null>(null);
   const deferredSearch = useDeferredValue(search);
 
   const indexedActivities = useMemo<IndexedActivity[]>(
@@ -542,11 +549,111 @@ export function StockHistoryClient({
     .filter(Boolean)
     .join(" / ");
 
+  const overviewDetails = useMemo(() => {
+    const productionItems = analytics.goods
+      .filter((item) => item.production > 0)
+      .sort((left, right) => right.production - left.production)
+      .slice(0, 10)
+      .map((item) => ({
+        label: item.label,
+        value: `${formatNumber(item.production)} ${item.unit}`,
+      }));
+
+    const dispatchItems = analytics.goods
+      .filter((item) => item.dispatch > 0)
+      .sort((left, right) => right.dispatch - left.dispatch)
+      .slice(0, 10)
+      .map((item) => ({
+        label: item.label,
+        value: `${formatNumber(item.dispatch)} ${item.unit}`,
+      }));
+
+    const latestItems = filtered
+      .slice()
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+      .slice(0, 12)
+      .map((activity) => ({
+        label: `${activity.goodLabel} (${getActivityLabel(activity.activityType)})`,
+        value: `${activity.quantityChange > 0 ? "+" : ""}${formatNumber(activity.quantityChange)} ${activity.goodUnit} · ${formatDateTime(activity.createdAt)}`,
+      }));
+
+    const untouchedItems = idleInsights.quietGoods
+      .slice(0, 12)
+      .map((good) => ({
+        label: good.label,
+        value: `${formatNumber(good.currentStock)} ${good.baseUnit} · Last moved ${formatDate(good.lastMovementAt)}`,
+      }));
+
+    const topProductionItems = analytics.goods
+      .filter((item) => item.production > 0)
+      .sort((left, right) => right.production - left.production)
+      .slice(0, 12)
+      .map((item) => ({
+        label: item.label,
+        value: `${formatNumber(item.production)} ${item.unit}`,
+      }));
+
+    const topDispatchItems = analytics.goods
+      .filter((item) => item.dispatch > 0)
+      .sort((left, right) => right.dispatch - left.dispatch)
+      .slice(0, 12)
+      .map((item) => ({
+        label: item.label,
+        value: `${formatNumber(item.dispatch)} ${item.unit}`,
+      }));
+
+    return {
+      totalProduction: {
+        title: "Total production",
+        subtitle: `Production activity in ${currentRangeLabel}`,
+        items:
+          productionItems.length > 0
+            ? productionItems
+            : [{ label: "No production data", value: "No production recorded in this view" }],
+      },
+      totalDispatch: {
+        title: "Total dispatch",
+        subtitle: `Dispatch activity in ${currentRangeLabel}`,
+        items: dispatchItems.length > 0 ? dispatchItems : [{ label: "No dispatch data", value: "No dispatch recorded in this view" }],
+      },
+      matchingLogs: {
+        title: "Matching logs",
+        subtitle: `Latest activity records for ${currentRangeLabel}`,
+        items: latestItems.length > 0 ? latestItems : [{ label: "No logs", value: "No matching activity in this view" }],
+      },
+      topProductionItem: {
+        title: "Top production item",
+        subtitle: "Goods ranked by produced quantity",
+        items:
+          topProductionItems.length > 0
+            ? topProductionItems
+            : [{ label: "No production yet", value: "No production activity in this view" }],
+      },
+      topDispatchItem: {
+        title: "Top dispatch item",
+        subtitle: "Goods ranked by dispatched quantity",
+        items:
+          topDispatchItems.length > 0
+            ? topDispatchItems
+            : [{ label: "No dispatch yet", value: "No dispatch activity in this view" }],
+      },
+      untouchedGoods: {
+        title: "Untouched goods",
+        subtitle: "In-stock goods with no matching movement in this view",
+        items:
+          untouchedItems.length > 0
+            ? untouchedItems
+            : [{ label: "Everything moved", value: "Every in-stock good has matching movement in this view" }],
+      },
+    };
+  }, [analytics.goods, currentRangeLabel, filtered, idleInsights.quietGoods]);
+
   const metricCards = [
     {
       icon: ArrowUpRight,
       label: "Total production",
       meta: analytics.production.meta,
+      onClick: () => setSelectedOverview(overviewDetails.totalProduction),
       tone: "emerald" as const,
       value: analytics.production.value,
     },
@@ -554,29 +661,17 @@ export function StockHistoryClient({
       icon: ArrowDownRight,
       label: "Total dispatch",
       meta: analytics.dispatch.meta,
+      onClick: () => setSelectedOverview(overviewDetails.totalDispatch),
       tone: "amber" as const,
       value: analytics.dispatch.value,
-    },
-    {
-      icon: ArrowRightLeft,
-      label: "Net movement",
-      meta: analytics.net.meta,
-      tone: "blue" as const,
-      value: analytics.net.value,
     },
     {
       icon: Activity,
       label: "Matching logs",
       meta: activityMix || "No matching activity",
+      onClick: () => setSelectedOverview(overviewDetails.matchingLogs),
       tone: "default" as const,
       value: formatNumber(analytics.matchingActivities),
-    },
-    {
-      icon: Package,
-      label: "Goods touched",
-      meta: analytics.mostActive ? `${analytics.mostActive.label} has the most movement` : "No finished goods matched this view",
-      tone: "default" as const,
-      value: formatNumber(analytics.uniqueGoodsCount),
     },
   ];
 
@@ -587,6 +682,7 @@ export function StockHistoryClient({
       meta: analytics.topProduced
         ? `${formatNumber(analytics.topProduced.production)} ${analytics.topProduced.unit} produced`
         : "No production recorded in this view",
+      onClick: () => setSelectedOverview(overviewDetails.topProductionItem),
       tone: "emerald" as const,
       value: analytics.topProduced?.label ?? "No production yet",
     },
@@ -596,33 +692,19 @@ export function StockHistoryClient({
       meta: analytics.topDispatched
         ? `${formatNumber(analytics.topDispatched.dispatch)} ${analytics.topDispatched.unit} dispatched`
         : "No dispatch recorded in this view",
+      onClick: () => setSelectedOverview(overviewDetails.topDispatchItem),
       tone: "amber" as const,
       value: analytics.topDispatched?.label ?? "No dispatch yet",
     },
     {
       icon: Clock3,
-      label: "Oldest idle stock",
+      label: "Untouched goods",
       meta: idleInsights.oldestIdle
         ? `${formatNumber(idleInsights.oldestIdle.currentStock)} ${idleInsights.oldestIdle.baseUnit} on hand / Last moved ${formatDate(idleInsights.oldestIdle.lastMovementAt)}`
-        : "No stock is currently sitting idle",
+        : "No untouched goods in this view",
+      onClick: () => setSelectedOverview(overviewDetails.untouchedGoods),
       tone: "blue" as const,
-      value: idleInsights.oldestIdle ? `${idleInsights.oldestIdle.label} / ${formatIdleLabel(idleInsights.oldestIdle.lastMovementAt)}` : "Nothing idle",
-    },
-    {
-      icon: BarChart3,
-      label: "Quiet stock in current view",
-      meta:
-        idleInsights.quietGoods.length > 0
-          ? idleInsights.quietGoods
-              .slice(0, 2)
-              .map((good) => good.label)
-              .join(" / ")
-          : "Every in-stock good has matching movement in this view",
-      tone: "default" as const,
-      value:
-        idleInsights.quietGoods.length > 0
-          ? `${formatNumber(idleInsights.quietGoods.length)} goods without matching movement`
-          : "No quiet stock",
+      value: idleInsights.oldestIdle ? `${idleInsights.oldestIdle.label} / ${formatIdleLabel(idleInsights.oldestIdle.lastMovementAt)}` : "Everything moved",
     },
   ];
 
@@ -705,7 +787,7 @@ export function StockHistoryClient({
         </Card>
       </motion.div>
 
-      <motion.div variants={itemVariants} className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 xl:grid-cols-5">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 xl:grid-cols-3">
         {metricCards.map((card, index) => (
           <MetricCard
             key={card.label}
@@ -713,19 +795,21 @@ export function StockHistoryClient({
             icon={card.icon}
             label={card.label}
             meta={card.meta}
+            onClick={card.onClick}
             tone={card.tone}
             value={card.value}
           />
         ))}
       </motion.div>
 
-      <motion.div variants={itemVariants} className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {insightCards.map((card) => (
           <InsightCard
             key={card.label}
             icon={card.icon}
             label={card.label}
             meta={card.meta}
+            onClick={card.onClick}
             tone={card.tone}
             value={card.value}
           />
@@ -872,6 +956,23 @@ export function StockHistoryClient({
           ) : null}
         </SheetContent>
       </Sheet>
+
+      <Sheet open={!!selectedOverview} onOpenChange={() => setSelectedOverview(null)}>
+        <SheetContent className="w-full sm:max-w-xl">
+          <SheetHeader>
+            <SheetTitle>{selectedOverview?.title ?? "Overview detail"}</SheetTitle>
+            <SheetDescription>{selectedOverview?.subtitle ?? ""}</SheetDescription>
+          </SheetHeader>
+          <div className="mt-6 space-y-3">
+            {(selectedOverview?.items ?? []).map((item) => (
+              <div key={`${item.label}-${item.value}`} className="rounded-[20px] border border-white/8 bg-white/[0.03] p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{item.label}</p>
+                <p className="mt-2 text-sm font-medium text-foreground/90">{item.value}</p>
+              </div>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
     </motion.div>
   );
 }
@@ -881,6 +982,7 @@ function MetricCard({
   icon: Icon,
   label,
   meta,
+  onClick,
   tone = "default",
   value,
 }: {
@@ -888,6 +990,7 @@ function MetricCard({
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   meta: string;
+  onClick?: () => void;
   tone?: "default" | "emerald" | "amber" | "blue";
   value: number | string;
 }) {
@@ -900,16 +1003,22 @@ function MetricCard({
 
   return (
     <Card className={cn("rounded-2xl sm:rounded-[24px]", className)}>
-      <CardContent className="flex min-h-[122px] items-center gap-3">
-        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] ${toneClasses[tone]}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{label}</p>
-          <p className="numeric-polished mt-2 truncate text-xl font-semibold sm:text-2xl">{value}</p>
-          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{meta}</p>
-        </div>
-      </CardContent>
+      <button
+        type="button"
+        className="w-full rounded-2xl text-left transition-colors hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 sm:rounded-[24px]"
+        onClick={onClick}
+      >
+        <CardContent className="flex min-h-[122px] items-center gap-3">
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] ${toneClasses[tone]}`}>
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{label}</p>
+            <p className="numeric-polished mt-2 break-words text-[clamp(1rem,2.2vw,1.5rem)] font-semibold leading-tight">{value}</p>
+            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{meta}</p>
+          </div>
+        </CardContent>
+      </button>
     </Card>
   );
 }
@@ -918,12 +1027,14 @@ function InsightCard({
   icon: Icon,
   label,
   meta,
+  onClick,
   tone = "default",
   value,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   meta: string;
+  onClick?: () => void;
   tone?: "default" | "emerald" | "amber" | "blue";
   value: string;
 }) {
@@ -936,18 +1047,24 @@ function InsightCard({
 
   return (
     <Card className="rounded-2xl sm:rounded-[24px]">
-      <CardContent className="flex min-h-[164px] flex-col justify-between gap-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{label}</p>
-            <p className="mt-3 line-clamp-2 text-lg font-semibold">{value}</p>
+      <button
+        type="button"
+        className="h-full w-full rounded-2xl text-left transition-colors hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 sm:rounded-[24px]"
+        onClick={onClick}
+      >
+        <CardContent className="flex min-h-[164px] flex-col justify-between gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{label}</p>
+              <p className="mt-3 break-words text-base font-semibold sm:text-lg">{value}</p>
+            </div>
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] ${toneClasses[tone]}`}>
+              <Icon className="h-4 w-4" />
+            </div>
           </div>
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] ${toneClasses[tone]}`}>
-            <Icon className="h-4 w-4" />
-          </div>
-        </div>
-        <p className="text-sm text-muted-foreground">{meta}</p>
-      </CardContent>
+          <p className="text-sm text-muted-foreground">{meta}</p>
+        </CardContent>
+      </button>
     </Card>
   );
 }
