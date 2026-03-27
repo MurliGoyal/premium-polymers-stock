@@ -13,9 +13,7 @@ import {
   type AuthenticatedUser,
 } from "@/lib/auth";
 import {
-  DEFAULT_FINISHED_GOODS_WAREHOUSE_CODE,
   FINISHED_GOODS_WAREHOUSE_CATALOG,
-  FINISHED_GOODS_WAREHOUSE_CODES,
 } from "@/lib/constants";
 import { daysAgo } from "@/lib/inventory";
 import { prisma } from "@/lib/prisma";
@@ -24,27 +22,6 @@ import { quantityToNumber, sumQuantities, toDecimal } from "@/lib/quantities";
 function resolveStatus(stock: Prisma.Decimal): MaterialStatus {
   if (stock.lte(0)) return MaterialStatus.OUT_OF_STOCK;
   return MaterialStatus.IN_STOCK;
-}
-
-function normalizeFinishedGoodsWarehouseCode(input?: string | null) {
-  const normalized = input?.trim().toUpperCase();
-
-  if (!normalized) {
-    return null;
-  }
-
-  return FINISHED_GOODS_WAREHOUSE_CODES.includes(
-    normalized as (typeof FINISHED_GOODS_WAREHOUSE_CODES)[number],
-  )
-    ? normalized
-    : null;
-}
-
-function resolveWarehouseCode(input?: string | null) {
-  return (
-    normalizeFinishedGoodsWarehouseCode(input) ??
-    DEFAULT_FINISHED_GOODS_WAREHOUSE_CODE
-  );
 }
 
 function getWarehouseMetaByCode(code: string) {
@@ -128,22 +105,39 @@ export async function getFinishedGoodsDirectoryData() {
     }),
   ]);
 
+  const goodsByWarehouse = new Map<string, typeof goods>();
+  for (const good of goods) {
+    const groupedGoods = goodsByWarehouse.get(good.warehouseCode);
+    if (groupedGoods) {
+      groupedGoods.push(good);
+      continue;
+    }
+
+    goodsByWarehouse.set(good.warehouseCode, [good]);
+  }
+
+  const activityCountByWarehouse = new Map<string, number>();
+  const dispatchQuantityByWarehouse = new Map<string, number>();
+  for (const activity of activities) {
+    const currentCount = activityCountByWarehouse.get(activity.warehouseCode) ?? 0;
+    activityCountByWarehouse.set(activity.warehouseCode, currentCount + 1);
+
+    if (activity.activityType === FinishedGoodActivityType.DISPATCH) {
+      const currentDispatchQuantity =
+        dispatchQuantityByWarehouse.get(activity.warehouseCode) ?? 0;
+      dispatchQuantityByWarehouse.set(
+        activity.warehouseCode,
+        currentDispatchQuantity + Math.abs(quantityToNumber(activity.quantityChange)),
+      );
+    }
+  }
+
   return FINISHED_GOODS_WAREHOUSE_CATALOG.filter((warehouse) =>
     allowedWarehouseCodes.includes(warehouse.code),
   ).map((warehouse) => {
-    const warehouseGoods = goods.filter(
-      (good) => good.warehouseCode === warehouse.code,
-    );
-    const warehouseActivities = activities.filter(
-      (activity) => activity.warehouseCode === warehouse.code,
-    );
-    const dispatchQuantity = warehouseActivities.reduce((sum, activity) => {
-      if (activity.activityType !== FinishedGoodActivityType.DISPATCH) {
-        return sum;
-      }
-
-      return sum + Math.abs(quantityToNumber(activity.quantityChange));
-    }, 0);
+    const warehouseGoods = goodsByWarehouse.get(warehouse.code) ?? [];
+    const dispatchQuantity =
+      dispatchQuantityByWarehouse.get(warehouse.code) ?? 0;
 
     return {
       code: warehouse.code,
@@ -159,7 +153,7 @@ export async function getFinishedGoodsDirectoryData() {
       outOfStockCount: warehouseGoods.filter(
         (good) => good.status === MaterialStatus.OUT_OF_STOCK,
       ).length,
-      recentActivities: warehouseActivities.length,
+      recentActivities: activityCountByWarehouse.get(warehouse.code) ?? 0,
       slug: warehouse.slug,
       subtitle: warehouse.subtitle,
       totalDispatchQty: dispatchQuantity,

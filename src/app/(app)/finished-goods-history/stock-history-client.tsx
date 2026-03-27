@@ -62,6 +62,13 @@ const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transiti
 const itemVariants = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { duration: 0.35 } } };
 const weekdayFormatter = new Intl.DateTimeFormat("en-US", { timeZone: APP_TIME_ZONE, weekday: "short" });
 const weekdayIndexes: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+const RANGE_PRESETS: Array<{ key: RangePresetKey; label: string }> = [
+  { key: "all", label: "All time" },
+  { key: "today", label: "Today" },
+  { key: "this-week", label: "This week" },
+  { key: "last-week", label: "Last week" },
+  { key: "this-month", label: "This month" },
+];
 
 function getActivityLabel(type: string) {
   const labels: Record<string, string> = {
@@ -267,19 +274,12 @@ export function StockHistoryClient({
     () => getRangeLabel(normalizedRange.from, normalizedRange.to),
     [normalizedRange.from, normalizedRange.to],
   );
-  const rangePresets: Array<{ key: RangePresetKey; label: string }> = [
-    { key: "all", label: "All time" },
-    { key: "today", label: "Today" },
-    { key: "this-week", label: "This week" },
-    { key: "last-week", label: "Last week" },
-    { key: "this-month", label: "This month" },
-  ];
 
   const activityTypes = useMemo(() => [...new Set(activities.map((activity) => activity.activityType))], [activities]);
   const finishedGoodsById = useMemo(() => new Map(finishedGoods.map((good) => [good.id, good])), [finishedGoods]);
   const activePresetKey = useMemo(
-    () => rangePresets.find((preset) => matchesPreset(normalizedRange.from, normalizedRange.to, preset.key))?.key ?? null,
-    [normalizedRange.from, normalizedRange.to, rangePresets],
+    () => RANGE_PRESETS.find((preset) => matchesPreset(normalizedRange.from, normalizedRange.to, preset.key))?.key ?? null,
+    [normalizedRange.from, normalizedRange.to],
   );
 
   const filtered = useMemo(() => {
@@ -654,7 +654,7 @@ export function StockHistoryClient({
                 </Badge>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
-                {rangePresets.map((preset) => (
+                {RANGE_PRESETS.map((preset) => (
                   <Button
                     key={preset.key}
                     type="button"
