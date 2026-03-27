@@ -15,11 +15,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { FINISHED_GOODS_WAREHOUSES } from "@/lib/constants";
 import { getRoleColor, getRoleLabel } from "@/lib/rbac";
 import { formatDate } from "@/lib/utils";
 import { createUser, deleteUser } from "../actions";
 
-type UserData = { id: string; name: string; email: string; role: string; isActive: boolean; createdAt: string };
+type UserData = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  finishedGoodsWarehouseCode: string | null;
+  isActive: boolean;
+  createdAt: string;
+};
 
 export function UsersClient({ users, canManage, currentUserId }: { users: UserData[]; canManage: boolean; currentUserId: string }) {
   const router = useRouter();
@@ -29,7 +38,9 @@ export function UsersClient({ users, canManage, currentUserId }: { users: UserDa
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("VIEWER");
+  const [finishedGoodsWarehouseCode, setFinishedGoodsWarehouseCode] = useState("");
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const isFinishedGoodsManagerRole = role === "FINISHED_GOODS_MANAGER";
 
   const handleCreate = () => {
     if (!name.trim() || !email.trim() || !password.trim()) {
@@ -43,6 +54,7 @@ export function UsersClient({ users, canManage, currentUserId }: { users: UserDa
           email: email.trim().toLowerCase(),
           password,
           role,
+          finishedGoodsWarehouseCode: isFinishedGoodsManagerRole ? finishedGoodsWarehouseCode : undefined,
         });
         toast.success("User created successfully");
         setShowAdd(false);
@@ -50,6 +62,7 @@ export function UsersClient({ users, canManage, currentUserId }: { users: UserDa
         setEmail("");
         setPassword("");
         setRole("VIEWER");
+        setFinishedGoodsWarehouseCode("");
         router.refresh();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to create user");
@@ -132,6 +145,9 @@ export function UsersClient({ users, canManage, currentUserId }: { users: UserDa
                         <Shield className="mr-1 h-3 w-3" />
                         {getRoleLabel(user.role)}
                       </Badge>
+                      {user.finishedGoodsWarehouseCode ? (
+                        <Badge variant="outline">{user.finishedGoodsWarehouseCode}</Badge>
+                      ) : null}
                       <Badge variant="outline">{formatDate(user.createdAt)}</Badge>
                     </div>
                     {canManage ? (
@@ -171,10 +187,15 @@ export function UsersClient({ users, canManage, currentUserId }: { users: UserDa
                       <TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={getRoleColor(user.role)}>
-                          <Shield className="mr-1 h-3 w-3" />
-                          {getRoleLabel(user.role)}
-                        </Badge>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="outline" className={getRoleColor(user.role)}>
+                            <Shield className="mr-1 h-3 w-3" />
+                            {getRoleLabel(user.role)}
+                          </Badge>
+                          {user.finishedGoodsWarehouseCode ? (
+                            <Badge variant="outline">{user.finishedGoodsWarehouseCode}</Badge>
+                          ) : null}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={user.isActive ? "success" : "secondary"}>
@@ -247,17 +268,44 @@ export function UsersClient({ users, canManage, currentUserId }: { users: UserDa
 
             <div className="space-y-2">
               <Label htmlFor="user-role">Role</Label>
-              <Select value={role} onValueChange={setRole}>
+              <Select
+                value={role}
+                onValueChange={(value) => {
+                  setRole(value);
+                  if (value !== "FINISHED_GOODS_MANAGER") {
+                    setFinishedGoodsWarehouseCode("");
+                  }
+                }}
+              >
                 <SelectTrigger id="user-role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="MANAGER">Manager (Admin)</SelectItem>
+                  <SelectItem value="FINISHED_GOODS_MANAGER">Finished Goods Manager</SelectItem>
                   <SelectItem value="STOCK_MANAGEMENT">Operator (Stock Management)</SelectItem>
                   <SelectItem value="VIEWER">Viewer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {isFinishedGoodsManagerRole ? (
+              <div className="space-y-2">
+                <Label htmlFor="user-fg-warehouse">Finished Goods Warehouse</Label>
+                <Select value={finishedGoodsWarehouseCode} onValueChange={setFinishedGoodsWarehouseCode}>
+                  <SelectTrigger id="user-fg-warehouse">
+                    <SelectValue placeholder="Select warehouse" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FINISHED_GOODS_WAREHOUSES.map((warehouse) => (
+                      <SelectItem key={warehouse.code} value={warehouse.code}>
+                        {warehouse.code} / {warehouse.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
           </div>
 
           <DialogFooter>
@@ -266,7 +314,7 @@ export function UsersClient({ users, canManage, currentUserId }: { users: UserDa
             </Button>
             <Button
               onClick={handleCreate}
-              disabled={isPending || !name.trim() || !email.trim() || !password.trim()}
+              disabled={isPending || !name.trim() || !email.trim() || !password.trim() || (isFinishedGoodsManagerRole && !finishedGoodsWarehouseCode)}
             >
               Create user
             </Button>

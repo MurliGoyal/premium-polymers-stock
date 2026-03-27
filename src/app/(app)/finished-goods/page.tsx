@@ -1,18 +1,32 @@
-import { requirePagePermission } from "@/lib/auth";
-import { FINISHED_GOODS_WAREHOUSE_CODE } from "@/lib/constants";
-import { hasPermission } from "@/lib/rbac";
-import { getFinishedGoodsData } from "./actions";
-import { FinishedGoodsClient } from "./finished-goods-client";
+import { redirect } from "next/navigation";
+import {
+  getAllowedFinishedGoodsWarehouseCodes,
+  requirePagePermission,
+} from "@/lib/auth";
+import { FINISHED_GOODS_WAREHOUSES } from "@/lib/constants";
+import { getFinishedGoodsDirectoryData } from "./actions";
+import { FinishedGoodsWarehousesClient } from "./finished-goods-warehouses-client";
+
+function getFinishedGoodsWarehousePath(code: string) {
+  const warehouse =
+    FINISHED_GOODS_WAREHOUSES.find((entry) => entry.code === code) ??
+    FINISHED_GOODS_WAREHOUSES[0];
+
+  return `/finished-goods/${warehouse.slug}`;
+}
 
 export default async function FinishedGoodsPage() {
   const user = await requirePagePermission("finished_goods:view");
-  const goods = await getFinishedGoodsData();
+  const allowedWarehouseCodes = getAllowedFinishedGoodsWarehouseCodes(user);
 
-  return (
-    <FinishedGoodsClient
-      goods={goods}
-      warehouseCode={FINISHED_GOODS_WAREHOUSE_CODE}
-      canManage={hasPermission(user.role, "finished_goods:manage")}
-    />
-  );
+  if (allowedWarehouseCodes.length === 0) {
+    redirect("/login");
+  }
+
+  if (allowedWarehouseCodes.length === 1) {
+    redirect(getFinishedGoodsWarehousePath(allowedWarehouseCodes[0]));
+  }
+
+  const warehouses = await getFinishedGoodsDirectoryData();
+  return <FinishedGoodsWarehousesClient warehouses={warehouses} />;
 }

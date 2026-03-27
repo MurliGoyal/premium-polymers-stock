@@ -15,6 +15,7 @@ export default async function UsersPage() {
         name: u.name,
         email: u.email,
         role: u.role,
+        finishedGoodsWarehouseCode: u.finishedGoodsWarehouseCode,
         isActive: u.isActive,
         createdAt: u.createdAt.toISOString(),
       }))}

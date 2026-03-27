@@ -1,6 +1,7 @@
 import { getServerAuthSession } from "@/lib/auth";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/rbac";
 
 export async function GET() {
   const session = await getServerAuthSession();
@@ -10,6 +11,10 @@ export async function GET() {
       { code: "UNAUTHORIZED", message: "Unauthorized", retryable: false },
       { status: 401 }
     );
+  }
+
+  if (!hasPermission(session.user.role, "raw_materials:view")) {
+    return jsonSuccess({ unreadCount: 0 });
   }
 
   try {

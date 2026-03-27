@@ -22,6 +22,10 @@ function isUniqueConstraintError(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
 
+function isMissingFinishedGoodsWarehouseColumn(error: unknown) {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2022";
+}
+
 // Categories
 export async function getCategories() {
   await assertServerPermission("categories:view");
@@ -213,10 +217,41 @@ export async function deleteAllRecipients(confirmationText: string) {
 // Users
 export async function getUsers() {
   await assertServerPermission("users:view");
-  return prisma.user.findMany({
-    select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
-    orderBy: { createdAt: "asc" },
-  });
+  try {
+    return await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        finishedGoodsWarehouseCode: true,
+        isActive: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+  } catch (error) {
+    if (!isMissingFinishedGoodsWarehouseColumn(error)) {
+      throw error;
+    }
+
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return users.map((user) => ({
+      ...user,
+      finishedGoodsWarehouseCode: null,
+    }));
+  }
 }
 
 export async function createUser(payload: unknown) {
@@ -230,15 +265,37 @@ export async function createUser(payload: unknown) {
 
   const passwordHash = await hash(data.password, 12);
 
-  await prisma.user.create({
-    data: {
-      name: data.name,
-      email: data.email,
-      passwordHash,
-      role: data.role,
-      isActive: true,
-    },
-  });
+  try {
+    await prisma.user.create({
+      data: data.role === "FINISHED_GOODS_MANAGER"
+        ? {
+            name: data.name,
+            email: data.email,
+            passwordHash,
+            role: data.role,
+            finishedGoodsWarehouseCode: data.finishedGoodsWarehouseCode ?? null,
+            isActive: true,
+          }
+        : {
+            name: data.name,
+            email: data.email,
+            passwordHash,
+            role: data.role,
+            isActive: true,
+          },
+    });
+  } catch (error) {
+    if (
+      data.role === "FINISHED_GOODS_MANAGER" &&
+      isMissingFinishedGoodsWarehouseColumn(error)
+    ) {
+      throw new Error(
+        "Finished goods warehouse managers require the latest database migration. Run Prisma migrate/db push first.",
+      );
+    }
+
+    throw error;
+  }
 
   revalidatePath("/settings/users");
 }

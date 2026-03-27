@@ -1,6 +1,7 @@
+import { redirect } from "next/navigation";
 import { requirePagePermission } from "@/lib/auth";
+import { resolveFinishedGoodsWarehouseForUser } from "@/lib/auth";
 import { getDateOnlySearchParam, getMatchingOptionValue, getTrimmedSearchParam } from "@/lib/drilldowns";
-import { FINISHED_GOODS_WAREHOUSE_CODE } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { quantityToNumber } from "@/lib/quantities";
 import { StockHistoryClient } from "./stock-history-client";
@@ -21,33 +22,57 @@ function getFinishedGoodLabel(good: { name: string; diameterValue: number | null
   return diameter ? `${good.name} (${diameter})` : good.name;
 }
 
-export default async function FinishedGoodsHistoryPage({ searchParams }: { searchParams: SearchParams }) {
-  await requirePagePermission("finished_goods_history:view");
+function resolveWarehouseCode(searchParams: Record<string, string | string[] | undefined>) {
+  const requested = Array.isArray(searchParams.warehouse) ? searchParams.warehouse[0] : searchParams.warehouse;
+  return requested?.trim() ?? undefined;
+}
 
-  const [activities, finishedGoods, users] = await Promise.all([
+export default async function FinishedGoodsHistoryPage({ searchParams }: { searchParams: SearchParams }) {
+  const user = await requirePagePermission("finished_goods_history:view");
+  const resolvedSearchParams = await searchParams;
+  const warehouseCode = resolveFinishedGoodsWarehouseForUser(
+    user,
+    resolveWarehouseCode(resolvedSearchParams),
+  );
+
+  if (!warehouseCode) {
+    redirect("/login");
+  }
+
+  const [activities, finishedGoods] = await Promise.all([
     prisma.finishedGoodActivityLog.findMany({
-      where: { warehouseCode: FINISHED_GOODS_WAREHOUSE_CODE },
+      where: { warehouseCode },
       orderBy: { createdAt: "desc" },
-      take: 500,
       include: {
         finishedGood: { select: { id: true, name: true, baseUnit: true, diameterValue: true, diameterUnit: true } },
         performedBy: { select: { name: true } },
       },
     }),
     prisma.finishedGood.findMany({
-      where: { warehouseCode: FINISHED_GOODS_WAREHOUSE_CODE },
-      select: { id: true, name: true, diameterValue: true, diameterUnit: true },
+      where: { warehouseCode },
+      select: {
+        id: true,
+        name: true,
+        baseUnit: true,
+        currentStock: true,
+        createdAt: true,
+        updatedAt: true,
+        diameterValue: true,
+        diameterUnit: true,
+      },
       orderBy: [{ name: "asc" }, { diameterValue: "asc" }],
     }),
-    prisma.user.findMany({ select: { name: true }, orderBy: { name: "asc" } }),
   ]);
 
-  const resolvedSearchParams = await searchParams;
   const goodOptions = finishedGoods.map((g) => ({
     id: g.id,
     label: getFinishedGoodLabel(g),
+    baseUnit: g.baseUnit,
+    currentStock: quantityToNumber(g.currentStock),
+    createdAt: g.createdAt.toISOString(),
+    updatedAt: g.updatedAt.toISOString(),
   }));
-  const userNames = users.map((u) => u.name);
+  const userNames = [...new Set(activities.map((activity) => activity.performedBy?.name || "System"))].sort();
   const activityTypes = [...new Set(activities.map((a) => a.activityType))];
 
   const initialGoodFilter = getMatchingOptionValue(goodOptions.map((g) => g.id), resolvedSearchParams.good);
@@ -59,7 +84,7 @@ export default async function FinishedGoodsHistoryPage({ searchParams }: { searc
   const initialFromDate = getDateOnlySearchParam(resolvedSearchParams.from);
   const initialToDate = getDateOnlySearchParam(resolvedSearchParams.to);
 
-  const clientKey = [initialGoodFilter, initialTypeFilter, initialUserFilter, initialFromDate, initialToDate].join("|");
+  const clientKey = [warehouseCode, initialGoodFilter, initialTypeFilter, initialUserFilter, initialFromDate, initialToDate].join("|");
 
   const data = activities.map((a) => ({
     id: a.id,
@@ -80,7 +105,7 @@ export default async function FinishedGoodsHistoryPage({ searchParams }: { searc
     <StockHistoryClient
       key={clientKey}
       activities={data}
-      warehouseCode={FINISHED_GOODS_WAREHOUSE_CODE}
+      warehouseCode={warehouseCode}
       finishedGoods={goodOptions}
       users={userNames}
       initialGoodFilter={initialGoodFilter}

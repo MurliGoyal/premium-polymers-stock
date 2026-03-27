@@ -11,6 +11,7 @@ datasource db {
 enum Role {
   MANAGER
   STOCK_MANAGEMENT
+  FINISHED_GOODS_MANAGER
   VIEWER
 }
 
@@ -56,6 +57,7 @@ model User {
   email        String   @unique
   passwordHash String   @map("password_hash")
   role         Role     @default(VIEWER)
+  finishedGoodsWarehouseCode String? @map("finished_goods_warehouse_code")
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")

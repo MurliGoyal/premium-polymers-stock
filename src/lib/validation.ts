@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MATERIAL_UNITS, SIZE_UNITS, THICKNESS_UNITS } from "@/lib/constants";
+import { FINISHED_GOODS_WAREHOUSE_CODES, MATERIAL_UNITS, SIZE_UNITS, THICKNESS_UNITS } from "@/lib/constants";
 import { collapseWhitespace } from "@/lib/naming";
 
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F]/;
@@ -153,5 +153,22 @@ export const createUserSchema = z.object({
     .string({ error: "Password is required" })
     .min(6, "Password must be at least 6 characters")
     .max(120, "Password must be 120 characters or less"),
-  role: z.enum(["MANAGER", "STOCK_MANAGEMENT", "VIEWER"], { error: "Select a valid role" }),
+  role: z.enum(["MANAGER", "STOCK_MANAGEMENT", "FINISHED_GOODS_MANAGER", "VIEWER"], { error: "Select a valid role" }),
+  finishedGoodsWarehouseCode: z
+    .string()
+    .trim()
+    .transform((value) => (value.length ? value.toUpperCase() : undefined))
+    .refine(
+      (value) => value === undefined || FINISHED_GOODS_WAREHOUSE_CODES.includes(value as (typeof FINISHED_GOODS_WAREHOUSE_CODES)[number]),
+      "Select a valid finished goods warehouse"
+    )
+    .optional(),
+}).superRefine((value, context) => {
+  if (value.role === "FINISHED_GOODS_MANAGER" && !value.finishedGoodsWarehouseCode) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["finishedGoodsWarehouseCode"],
+      message: "Select a finished goods warehouse",
+    });
+  }
 });

@@ -2,6 +2,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PageTransition } from "@/components/layout/page-transition";
 import { getServerAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 
 export default async function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -11,10 +12,12 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
     redirect("/login");
   }
 
-  const warehouses = await prisma.warehouse.findMany({
-    orderBy: { code: "asc" },
-    select: { code: true, name: true, slug: true },
-  });
+  const warehouses = hasPermission(session.user.role, "raw_materials:view")
+    ? await prisma.warehouse.findMany({
+        orderBy: { code: "asc" },
+        select: { code: true, name: true, slug: true },
+      })
+    : [];
 
   const normalizedName =
     session.user.name?.trim() ||

@@ -60,6 +60,10 @@ export function CommandPalette({
   );
 
   const warehouseCommands = useMemo(() => {
+    if (!hasPermission(role, "raw_materials:view")) {
+      return [];
+    }
+
     const items: CommandItem[] = [];
 
     warehouses.forEach((warehouse) => {

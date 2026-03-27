@@ -49,4 +49,25 @@ export const HISTORY_PAGE_SIZE = 12;
 export const WAREHOUSE_MATERIAL_PAGE_SIZE = 10;
 export const FINISHED_GOODS_PAGE_SIZE = 12;
 
-export const FINISHED_GOODS_WAREHOUSE_CODE = "F-12";
+export const FINISHED_GOODS_WAREHOUSE_CATALOG = [
+  {
+    code: "F-12",
+    slug: "f-12",
+    name: "Warehouse F-12",
+    subtitle: "Primary production and dispatch staging",
+    gradient: "from-amber-500/18 via-orange-500/10 to-transparent",
+  },
+  {
+    code: "E-221",
+    slug: "e-221",
+    name: "Warehouse E-221",
+    subtitle: "Finished rolls and reserve dispatch storage",
+    gradient: "from-rose-500/18 via-pink-500/10 to-transparent",
+  },
+] as const;
+
+export const FINISHED_GOODS_WAREHOUSES = FINISHED_GOODS_WAREHOUSE_CATALOG;
+
+export const FINISHED_GOODS_WAREHOUSE_CODES = FINISHED_GOODS_WAREHOUSES.map((warehouse) => warehouse.code);
+export const DEFAULT_FINISHED_GOODS_WAREHOUSE_CODE = FINISHED_GOODS_WAREHOUSES[0].code;
+export const FINISHED_GOODS_WAREHOUSE_CODE = DEFAULT_FINISHED_GOODS_WAREHOUSE_CODE;

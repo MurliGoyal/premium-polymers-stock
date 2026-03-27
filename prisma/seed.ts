@@ -55,19 +55,21 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log("🌱 Seeding database...");
   const stockManagementRole = "STOCK_MANAGEMENT" as Role;
+  const finishedGoodsManagerRole = "FINISHED_GOODS_MANAGER" as Role;
 
   // ─── Users ──────────────────────────────────────────────────
   const passwordHash = await bcrypt.hash("admin123", 12);
 
   const manager = await prisma.user.upsert({
     where: { email: "manager@premiumpolymers.com" },
-    update: {},
-    create: { name: "Ravi Manager", email: "manager@premiumpolymers.com", passwordHash, role: Role.MANAGER },
+    update: { finishedGoodsWarehouseCode: null, isActive: true },
+    create: { name: "Ravi Manager", email: "manager@premiumpolymers.com", passwordHash, role: Role.MANAGER, finishedGoodsWarehouseCode: null },
   });
 
   const stockManager = await prisma.user.upsert({
     where: { email: "stock@premiumpolymers.com" },
     update: {
+      finishedGoodsWarehouseCode: null,
       role: stockManagementRole,
       isActive: true,
     },
@@ -76,12 +78,14 @@ async function main() {
       email: "stock@premiumpolymers.com",
       passwordHash,
       role: stockManagementRole,
+      finishedGoodsWarehouseCode: null,
     },
   });
 
   await prisma.user.upsert({
     where: { email: "operator@premiumpolymers.com" },
     update: {
+      finishedGoodsWarehouseCode: null,
       role: stockManagementRole,
       isActive: true,
     },
@@ -90,18 +94,53 @@ async function main() {
       email: "operator@premiumpolymers.com",
       passwordHash,
       role: stockManagementRole,
+      finishedGoodsWarehouseCode: null,
     },
   });
 
   await prisma.user.upsert({
     where: { email: "viewer@premiumpolymers.com" },
-    update: {},
-    create: { name: "Priya Viewer", email: "viewer@premiumpolymers.com", passwordHash, role: Role.VIEWER },
+    update: { finishedGoodsWarehouseCode: null, isActive: true },
+    create: { name: "Priya Viewer", email: "viewer@premiumpolymers.com", passwordHash, role: Role.VIEWER, finishedGoodsWarehouseCode: null },
   });
 
   console.log("  ✅ Users seeded");
 
   // ─── Warehouses ─────────────────────────────────────────────
+  await prisma.user.upsert({
+    where: { email: "f12.manager@premiumpolymers.com" },
+    update: {
+      finishedGoodsWarehouseCode: "F-12",
+      isActive: true,
+      role: finishedGoodsManagerRole,
+    },
+    create: {
+      name: "F-12 Manager",
+      email: "f12.manager@premiumpolymers.com",
+      passwordHash,
+      role: finishedGoodsManagerRole,
+      isActive: true,
+      finishedGoodsWarehouseCode: "F-12",
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: "e221.manager@premiumpolymers.com" },
+    update: {
+      finishedGoodsWarehouseCode: "E-221",
+      isActive: true,
+      role: finishedGoodsManagerRole,
+    },
+    create: {
+      name: "E-221 Manager",
+      email: "e221.manager@premiumpolymers.com",
+      passwordHash,
+      role: finishedGoodsManagerRole,
+      isActive: true,
+      finishedGoodsWarehouseCode: "E-221",
+    },
+  });
+
   const warehouseE219 = await prisma.warehouse.upsert({
     where: { code: "E-219" },
     update: {},
@@ -112,6 +151,12 @@ async function main() {
     where: { code: "F-11" },
     update: {},
     create: { code: "F-11", name: "Warehouse F-11 (Secondary)", slug: "f-11" },
+  });
+
+  await prisma.warehouse.upsert({
+    where: { code: "E-221" },
+    update: {},
+    create: { code: "E-221", name: "Warehouse E-221 (Finished Goods)", slug: "e-221" },
   });
 
   console.log("  ✅ Warehouses seeded");
