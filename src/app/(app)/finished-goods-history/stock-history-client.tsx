@@ -765,7 +765,7 @@ export function StockHistoryClient({
                         </div>
                         <div className="text-right">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Change</p>
-                          <p className={activity.quantityChange < 0 ? "mt-1 text-lg font-semibold text-red-300" : "mt-1 text-lg font-semibold text-emerald-300"}>
+                          <p className={cn("numeric-polished mt-1 text-lg font-semibold", activity.quantityChange < 0 ? "text-red-300" : "text-emerald-300")}>
                             {activity.quantityChange > 0 ? "+" : ""}
                             {formatNumber(activity.quantityChange)}
                             <span className="ml-1 text-xs text-muted-foreground">{activity.goodUnit}</span>
@@ -775,11 +775,11 @@ export function StockHistoryClient({
                       <div className="grid grid-cols-2 gap-3">
                         <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
                           <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Before</p>
-                          <p className="mt-2 font-medium">{formatNumber(activity.previousStock)}</p>
+                          <p className="numeric-polished mt-2 font-medium">{formatNumber(activity.previousStock)}</p>
                         </div>
                         <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
                           <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">After</p>
-                          <p className="mt-2 font-medium">{formatNumber(activity.newStock)}</p>
+                          <p className="numeric-polished mt-2 font-medium">{formatNumber(activity.newStock)}</p>
                         </div>
                       </div>
                       <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3 text-sm text-muted-foreground sm:rounded-[22px]">
@@ -813,15 +813,15 @@ export function StockHistoryClient({
                             {getActivityLabel(activity.activityType)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{formatNumber(activity.previousStock)}</TableCell>
+                        <TableCell className="numeric-polished text-xs text-muted-foreground">{formatNumber(activity.previousStock)}</TableCell>
                         <TableCell>
-                          <span className={activity.quantityChange < 0 ? "font-semibold text-red-300" : "font-semibold text-emerald-300"}>
+                          <span className={cn("numeric-polished font-semibold", activity.quantityChange < 0 ? "text-red-300" : "text-emerald-300")}>
                             {activity.quantityChange > 0 ? "+" : ""}
                             {formatNumber(activity.quantityChange)}
                           </span>
                           <span className="ml-1 text-xs text-muted-foreground">{activity.goodUnit}</span>
                         </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{formatNumber(activity.newStock)}</TableCell>
+                        <TableCell className="numeric-polished text-xs text-muted-foreground">{formatNumber(activity.newStock)}</TableCell>
                         <TableCell className="max-w-[220px] truncate text-sm text-muted-foreground">{activity.notes || "-"}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{activity.performedBy}</TableCell>
                         <TableCell className="whitespace-nowrap text-sm text-muted-foreground">{formatDateTime(activity.createdAt)}</TableCell>
@@ -906,7 +906,7 @@ function MetricCard({
         </div>
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{label}</p>
-          <p className="mt-2 truncate text-xl font-semibold sm:text-2xl">{value}</p>
+          <p className="numeric-polished mt-2 truncate text-xl font-semibold sm:text-2xl">{value}</p>
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{meta}</p>
         </div>
       </CardContent>

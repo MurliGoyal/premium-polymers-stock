@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { HISTORY_PAGE_SIZE } from "@/lib/constants";
-import { formatDateTime, formatNumber, getActivityColor, getActivityLabel, getStatusLabel } from "@/lib/utils";
+import { cn, formatDateTime, formatNumber, getActivityColor, getActivityLabel, getStatusLabel } from "@/lib/utils";
 
 type ActivityRecord = {
   id: string;
@@ -358,13 +358,14 @@ export function MaterialHistoryClient({
                       <div className="text-right">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Change</p>
                         <p
-                          className={
+                          className={cn(
+                            "numeric-polished mt-1 text-lg font-semibold",
                             activity.quantityChange === null
-                              ? "mt-1 text-lg font-semibold"
+                              ? ""
                               : activity.quantityChange < 0
-                                ? "mt-1 text-lg font-semibold text-red-300"
-                                : "mt-1 text-lg font-semibold text-emerald-300"
-                          }
+                                ? "text-red-300"
+                                : "text-emerald-300",
+                          )}
                         >
                           {activity.quantityChange !== null
                             ? `${activity.quantityChange > 0 ? "+" : ""}${formatNumber(activity.quantityChange)}`
@@ -422,15 +423,15 @@ export function MaterialHistoryClient({
                           {getActivityLabel(activity.activityType)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
+                      <TableCell className="numeric-polished text-xs text-muted-foreground">
                         {extractStock(activity.beforeSnapshot)}
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
+                      <TableCell className="numeric-polished text-xs text-muted-foreground">
                         {extractStock(activity.afterSnapshot)}
                       </TableCell>
                       <TableCell>
                         {activity.quantityChange !== null ? (
-                          <span className={activity.quantityChange < 0 ? "font-semibold text-red-300" : "font-semibold text-emerald-300"}>
+                          <span className={cn("numeric-polished font-semibold", activity.quantityChange < 0 ? "text-red-300" : "text-emerald-300")}>
                             {activity.quantityChange > 0 ? "+" : ""}
                             {formatNumber(activity.quantityChange)}
                           </span>
@@ -488,7 +489,7 @@ export function MaterialHistoryClient({
 
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Quantity affected</p>
-                <p className="mt-2 text-lg font-semibold">
+                <p className="numeric-polished mt-2 text-lg font-semibold">
                   {selectedActivity.quantityChange !== null ? formatNumber(selectedActivity.quantityChange) : "-"}
                 </p>
               </div>
@@ -514,7 +515,7 @@ function DetailBlock({
   return (
     <div className={compact ? "rounded-[20px] border border-white/8 bg-white/[0.03] p-3" : undefined}>
       <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
-      <p className={accent ? "mt-2 font-semibold text-primary" : "mt-2 font-medium"}>{value}</p>
+      <p className={cn("numeric-polished-soft mt-2", accent ? "font-semibold text-primary" : "font-medium")}>{value}</p>
     </div>
   );
 }
@@ -574,7 +575,7 @@ function SnapshotValue({
   return (
     <div className="rounded-[20px] border border-white/8 bg-black/10 p-3">
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
-      <p className={`mt-2 text-sm ${changed && label === "After" ? "font-semibold text-primary" : "font-medium"}`}>{value}</p>
+      <p className={cn("numeric-polished-soft mt-2 text-sm", changed && label === "After" ? "font-semibold text-primary" : "font-medium")}>{value}</p>
     </div>
   );
 }

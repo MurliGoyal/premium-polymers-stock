@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TRANSFER_PAGE_SIZE } from "@/lib/constants";
-import { formatDateTime, formatNumber } from "@/lib/utils";
+import { cn, formatDateTime, formatNumber } from "@/lib/utils";
 
 type TransferRecord = {
   id: string;
@@ -348,7 +348,7 @@ export function TransferHistoryClient({
                         </div>
                         <div className="surface-subtle self-start rounded-[18px] px-3 py-2 text-left sm:self-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-right sm:shadow-none">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Quantity</p>
-                          <p className="mt-1 text-2xl font-semibold text-amber-300">
+                          <p className="numeric-polished mt-1 text-2xl font-semibold text-amber-300">
                             -{formatNumber(transfer.quantity)}
                             <span className="ml-1 text-sm font-medium text-muted-foreground">{transfer.unit}</span>
                           </p>
@@ -399,7 +399,7 @@ export function TransferHistoryClient({
                       <TableCell className="font-medium">{transfer.materialName}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{transfer.category}</TableCell>
                       <TableCell>
-                        <span className="font-semibold text-amber-300">-{formatNumber(transfer.quantity)}</span>
+                        <span className="numeric-polished font-semibold text-amber-300">-{formatNumber(transfer.quantity)}</span>
                         <span className="ml-1 text-xs text-muted-foreground">{transfer.unit}</span>
                       </TableCell>
                       <TableCell>{transfer.recipientName}</TableCell>
@@ -500,7 +500,7 @@ function DetailBlock({
   return (
     <div className={compact ? "rounded-[20px] border border-white/8 bg-white/[0.03] p-3" : undefined}>
       <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
-      <p className={accent ? "mt-2 font-semibold text-primary" : "mt-2 font-medium"}>{value}</p>
+      <p className={cn("numeric-polished-soft mt-2", accent ? "font-semibold text-primary" : "font-medium")}>{value}</p>
     </div>
   );
 }

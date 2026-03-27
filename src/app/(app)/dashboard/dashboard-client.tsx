@@ -689,7 +689,7 @@ function MetricCard({
             <Icon className="h-4 w-4" />
           </IconChip>
         </div>
-        <p className="text-[clamp(1.75rem,7vw,2.55rem)] font-semibold tracking-[-0.04em]">{formatNumber(value)}</p>
+        <p className="numeric-polished text-[clamp(1.75rem,7vw,2.55rem)] font-semibold tracking-[-0.04em]">{formatNumber(value)}</p>
       </CardContent>
     </Card>
   );
@@ -726,7 +726,7 @@ function MetricPill({
   const content = (
     <div className="rounded-[18px] border border-white/8 bg-white/[0.03] p-3 sm:rounded-[20px]">
       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
-      <p className={`mt-2 text-base font-semibold sm:text-lg ${tones[tone]}`}>{value}</p>
+      <p className={`numeric-polished mt-2 text-base font-semibold sm:text-lg ${tones[tone]}`}>{value}</p>
     </div>
   );
 
@@ -759,7 +759,7 @@ function InsightTile({
   const content = (
     <div className="rounded-[18px] border border-white/8 bg-white/[0.03] px-3 py-3 sm:rounded-[20px]">
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
-      <p className={cn("mt-2 font-semibold", compact ? "text-sm" : "text-base")}>{value}</p>
+      <p className={cn("numeric-polished mt-2 font-semibold", compact ? "text-sm" : "text-base")}>{value}</p>
     </div>
   );
 

@@ -667,7 +667,7 @@ export function WarehouseDetailClient({
                           <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                             Stock
                           </p>
-                          <p className="mt-1 text-2xl font-semibold">
+                          <p className="numeric-polished mt-1 text-2xl font-semibold">
                             {formatQuantity(
                               material.currentStock,
                               material.baseUnit,
@@ -848,18 +848,19 @@ export function WarehouseDetailClient({
                         </TableCell>
                         <TableCell>
                           <span
-                            className={
+                            className={cn(
+                              "numeric-polished font-semibold",
                               material.status === "OUT_OF_STOCK"
-                                ? "font-semibold text-red-300"
+                                ? "text-red-300"
                                 : material.status === "LOW_STOCK"
-                                  ? "font-semibold text-amber-300"
-                                  : "font-semibold"
-                            }
+                                  ? "text-amber-300"
+                                  : "",
+                            )}
                           >
                             {formatNumber(material.currentStock)}
                           </span>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="numeric-polished text-sm text-muted-foreground">
                           {formatNumber(material.minimumStock)}
                         </TableCell>
                         <TableCell>
@@ -1077,7 +1078,7 @@ function InfoPill({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         {label}
       </p>
-      <p className="mt-2 text-sm font-medium">{value}</p>
+      <p className="numeric-polished-soft mt-2 text-sm font-medium">{value}</p>
     </div>
   );
 }
@@ -1117,7 +1118,7 @@ function MetricCard({
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground sm:text-[11px]">
             {label}
           </p>
-          <p className="mt-1.5 truncate text-xl font-semibold sm:mt-2 sm:text-2xl">
+          <p className="numeric-polished mt-1.5 truncate text-xl font-semibold sm:mt-2 sm:text-2xl">
             {value}
           </p>
         </div>

@@ -309,21 +309,21 @@ export function TransferClient({ warehouse, materials, recipients: initialRecipi
                 <div className="grid gap-4 md:grid-cols-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Available stock</p>
-                  <p className="mt-2 text-2xl font-semibold">
+                  <p className="numeric-polished mt-2 text-2xl font-semibold">
                     {formatNumber(selectedMaterial.currentStock)}{" "}
                     <span className="text-base font-normal text-muted-foreground">{selectedMaterial.baseUnit}</span>
                   </p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Minimum stock</p>
-                  <p className="mt-2 text-lg font-semibold">
+                  <p className="numeric-polished mt-2 text-lg font-semibold">
                     {formatNumber(selectedMaterial.minimumStock)}{" "}
                     <span className="text-sm font-normal text-muted-foreground">{selectedMaterial.baseUnit}</span>
                   </p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Projected balance</p>
-                  <p className="mt-2 text-lg font-semibold">
+                  <p className="numeric-polished mt-2 text-lg font-semibold">
                     {projectedBalance !== null && Number.isFinite(projectedBalance)
                       ? `${formatNumber(projectedBalance)} ${selectedMaterial.baseUnit}`
                       : `Waiting for quantity`}

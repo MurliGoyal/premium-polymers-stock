@@ -362,11 +362,11 @@ export function FinishedGoodsClient({ canManage, data }: { canManage: boolean; d
 
 function MetricCard({ className, icon: Icon, label, tone = "default", value }: { className?: string; icon: React.ComponentType<{ className?: string }>; label: string; tone?: "default" | "emerald" | "amber" | "red" | "blue"; value: number | string }) {
   const toneClasses: Record<string, string> = { default: "bg-primary/16 text-primary", emerald: "bg-emerald-500/14 text-emerald-300", amber: "bg-amber-500/14 text-amber-300", red: "bg-red-500/14 text-red-300", blue: "bg-sky-500/14 text-sky-300" };
-  return <Card className={cn("rounded-2xl sm:rounded-[24px]", className)}><CardContent className="flex min-h-[110px] items-center gap-2.5 sm:min-h-[132px] sm:gap-3"><div className={`flex h-10 w-10 items-center justify-center rounded-[16px] sm:h-12 sm:w-12 sm:rounded-2xl ${toneClasses[tone]}`}><Icon className="h-4 w-4 sm:h-5 sm:w-5" /></div><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground sm:text-[11px]">{label}</p><p className="mt-1.5 truncate text-xl font-semibold sm:mt-2 sm:text-2xl">{value}</p></div></CardContent></Card>;
+  return <Card className={cn("rounded-2xl sm:rounded-[24px]", className)}><CardContent className="flex min-h-[110px] items-center gap-2.5 sm:min-h-[132px] sm:gap-3"><div className={`flex h-10 w-10 items-center justify-center rounded-[16px] sm:h-12 sm:w-12 sm:rounded-2xl ${toneClasses[tone]}`}><Icon className="h-4 w-4 sm:h-5 sm:w-5" /></div><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground sm:text-[11px]">{label}</p><p className="numeric-polished mt-1.5 truncate text-xl font-semibold sm:mt-2 sm:text-2xl">{value}</p></div></CardContent></Card>;
 }
 
 function InfoPill({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3"><p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</p><p className="mt-2 text-sm font-medium">{value}</p></div>;
+  return <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3"><p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</p><p className="numeric-polished-soft mt-2 text-sm font-medium">{value}</p></div>;
 }
 
 function formatDiameter(value: number | null, unit: string | null) {

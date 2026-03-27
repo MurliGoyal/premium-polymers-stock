@@ -255,7 +255,7 @@ function MetricCell({
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-2.5 backdrop-blur-sm transition-all hover:scale-[1.02] hover:bg-white/[0.06] sm:rounded-[20px] sm:p-3">
       <div className="flex items-center justify-between gap-2 sm:gap-3">
-        <p className="text-lg font-semibold sm:text-xl">{value}</p>
+        <p className="numeric-polished text-lg font-semibold sm:text-xl">{value}</p>
         <div className={`h-2 w-8 rounded-full sm:h-2.5 sm:w-10 ${tones[tone]}`} />
       </div>
       <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:mt-2 sm:text-[11px]">{label}</p>
@@ -285,7 +285,7 @@ function DetailStat({
   return (
     <div className={cn("rounded-2xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur-sm transition-all hover:scale-[1.02] hover:bg-white/[0.06] sm:rounded-[22px] sm:p-4", className)}>
       <Icon className="h-4 w-4 text-muted-foreground" />
-      <p className={`mt-2 text-base font-semibold sm:mt-3 sm:text-xl ${accents[accent]}`}>{value}</p>
+      <p className={`numeric-polished mt-2 text-base font-semibold sm:mt-3 sm:text-xl ${accents[accent]}`}>{value}</p>
       <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:mt-1 sm:text-[11px]">{label}</p>
     </div>
   );

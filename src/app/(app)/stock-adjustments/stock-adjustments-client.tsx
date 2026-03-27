@@ -318,7 +318,7 @@ export function StockAdjustmentsClient({
                       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                         Current stock
                       </p>
-                      <p className="mt-1 text-2xl font-semibold">
+                      <p className="numeric-polished mt-1 text-2xl font-semibold">
                         {formatNumber(material.currentStock)}{" "}
                         <span className="text-sm font-normal text-muted-foreground">{material.baseUnit}</span>
                       </p>
@@ -340,7 +340,7 @@ export function StockAdjustmentsClient({
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Min: {formatNumber(material.minimumStock)} {material.baseUnit}
+                    Min: <span className="numeric-polished-soft">{formatNumber(material.minimumStock)}</span> {material.baseUnit}
                   </p>
                 </CardContent>
               </Card>
@@ -415,7 +415,7 @@ export function StockAdjustmentsClient({
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                     New stock after adjustment
                   </p>
-                  <p className="mt-1 text-xl font-semibold">
+                  <p className="numeric-polished mt-1 text-xl font-semibold">
                     {formatNumber(previewNewStock)} {selectedMaterial.baseUnit}
                   </p>
                 </div>

@@ -154,6 +154,8 @@
     overflow-x: hidden;
     overscroll-behavior-x: none;
     font-family: var(--font-plus-jakarta-sans), system-ui, -apple-system, sans-serif;
+    font-variant-numeric: lining-nums proportional-nums;
+    text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-image:
@@ -275,6 +277,20 @@
 }
 
 @layer utilities {
+  .numeric-polished {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
+    font-kerning: normal;
+    letter-spacing: -0.02em;
+  }
+
+  .numeric-polished-soft {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
+    font-kerning: normal;
+    letter-spacing: -0.01em;
+  }
+
   .surface-panel {
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0)),
