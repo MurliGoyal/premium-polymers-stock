@@ -679,10 +679,10 @@ export function StockAdjustmentsClient({
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {filteredMaterials.map((material) => (
               <Card key={material.id} className="rounded-2xl sm:rounded-[24px]">
-                <CardContent className="space-y-3">
+                <CardContent className="flex flex-col gap-3 pt-4 pb-3 px-4">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-base font-semibold">{material.name}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold leading-tight">{material.name}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {material.warehouseCodes.join(", ")} · {material.category}
                       </p>
@@ -691,41 +691,44 @@ export function StockAdjustmentsClient({
                       {getStatusLabel(material.status)}
                     </Badge>
                   </div>
-                  <div className="flex items-end justify-between gap-2">
+
+                  <div className="grid gap-2">
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
                         Current stock
                       </p>
-                      <p className="numeric-polished mt-1 text-2xl font-semibold">
+                      <p className="numeric-polished text-xl font-bold">
                         {formatNumber(material.currentStock)}{" "}
-                        <span className="text-sm font-normal text-muted-foreground">{material.baseUnit}</span>
+                        <span className="text-xs font-normal text-muted-foreground">{material.baseUnit}</span>
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" onClick={() => canManage && openAdjust(material)} disabled={!canManage}>
-                        <SlidersHorizontal className="mr-1 h-3.5 w-3.5" />
-                        {canManage ? "Adjust" : "View"}
-                      </Button>
-                      {canTransfer ? (
-                        <Button size="sm" variant="outline" onClick={() => openTransfer(material)}>
-                          <ArrowRightLeft className="mr-1 h-3.5 w-3.5" />
-                          Transfer
-                        </Button>
-                      ) : null}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => canEditMaterials && openEditSpecifications(material)}
-                        disabled={!canEditMaterials}
-                      >
-                        <Pencil className="mr-1 h-3.5 w-3.5" />
-                        Edit
-                      </Button>
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Min: <span className="numeric-polished-soft text-xs font-medium">{formatNumber(material.minimumStock)}</span> {material.baseUnit}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Min: <span className="numeric-polished-soft">{formatNumber(material.minimumStock)}</span> {material.baseUnit}
-                  </p>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button size="sm" onClick={() => canManage && openAdjust(material)} disabled={!canManage} className="flex-1 h-8">
+                      <SlidersHorizontal className="mr-1 h-3.5 w-3.5" />
+                      <span className="text-xs">{canManage ? "Adjust" : "View"}</span>
+                    </Button>
+                    {canTransfer ? (
+                      <Button size="sm" variant="outline" onClick={() => openTransfer(material)} className="flex-1 h-8">
+                        <ArrowRightLeft className="mr-1 h-3.5 w-3.5" />
+                        <span className="text-xs">Transfer</span>
+                      </Button>
+                    ) : null}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => canEditMaterials && openEditSpecifications(material)}
+                      disabled={!canEditMaterials}
+                      className="flex-1 h-8"
+                    >
+                      <Pencil className="mr-1 h-3.5 w-3.5" />
+                      <span className="text-xs">Edit</span>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
