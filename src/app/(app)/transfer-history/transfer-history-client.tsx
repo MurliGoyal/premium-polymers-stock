@@ -33,6 +33,10 @@ type TransferRecord = {
   materialSnapshot: Record<string, unknown> | null;
 };
 
+function isBulkReference(referenceNumber: string | null) {
+  return Boolean(referenceNumber && referenceNumber.toUpperCase().startsWith("BULK-"));
+}
+
 function parseDateBoundary(dateInput: string, endOfDay = false) {
   if (!dateInput || !/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
     return null;
@@ -360,6 +364,10 @@ export function TransferHistoryClient({
                         <DetailBlock label="Created by" value={transfer.createdBy} compact />
                       </div>
 
+                      {isBulkReference(transfer.referenceNumber) ? (
+                        <Badge variant="outline">Bulk batch</Badge>
+                      ) : null}
+
                       <div className="rounded-[20px] border border-white/10 bg-white/[0.03] p-3 text-sm text-muted-foreground backdrop-blur-sm transition-all hover:bg-white/[0.05]">
                         {formatDateTime(transfer.createdAt)}
                       </div>
@@ -391,7 +399,10 @@ export function TransferHistoryClient({
                       onClick={() => setSelectedTransfer(transfer)}
                     >
                       <TableCell className="font-mono text-xs text-muted-foreground">
-                        {transfer.referenceNumber || transfer.id.slice(0, 8)}
+                        <div className="flex items-center gap-2">
+                          <span>{transfer.referenceNumber || transfer.id.slice(0, 8)}</span>
+                          {isBulkReference(transfer.referenceNumber) ? <Badge variant="outline">Bulk</Badge> : null}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{transfer.warehouseCode}</Badge>
@@ -428,7 +439,10 @@ export function TransferHistoryClient({
         <SheetContent className="w-full sm:max-w-xl">
           <SheetHeader>
             <SheetTitle>Transfer detail</SheetTitle>
-            <SheetDescription>{selectedTransfer?.referenceNumber || selectedTransfer?.id.slice(0, 8)}</SheetDescription>
+            <SheetDescription>
+              <span>{selectedTransfer?.referenceNumber || selectedTransfer?.id.slice(0, 8)}</span>
+              {isBulkReference(selectedTransfer?.referenceNumber ?? null) ? <span> • Bulk batch item</span> : null}
+            </SheetDescription>
           </SheetHeader>
           {selectedTransfer ? (
             <div className="mt-6 space-y-5">

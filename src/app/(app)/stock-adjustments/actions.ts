@@ -26,7 +26,7 @@ function revalidateViews(warehouseSlug: string) {
 export async function getStockAdjustmentData() {
   await assertServerPermission("stock_adjustments:view");
 
-  const [warehouses, materials] = await Promise.all([
+  const [warehouses, materials, recipients] = await Promise.all([
     prisma.warehouse.findMany({
       select: { id: true, code: true, name: true, slug: true },
       orderBy: { code: "asc" },
@@ -52,10 +52,15 @@ export async function getStockAdjustmentData() {
       },
       orderBy: { name: "asc" },
     }),
+    prisma.recipient.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   return {
     warehouses,
+    recipients,
     materials: materials.map((m) => ({
       id: m.id,
       name: m.name,

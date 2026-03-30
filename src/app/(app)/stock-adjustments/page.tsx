@@ -10,9 +10,11 @@ export default async function StockAdjustmentsPage() {
   return (
     <StockAdjustmentsClient
       warehouses={data.warehouses}
+      recipients={data.recipients}
       materials={data.materials}
       canManage={hasPermission(user.role, "stock_adjustments:manage")}
       canEditMaterials={hasPermission(user.role, "raw_materials:edit")}
+      canTransfer={hasPermission(user.role, "transfers:create")}
     />
   );
 }
