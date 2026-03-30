@@ -35,6 +35,7 @@ export async function getStockAdjustmentData() {
       select: {
         id: true,
         name: true,
+        normalizedName: true,
         warehouseId: true,
         currentStock: true,
         minimumStock: true,
@@ -64,6 +65,7 @@ export async function getStockAdjustmentData() {
     materials: materials.map((m) => ({
       id: m.id,
       name: m.name,
+      normalizedName: m.normalizedName,
       warehouseId: m.warehouseId,
       warehouseCode: m.warehouse.code,
       currentStock: quantityToNumber(m.currentStock),

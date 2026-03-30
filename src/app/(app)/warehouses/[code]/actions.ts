@@ -445,7 +445,7 @@ export async function deleteRawMaterial(payload: {
 }
 
 export async function performTransfer(payload: unknown): Promise<TransferActionResult> {
-  const user = await assertServerPermission("transfers:create");
+  const user = await assertAnyServerPermission(["transfers:create", "stock_adjustments:manage"]);
   const data = transferFormSchema.parse(payload);
   const requestedQuantity = toDecimal(data.quantity);
 

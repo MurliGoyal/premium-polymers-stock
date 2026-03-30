@@ -29,6 +29,7 @@ import { adjustStock, updateRawMaterialSpecifications } from "./actions";
 type MaterialItem = {
   id: string;
   name: string;
+  normalizedName: string | null;
   warehouseId: string;
   warehouseCode: string;
   currentStock: number;
@@ -153,15 +154,17 @@ export function StockAdjustmentsClient({
     const grouped = new Map<string, MaterialItem[]>();
 
     for (const material of materials) {
-      const key = buildRawMaterialNormalizedKey({
-        name: material.name,
-        thicknessValue: material.thicknessValue,
-        thicknessUnit: material.thicknessUnit,
-        sizeValue: material.sizeValue,
-        sizeUnit: material.sizeUnit,
-        gsm: material.gsm,
-        micron: material.micron,
-      });
+      const key =
+        material.normalizedName ??
+        buildRawMaterialNormalizedKey({
+          name: material.name,
+          thicknessValue: material.thicknessValue,
+          thicknessUnit: material.thicknessUnit,
+          sizeValue: material.sizeValue,
+          sizeUnit: material.sizeUnit,
+          gsm: material.gsm,
+          micron: material.micron,
+        });
       const existing = grouped.get(key);
       if (existing) {
         existing.push(material);

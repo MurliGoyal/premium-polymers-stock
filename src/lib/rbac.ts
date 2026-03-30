@@ -43,6 +43,11 @@ const rolePermissions: Record<string, Permission[]> = {
   STOCK_MANAGEMENT: [
     "warehouses:view",
     "raw_materials:view",
+    "transfers:view",
+    "transfers:create",
+    "transfer_history:view",
+    "stock_adjustments:view",
+    "stock_adjustments:manage",
     "finished_goods:view", "finished_goods:manage", "finished_goods_history:view",
   ],
   VIEWER: [
