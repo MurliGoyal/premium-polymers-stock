@@ -12,6 +12,7 @@ enum Role {
   MANAGER
   STOCK_MANAGEMENT
   FINISHED_GOODS_MANAGER
+  RAW_MATERIAL_MANAGER
   VIEWER
 }
 
@@ -256,15 +257,33 @@ model FinishedGood {
   diameterValue  Float?         @map("diameter_value")
   diameterUnit   String?        @map("diameter_unit")
   currentStock   Decimal        @default(0) @db.Decimal(18, 3) @map("current_stock")
+  stockInDate    DateTime       @default(now()) @map("stock_in_date")
   status         MaterialStatus @default(IN_STOCK)
+  isContainer    Boolean        @default(false) @map("is_container")
+  parentId       String?        @map("parent_id")
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  parent   FinishedGood?  @relation("SubGoods", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subGoods FinishedGood[] @relation("SubGoods")
 
   activityLogs FinishedGoodActivityLog[]
 
   @@index([warehouseCode])
   @@index([status])
+  @@index([parentId])
+  @@index([isContainer])
   @@map("finished_goods")
+}
+
+model FinishedGoodsParty {
+  id             String   @id @default(cuid())
+  name           String
+  normalizedName String?  @unique @map("normalized_name")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("finished_goods_parties")
 }
 
 model FinishedGoodActivityLog {

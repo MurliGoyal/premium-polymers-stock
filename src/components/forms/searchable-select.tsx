@@ -14,11 +14,15 @@ export type SearchableOption = {
 };
 
 type SearchableSelectProps = {
+  allowCreate?: boolean;
   ariaLabel?: string;
   ariaRequired?: boolean;
+  createOptionLabel?: (query: string) => string;
+  creatingLabel?: string;
   disabled?: boolean;
   emptyState?: string;
   error?: boolean;
+  onCreateOption?: (query: string) => Promise<string | void> | string | void;
   onChange: (value: string) => void;
   options: SearchableOption[];
   placeholder: string;
@@ -27,11 +31,15 @@ type SearchableSelectProps = {
 };
 
 export function SearchableSelect({
+  allowCreate = false,
   ariaLabel,
   ariaRequired,
+  createOptionLabel,
+  creatingLabel = "Saving...",
   disabled,
   emptyState = "No options found",
   error,
+  onCreateOption,
   onChange,
   options,
   placeholder,
@@ -40,6 +48,7 @@ export function SearchableSelect({
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
   const deferredQuery = useDeferredValue(query);
 
   const selectedOption = options.find((option) => option.value === value);
@@ -55,6 +64,38 @@ export function SearchableSelect({
         .some((candidate) => candidate?.toLowerCase().includes(normalizedQuery))
     );
   }, [deferredQuery, options]);
+
+  const trimmedQuery = query.trim();
+  const normalizedQuery = trimmedQuery.toLowerCase();
+  const hasExactMatch = options.some(
+    (option) =>
+      option.label.toLowerCase() === normalizedQuery ||
+      option.value.toLowerCase() === normalizedQuery,
+  );
+  const showCreateOption =
+    allowCreate &&
+    Boolean(onCreateOption) &&
+    normalizedQuery.length > 0 &&
+    !hasExactMatch;
+
+  const handleCreateOption = async () => {
+    if (!onCreateOption || !trimmedQuery || isCreating) {
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const createdValue = await onCreateOption(trimmedQuery);
+      if (typeof createdValue === "string" && createdValue) {
+        onChange(createdValue);
+      }
+
+      setOpen(false);
+      setQuery("");
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -125,6 +166,20 @@ export function SearchableSelect({
               </button>
             ))
           )}
+          {showCreateOption ? (
+            <div className="border-t border-white/8 p-1">
+              <button
+                type="button"
+                onClick={() => void handleCreateOption()}
+                disabled={disabled || isCreating}
+                className="flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isCreating
+                  ? creatingLabel
+                  : createOptionLabel?.(trimmedQuery) ?? `Use \"${trimmedQuery}\"`}
+              </button>
+            </div>
+          ) : null}
         </div>
       </PopoverContent>
     </Popover>

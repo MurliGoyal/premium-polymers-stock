@@ -14,6 +14,7 @@ import { normalizeRecordName } from "@/lib/naming";
 import { prisma } from "@/lib/prisma";
 import { quantityToNumber, quantityToString, serializeQuantity, sumQuantities, toDecimal } from "@/lib/quantities";
 import { buildRawMaterialNormalizedKey, formatRawMaterialDisplayName } from "@/lib/raw-materials";
+import { buildRawMaterialsPdfCategories } from "@/lib/raw-materials-pdf";
 import {
   categoryNameSchema,
   rawMaterialFormSchema,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/validation";
 import { slugify } from "@/lib/utils";
 import { z } from "zod";
+import { getTotalRawMaterialsData } from "../total/actions";
 
 type CreatedEntityResult<T> = {
   created: boolean;
@@ -117,9 +119,41 @@ export async function getWarehouseData(warehouseRef: string) {
   };
 }
 
+export async function getRawMaterialsPdfData(payload: {
+  warehouseCode: string;
+  fromDate: string;
+  includeAllMaterials?: boolean;
+  toDate: string;
+}) {
+  await assertServerPermission("raw_materials:view");
+
+  const fromDate = new Date(payload.fromDate);
+  const toDate = new Date(payload.toDate);
+
+  if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+    throw new Error("Select a valid date range.");
+  }
+
+  if (fromDate > toDate) {
+    throw new Error("From date must be before to date.");
+  }
+
+  const { materials } = await getTotalRawMaterialsData();
+
+  return {
+    categories: buildRawMaterialsPdfCategories(materials, {
+      fromDate,
+      includeAllMaterials: payload.includeAllMaterials,
+      toDate,
+      warehouseCode: payload.warehouseCode,
+    }),
+  };
+}
+
 function revalidateWarehouseViews(warehouseSlug: string) {
   revalidatePath("/dashboard");
   revalidatePath("/warehouses");
+  revalidatePath("/warehouses/total");
   revalidatePath(`/warehouses/${warehouseSlug}`);
   revalidatePath(`/warehouses/${warehouseSlug}/raw-materials/add`);
   revalidatePath(`/warehouses/${warehouseSlug}/transfer`);

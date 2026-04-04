@@ -198,7 +198,7 @@ export function Topbar({
     } else if (pathname === "/raw-materials-history") {
       subtitle = "Material activity and stock changes";
     } else if (pathname.startsWith("/settings")) {
-      subtitle = "Administration and master data";
+      subtitle = title === "My Account" ? "Password and account security" : "Administration and master data";
     }
 
     return { mobileSubtitle: subtitle, mobileTitle: title };

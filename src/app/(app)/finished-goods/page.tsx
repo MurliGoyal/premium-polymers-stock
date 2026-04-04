@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import {
-  getAllowedFinishedGoodsWarehouseCodes,
+  getReadableFinishedGoodsWarehouseCodes,
+  getWritableFinishedGoodsWarehouseCodes,
   requirePagePermission,
 } from "@/lib/auth";
 import { FINISHED_GOODS_WAREHOUSES } from "@/lib/constants";
@@ -17,16 +18,22 @@ function getFinishedGoodsWarehousePath(code: string) {
 
 export default async function FinishedGoodsPage() {
   const user = await requirePagePermission("finished_goods:view");
-  const allowedWarehouseCodes = getAllowedFinishedGoodsWarehouseCodes(user);
+  const readableWarehouseCodes = getReadableFinishedGoodsWarehouseCodes(user);
+  const writableWarehouseCodes = getWritableFinishedGoodsWarehouseCodes(user);
 
-  if (allowedWarehouseCodes.length === 0) {
+  if (readableWarehouseCodes.length === 0) {
     redirect("/login");
   }
 
-  if (allowedWarehouseCodes.length === 1) {
-    redirect(getFinishedGoodsWarehousePath(allowedWarehouseCodes[0]));
+  if (readableWarehouseCodes.length === 1) {
+    redirect(getFinishedGoodsWarehousePath(readableWarehouseCodes[0]));
   }
 
   const warehouses = await getFinishedGoodsDirectoryData();
-  return <FinishedGoodsWarehousesClient warehouses={warehouses} />;
+  return (
+    <FinishedGoodsWarehousesClient
+      warehouses={warehouses}
+      writableWarehouseCodes={writableWarehouseCodes}
+    />
+  );
 }

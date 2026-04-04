@@ -153,7 +153,7 @@ export const createUserSchema = z.object({
     .string({ error: "Password is required" })
     .min(6, "Password must be at least 6 characters")
     .max(120, "Password must be 120 characters or less"),
-  role: z.enum(["MANAGER", "STOCK_MANAGEMENT", "FINISHED_GOODS_MANAGER", "VIEWER"], { error: "Select a valid role" }),
+  role: z.enum(["MANAGER", "STOCK_MANAGEMENT", "FINISHED_GOODS_MANAGER", "RAW_MATERIAL_MANAGER", "VIEWER"], { error: "Select a valid role" }),
   finishedGoodsWarehouseCode: z
     .string()
     .trim()
@@ -172,3 +172,81 @@ export const createUserSchema = z.object({
     });
   }
 });
+
+const currentPasswordSchema = z
+  .string({ error: "Current password is required" })
+  .min(1, "Current password is required")
+  .max(120, "Current password must be 120 characters or less");
+
+const passwordSchema = z
+  .string({ error: "Password is required" })
+  .min(6, "Password must be at least 6 characters")
+  .max(120, "Password must be 120 characters or less");
+
+export const changePasswordSchema = z
+  .object({
+    confirmPassword: passwordSchema,
+    currentPassword: currentPasswordSchema,
+    newPassword: passwordSchema,
+  })
+  .superRefine((value, context) => {
+    if (value.newPassword !== value.confirmPassword) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["confirmPassword"],
+        message: "Passwords do not match",
+      });
+    }
+  });
+
+export const adminChangePasswordSchema = z
+  .object({
+    confirmPassword: passwordSchema,
+    newPassword: passwordSchema,
+    userId: trimmedString("User"),
+  })
+  .superRefine((value, context) => {
+    if (value.newPassword !== value.confirmPassword) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["confirmPassword"],
+        message: "Passwords do not match",
+      });
+    }
+  });
+
+export const createMasterGoodSchema = z.object({
+  warehouseCode: z.string().trim().optional(),
+  name: normalizedName("Group name"),
+});
+
+export const createSubGoodSchema = z
+  .object({
+    warehouseCode: z.string().trim().optional(),
+    masterGoodId: trimmedString("Master group"),
+    name: normalizedName("Variant name"),
+    baseUnit: z
+      .string({ error: "Unit is required" })
+      .trim()
+      .min(1, "Select a unit")
+      .max(30, "Unit must be 30 characters or less")
+      .refine(
+        (value) =>
+          MATERIAL_UNITS.includes(value as (typeof MATERIAL_UNITS)[number]) ||
+          /^[a-zA-Z][a-zA-Z0-9 -]{0,29}$/.test(value),
+        "Enter a valid unit",
+      ),
+    diameterValue: z.number().finite().min(0).optional(),
+    diameterUnit: z.enum(THICKNESS_UNITS).optional(),
+    initialStock: z.number().finite().min(0).optional(),
+    stockInDate: z.string().trim().optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.diameterValue !== undefined && !value.diameterUnit) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["diameterUnit"],
+        message: "Select a diameter unit",
+      });
+    }
+  });

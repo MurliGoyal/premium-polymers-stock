@@ -1,9 +1,13 @@
 import { notFound, redirect } from "next/navigation";
 import {
+  getWritableFinishedGoodsWarehouseCodes,
   requirePagePermission,
   resolveFinishedGoodsWarehouseForUser,
 } from "@/lib/auth";
-import { hasPermission } from "@/lib/rbac";
+import {
+  hasPermission,
+  isFinishedGoodsWarehouseScopedRole,
+} from "@/lib/rbac";
 import { FINISHED_GOODS_WAREHOUSES } from "@/lib/constants";
 import { getFinishedGoodsWarehouseData } from "../actions";
 import { FinishedGoodsClient } from "../finished-goods-client";
@@ -30,6 +34,7 @@ export default async function FinishedGoodsWarehousePage({
         entry.slug === normalizedCode ||
         entry.code.toLowerCase() === normalizedCode,
     ) ?? null;
+  const writableWarehouseCodes = getWritableFinishedGoodsWarehouseCodes(user);
   const resolvedWarehouseCode = resolveFinishedGoodsWarehouseForUser(
     user,
     requestedWarehouse?.code,
@@ -39,11 +44,15 @@ export default async function FinishedGoodsWarehousePage({
     redirect("/login");
   }
 
-  if (!requestedWarehouse || requestedWarehouse.code !== resolvedWarehouseCode) {
+  if (!requestedWarehouse) {
     redirect(getFinishedGoodsWarehousePath(resolvedWarehouseCode));
   }
 
-  const data = await getFinishedGoodsWarehouseData(resolvedWarehouseCode);
+  const isOwnWarehouse = writableWarehouseCodes.includes(requestedWarehouse.code);
+  const isReadOnlyView =
+    isFinishedGoodsWarehouseScopedRole(user.role) && !isOwnWarehouse;
+
+  const data = await getFinishedGoodsWarehouseData(requestedWarehouse.code);
   if (!data) {
     notFound();
   }
@@ -51,7 +60,11 @@ export default async function FinishedGoodsWarehousePage({
   return (
     <FinishedGoodsClient
       data={data}
-      canManage={hasPermission(user.role, "finished_goods:manage")}
+      canManage={
+        hasPermission(user.role, "finished_goods:manage") && isOwnWarehouse
+      }
+      isReadOnlyView={isReadOnlyView}
+      ownWarehouseCode={writableWarehouseCodes[0] ?? null}
     />
   );
 }

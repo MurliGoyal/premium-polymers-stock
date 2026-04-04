@@ -10,6 +10,11 @@ type RawMaterialIdentityInput = {
   micron?: number | null;
 };
 
+export type RawMaterialFingerprintInput = RawMaterialIdentityInput & {
+  baseUnit: string;
+  normalizedName?: string | null;
+};
+
 function normalizeOptionalTextSegment(value?: string | null) {
   const normalized = collapseWhitespace(value ?? "").toLowerCase();
   return normalized || "na";
@@ -59,4 +64,25 @@ export function formatRawMaterialVariantDetails(material: Omit<RawMaterialIdenti
 export function formatRawMaterialDisplayName(material: RawMaterialIdentityInput) {
   const details = formatRawMaterialVariantDetails(material);
   return details ? `${material.name} (${details})` : material.name;
+}
+
+function normalizeFingerprintSegment(value?: string | null) {
+  return collapseWhitespace(value ?? "").toLowerCase();
+}
+
+function normalizeFingerprintNumber(value?: number | null) {
+  return value === undefined || value === null ? "" : String(value);
+}
+
+export function buildRawMaterialFingerprint(material: RawMaterialFingerprintInput) {
+  return [
+    material.normalizedName ?? normalizeRecordName(material.name),
+    normalizeFingerprintNumber(material.gsm),
+    normalizeFingerprintSegment(material.sizeValue),
+    normalizeFingerprintSegment(material.sizeUnit),
+    normalizeFingerprintNumber(material.thicknessValue),
+    normalizeFingerprintSegment(material.thicknessUnit),
+    normalizeFingerprintNumber(material.micron),
+    normalizeFingerprintSegment(material.baseUnit),
+  ].join("|");
 }

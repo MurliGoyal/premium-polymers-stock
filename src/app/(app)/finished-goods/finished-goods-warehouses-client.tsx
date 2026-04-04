@@ -57,8 +57,10 @@ const cardVariants = {
 
 export function FinishedGoodsWarehousesClient({
   warehouses,
+  writableWarehouseCodes,
 }: {
   warehouses: FinishedGoodsWarehouseData[];
+  writableWarehouseCodes: string[];
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -263,6 +265,14 @@ export function FinishedGoodsWarehousesClient({
                           </div>
 
                           <div className="flex flex-wrap gap-2">
+                            {writableWarehouseCodes.includes(warehouse.code) ? (
+                              <Badge variant="success">
+                                <CheckCircle2 className="mr-1 h-3 w-3" />
+                                Your warehouse
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">View only</Badge>
+                            )}
                             <Badge variant="success">
                               <CheckCircle2 className="mr-1 h-3 w-3" />
                               {warehouse.inStockCount} in stock

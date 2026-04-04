@@ -1,6 +1,7 @@
 import {
   ArrowRightLeft,
   ClipboardList,
+  KeyRound,
   History,
   LayoutDashboard,
   Package,
@@ -51,6 +52,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: "Settings",
     items: [
+      { label: "My Account", href: "/settings/account", icon: KeyRound },
       { label: "Categories", href: "/settings/categories", icon: Tag, permission: "categories:view" },
       { label: "Recipients", href: "/settings/recipients", icon: UserCheck, permission: "recipients:view" },
       { label: "Users", href: "/settings/users", icon: Users, permission: "users:view" },

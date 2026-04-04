@@ -5,12 +5,9 @@ import { motion } from "framer-motion";
 import {
   Activity,
   ArrowDownRight,
-  ArrowRightLeft,
   ArrowUpRight,
-  BarChart3,
   CalendarRange,
   Clock3,
-  Package,
   Search,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";

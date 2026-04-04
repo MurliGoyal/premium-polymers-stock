@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Shield, Trash2 } from "lucide-react";
+import { KeyRound, Plus, Shield, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { FINISHED_GOODS_WAREHOUSES } from "@/lib/constants";
 import { getRoleColor, getRoleLabel } from "@/lib/rbac";
 import { formatDate } from "@/lib/utils";
-import { createUser, deleteUser } from "../actions";
+import { adminChangeUserPassword, createUser, deleteUser } from "../actions";
 
 type UserData = {
   id: string;
@@ -40,7 +40,12 @@ export function UsersClient({ users, canManage, currentUserId }: { users: UserDa
   const [role, setRole] = useState("VIEWER");
   const [finishedGoodsWarehouseCode, setFinishedGoodsWarehouseCode] = useState("");
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [resetUserId, setResetUserId] = useState<string | null>(null);
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetPasswordConfirmation, setResetPasswordConfirmation] = useState("");
   const isFinishedGoodsManagerRole = role === "FINISHED_GOODS_MANAGER";
+  const resetTargetUser = resetUserId ? users.find((user) => user.id === resetUserId) ?? null : null;
+  const resetPasswordsMatch = resetPassword === resetPasswordConfirmation;
 
   const handleCreate = () => {
     if (!name.trim() || !email.trim() || !password.trim()) {
@@ -81,6 +86,41 @@ export function UsersClient({ users, canManage, currentUserId }: { users: UserDa
         router.refresh();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to delete user");
+      }
+    });
+  };
+
+  const openResetDialog = (userId: string) => {
+    setDeleteUserId(null);
+    setResetUserId(userId);
+    setResetPassword("");
+    setResetPasswordConfirmation("");
+  };
+
+  const handleResetPassword = () => {
+    if (!resetUserId || !resetPassword || !resetPasswordConfirmation) {
+      return;
+    }
+
+    if (!resetPasswordsMatch) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        await adminChangeUserPassword({
+          confirmPassword: resetPasswordConfirmation,
+          newPassword: resetPassword,
+          userId: resetUserId,
+        });
+        toast.success("Password reset successfully");
+        setResetUserId(null);
+        setResetPassword("");
+        setResetPasswordConfirmation("");
+        router.refresh();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to reset password");
       }
     });
   };
@@ -151,13 +191,26 @@ export function UsersClient({ users, canManage, currentUserId }: { users: UserDa
                       <Badge variant="outline">{formatDate(user.createdAt)}</Badge>
                     </div>
                     {canManage ? (
-                      <div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={user.id === currentUserId}
+                          onClick={() => openResetDialog(user.id)}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                          Reset password
+                        </Button>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           disabled={user.id === currentUserId}
-                          onClick={() => setDeleteUserId(user.id)}
+                          onClick={() => {
+                            setResetUserId(null);
+                            setDeleteUserId(user.id);
+                          }}
                         >
                           <Trash2 className="h-4 w-4" />
                           Delete
@@ -178,7 +231,7 @@ export function UsersClient({ users, canManage, currentUserId }: { users: UserDa
                     <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
-                    <TableHead className="w-[90px]" />
+                    <TableHead className="w-[220px]" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -205,15 +258,30 @@ export function UsersClient({ users, canManage, currentUserId }: { users: UserDa
                       <TableCell className="text-xs text-muted-foreground">{formatDate(user.createdAt)}</TableCell>
                       <TableCell>
                         {canManage ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            disabled={user.id === currentUserId}
-                            onClick={() => setDeleteUserId(user.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={user.id === currentUserId}
+                              onClick={() => openResetDialog(user.id)}
+                            >
+                              <KeyRound className="h-4 w-4" />
+                              Reset password
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={user.id === currentUserId}
+                              onClick={() => {
+                                setResetUserId(null);
+                                setDeleteUserId(user.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         ) : null}
                       </TableCell>
                     </TableRow>
@@ -284,6 +352,7 @@ export function UsersClient({ users, canManage, currentUserId }: { users: UserDa
                   <SelectItem value="MANAGER">Manager (Admin)</SelectItem>
                   <SelectItem value="FINISHED_GOODS_MANAGER">Finished Goods Manager</SelectItem>
                   <SelectItem value="STOCK_MANAGEMENT">Operator (Stock Management)</SelectItem>
+                  <SelectItem value="RAW_MATERIAL_MANAGER">Raw Material Manager</SelectItem>
                   <SelectItem value="VIEWER">Viewer</SelectItem>
                 </SelectContent>
               </Select>
@@ -334,6 +403,75 @@ export function UsersClient({ users, canManage, currentUserId }: { users: UserDa
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!resetUserId && canManage}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResetUserId(null);
+            setResetPassword("");
+            setResetPasswordConfirmation("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset password for {resetTargetUser?.name ?? "user"}?</DialogTitle>
+            <DialogDescription>
+              The user will not be notified. Share the new password securely after resetting it.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-password">New password</Label>
+              <Input
+                id="reset-password"
+                type="password"
+                value={resetPassword}
+                onChange={(event) => setResetPassword(event.target.value)}
+                placeholder="At least 6 characters"
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reset-password-confirmation">Confirm new password</Label>
+              <Input
+                id="reset-password-confirmation"
+                type="password"
+                value={resetPasswordConfirmation}
+                onChange={(event) => setResetPasswordConfirmation(event.target.value)}
+                placeholder="Repeat the new password"
+              />
+              {resetPasswordConfirmation.length > 0 && !resetPasswordsMatch ? (
+                <p className="text-xs font-medium text-red-300">Passwords do not match.</p>
+              ) : null}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setResetUserId(null);
+                setResetPassword("");
+                setResetPasswordConfirmation("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleResetPassword}
+              disabled={isPending || !resetUserId || !resetPassword || !resetPasswordConfirmation || !resetPasswordsMatch}
+            >
+              <KeyRound className="h-4 w-4" />
+              Reset password
             </Button>
           </DialogFooter>
         </DialogContent>

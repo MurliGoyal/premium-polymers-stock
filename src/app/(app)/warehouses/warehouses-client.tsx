@@ -7,6 +7,7 @@ import {
   ArrowRightLeft,
   BarChart3,
   CheckCircle2,
+  Layers3,
   OctagonAlert,
   Package,
   Warehouse,
@@ -103,6 +104,36 @@ export function WarehousesClient({
             </Badge>
           }
         />
+      </motion.div>
+
+      <motion.div variants={cardVariants}>
+        <Link href="/warehouses/total" className="block">
+          <Card className="group relative overflow-hidden border-white/10 glass-panel hover-glow">
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-sky-500/18 via-cyan-500/10 to-transparent opacity-80" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_36%)]" />
+
+            <CardContent className="relative flex items-center justify-between gap-4">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-sky-500/14 text-sky-200 shadow-[0_18px_38px_rgba(56,189,248,0.18)] sm:h-14 sm:w-14 sm:rounded-[20px]">
+                  <Layers3 className="h-5 w-5 sm:h-6 sm:w-6" />
+                </div>
+                <div className="min-w-0 space-y-0.5 sm:space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary">Unified view</Badge>
+                    <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/80 sm:text-xs">All warehouses</span>
+                  </div>
+                  <h2 className="text-xl font-semibold tracking-[-0.04em] sm:text-2xl">Total Raw Materials</h2>
+                  <p className="max-w-2xl text-[13px] text-muted-foreground sm:text-sm">
+                    Open the merged stock view for every raw material, with source breakdowns and advanced filtering in one place.
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-full border border-white/8 bg-white/[0.05] p-2 text-muted-foreground transition-all duration-200 group-hover:translate-x-1 group-hover:text-foreground sm:p-3">
+                <ArrowRight className="h-4 w-4" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </motion.div>
 
       {warehouses.length === 0 ? (

@@ -9,6 +9,7 @@ import {
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { assertServerPermission } from "@/lib/auth";
+import { FINISHED_GOODS_WAREHOUSE_CODES } from "@/lib/constants";
 import { createMaterialSnapshot, resolveMaterialStatus } from "@/lib/inventory";
 import { prisma } from "@/lib/prisma";
 import { quantityToNumber, quantityToString, toDecimal } from "@/lib/quantities";
@@ -18,6 +19,7 @@ import { rawMaterialSpecificationUpdateSchema, stockAdjustmentFormSchema } from 
 function revalidateViews(warehouseSlug: string) {
   revalidatePath("/dashboard");
   revalidatePath("/warehouses");
+  revalidatePath("/warehouses/total");
   revalidatePath(`/warehouses/${warehouseSlug}`);
   revalidatePath("/raw-materials-history");
   revalidatePath("/stock-adjustments");
@@ -26,12 +28,23 @@ function revalidateViews(warehouseSlug: string) {
 export async function getStockAdjustmentData() {
   await assertServerPermission("stock_adjustments:view");
 
+  const excludedWarehouseCodes = [...FINISHED_GOODS_WAREHOUSE_CODES];
+
   const [warehouses, materials, recipients] = await Promise.all([
     prisma.warehouse.findMany({
+      where: {
+        code: { notIn: excludedWarehouseCodes },
+        rawMaterials: { some: {} },
+      },
       select: { id: true, code: true, name: true, slug: true },
       orderBy: { code: "asc" },
     }),
     prisma.rawMaterial.findMany({
+      where: {
+        warehouse: {
+          code: { notIn: excludedWarehouseCodes },
+        },
+      },
       select: {
         id: true,
         name: true,

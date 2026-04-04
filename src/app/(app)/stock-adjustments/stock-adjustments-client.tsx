@@ -202,10 +202,29 @@ export function StockAdjustmentsClient({
   const filteredMaterials = useMemo(() => {
     const normalizedSearch = deferredSearch.trim().toLowerCase();
     return aggregatedMaterials.filter((m) => {
-      if (warehouseFilter !== "all" && !m.members.some((member) => member.warehouseId === warehouseFilter)) return false;
+      if (warehouseFilter === "both") {
+        const warehouseCount = new Set(m.members.map((member) => member.warehouseId)).size;
+        if (warehouseCount < 2) return false;
+      }
+      if (
+        warehouseFilter !== "all" &&
+        warehouseFilter !== "both" &&
+        !m.members.some((member) => member.warehouseId === warehouseFilter)
+      ) {
+        return false;
+      }
       if (
         normalizedSearch &&
-        ![m.name, m.category, m.baseUnit, ...m.warehouseCodes].join(" ").toLowerCase().includes(normalizedSearch)
+        ![
+          m.name,
+          m.category,
+          m.baseUnit,
+          ...m.warehouseCodes,
+          ...m.members.map((member) => `${member.sizeValue ?? ""} ${member.sizeUnit ?? ""}`),
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedSearch)
       ) {
         return false;
       }
@@ -652,6 +671,7 @@ export function StockAdjustmentsClient({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All warehouses</SelectItem>
+                  <SelectItem value="both">Both stock</SelectItem>
                   {warehouses.map((w) => (
                     <SelectItem key={w.id} value={w.id}>
                       {w.code} — {w.name}
@@ -686,6 +706,7 @@ export function StockAdjustmentsClient({
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {material.warehouseCodes.join(", ")} · {material.category}
                       </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{formatMaterialSize(material.members)}</p>
                     </div>
                     <Badge variant="outline" className={getStatusColor(material.status)}>
                       {getStatusLabel(material.status)}
@@ -1298,4 +1319,18 @@ export function StockAdjustmentsClient({
       </Dialog>
     </motion.div>
   );
+}
+
+function formatMaterialSize(members: MaterialItem[]) {
+  const sizeValues = [...new Set(members.map((member) => `${member.sizeValue ?? ""}${member.sizeUnit ? ` ${member.sizeUnit}` : ""}`.trim()).filter(Boolean))];
+
+  if (sizeValues.length === 0) {
+    return "Roll size / width: Not set";
+  }
+
+  if (sizeValues.length === 1) {
+    return `Roll size / width: ${sizeValues[0]}`;
+  }
+
+  return "Roll size / width: Mixed";
 }

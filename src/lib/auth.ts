@@ -164,6 +164,22 @@ export type AuthenticatedUser = {
 export function getAllowedFinishedGoodsWarehouseCodes(
   user: Pick<AuthenticatedUser, "finishedGoodsWarehouseCode" | "role">,
 ) {
+  return getWritableFinishedGoodsWarehouseCodes(user);
+}
+
+export function getReadableFinishedGoodsWarehouseCodes(
+  user: Pick<AuthenticatedUser, "finishedGoodsWarehouseCode" | "role">,
+) {
+  if (!isFinishedGoodsWarehouseScopedRole(user.role)) {
+    return [...FINISHED_GOODS_WAREHOUSE_CODES];
+  }
+
+  return [...FINISHED_GOODS_WAREHOUSE_CODES];
+}
+
+export function getWritableFinishedGoodsWarehouseCodes(
+  user: Pick<AuthenticatedUser, "finishedGoodsWarehouseCode" | "role">,
+) {
   if (!isFinishedGoodsWarehouseScopedRole(user.role)) {
     return [...FINISHED_GOODS_WAREHOUSE_CODES];
   }
@@ -184,25 +200,46 @@ export function canAccessFinishedGoodsWarehouse(
     return false;
   }
 
-  return getAllowedFinishedGoodsWarehouseCodes(user).includes(resolvedCode);
+  return getReadableFinishedGoodsWarehouseCodes(user).includes(
+    resolvedCode as (typeof FINISHED_GOODS_WAREHOUSE_CODES)[number],
+  );
 }
 
 export function resolveFinishedGoodsWarehouseForUser(
   user: Pick<AuthenticatedUser, "finishedGoodsWarehouseCode" | "role">,
   warehouseCode?: string | null,
 ) {
-  const allowedCodes = getAllowedFinishedGoodsWarehouseCodes(user);
+  const allowedCodes = getReadableFinishedGoodsWarehouseCodes(user);
 
   if (allowedCodes.length === 0) {
     return null;
   }
 
   const requestedCode = normalizeFinishedGoodsWarehouseCode(warehouseCode);
-  if (requestedCode && allowedCodes.includes(requestedCode)) {
+  if (
+    requestedCode &&
+    allowedCodes.includes(
+      requestedCode as (typeof FINISHED_GOODS_WAREHOUSE_CODES)[number],
+    )
+  ) {
     return requestedCode;
   }
 
   return allowedCodes[0];
+}
+
+export function assertOwnsFinishedGoodsWarehouse(
+  user: Pick<AuthenticatedUser, "finishedGoodsWarehouseCode" | "role">,
+  warehouseCode: string,
+) {
+  if (!isFinishedGoodsWarehouseScopedRole(user.role)) {
+    return;
+  }
+
+  const writableCodes = getWritableFinishedGoodsWarehouseCodes(user);
+  if (!writableCodes.includes(warehouseCode)) {
+    throw new Error("You can only manage your own warehouse.");
+  }
 }
 
 function getAuthorizedHome(

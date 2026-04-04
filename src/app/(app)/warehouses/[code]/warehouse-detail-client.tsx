@@ -10,6 +10,7 @@ import {
   BarChart3,
   ChevronLeft,
   ClipboardList,
+  Download,
   History,
   OctagonAlert,
   Package,
@@ -23,6 +24,8 @@ import { toast } from "sonner";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { ResponsiveFiltersSheet } from "@/components/shared/responsive-filters-sheet";
 import { ResponsivePageHeader } from "@/components/shared/responsive-page-header";
+  import { DurationPickerDialog } from "@/components/shared/duration-picker-dialog";
+  import { RawMaterialsReport } from "@/components/pdf/raw-materials-report";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { formatPdfDate, generateAndDownloadPdf } from "@/lib/pdf-utils";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -65,7 +69,7 @@ import {
   getStatusColor,
   getStatusLabel,
 } from "@/lib/utils";
-import { addRawMaterialThickness, deleteRawMaterial } from "./actions";
+import { addRawMaterialThickness, deleteRawMaterial, getRawMaterialsPdfData } from "./actions";
 
 type WarehouseDetailData = {
   warehouse: { id: string; code: string; name: string; slug: string };
@@ -141,6 +145,8 @@ export function WarehouseDetailClient({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const deferredSearch = useDeferredValue(search);
+  const [showPdfDialog, setShowPdfDialog] = useState(false);
+  const [isPdfPending, startPdfTransition] = useTransition();
 
   const canCreateMaterials = hasPermission(userRole, "raw_materials:create");
   const canEditMaterials = hasPermission(userRole, "raw_materials:edit");
@@ -397,6 +403,43 @@ export function WarehouseDetailClient({
     });
   };
 
+  const handleGeneratePdf = ({
+    fromDate,
+    includeAllMaterials,
+    label,
+    toDate,
+  }: {
+    fromDate: Date;
+    includeAllMaterials: boolean;
+    label: string;
+    toDate: Date;
+  }) => {
+    startPdfTransition(async () => {
+      try {
+        const reportData = await getRawMaterialsPdfData({
+          warehouseCode: warehouse.code,
+          fromDate: fromDate.toISOString(),
+          includeAllMaterials,
+          toDate: toDate.toISOString(),
+        });
+
+        await generateAndDownloadPdf(
+          <RawMaterialsReport
+            categories={reportData.categories}
+            durationLabel={label}
+            generatedLabel={formatPdfDate(new Date())}
+            reportTitle={`Raw Materials Report — Warehouse ${warehouse.code}`}
+          />,
+          `raw-materials-${warehouse.code.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.pdf`,
+        );
+
+        setShowPdfDialog(false);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to generate raw materials PDF.");
+      }
+    });
+  };
+
   const filters = (
     <>
       <div className="relative md:col-span-2 xl:col-span-2">
@@ -520,6 +563,10 @@ export function WarehouseDetailClient({
           }
           actions={
             <>
+              <Button type="button" variant="outline" onClick={() => setShowPdfDialog(true)}>
+                <Download className="h-4 w-4" />
+                Download PDF
+              </Button>
               {canCreateTransfers ? (
                 <Button asChild variant="outline">
                   <Link href={`/warehouses/${warehouse.slug}/transfer`}>
@@ -1068,6 +1115,17 @@ export function WarehouseDetailClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DurationPickerDialog
+        defaultIncludeAllMaterials={false}
+        description="Choose a date range for the warehouse raw materials PDF. You can include all materials regardless of period if needed."
+        isLoading={isPdfPending}
+        open={showPdfDialog}
+        showIncludeAllMaterials
+        title="Download Raw Materials PDF"
+        onConfirm={handleGeneratePdf}
+        onOpenChange={setShowPdfDialog}
+      />
     </motion.div>
   );
 }
@@ -1105,6 +1163,8 @@ function MetricCard({
     red: "bg-red-500/14 text-red-300",
     blue: "bg-sky-500/14 text-sky-300",
   };
+  const valueText = String(value);
+  const valueSizeClass = valueText.length > 14 ? "text-lg sm:text-xl" : "text-xl sm:text-2xl";
 
   const content = (
     <Card className={cn("rounded-2xl sm:rounded-[24px]", className)}>
@@ -1118,7 +1178,7 @@ function MetricCard({
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground sm:text-[11px]">
             {label}
           </p>
-          <p className="numeric-polished mt-1.5 truncate text-xl font-semibold sm:mt-2 sm:text-2xl">
+          <p className={cn("numeric-polished numeric-no-ellipsis mt-1.5 font-semibold sm:mt-2", valueSizeClass)}>
             {value}
           </p>
         </div>

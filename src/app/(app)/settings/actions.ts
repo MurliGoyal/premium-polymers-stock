@@ -1,12 +1,18 @@
 "use server";
 
 import { Prisma } from "@prisma/client";
-import { hash } from "bcryptjs";
+import { compare, hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { assertServerPermission } from "@/lib/auth";
 import { normalizeRecordName } from "@/lib/naming";
-import { categoryNameSchema, createUserSchema, recipientNameSchema } from "@/lib/validation";
+import {
+  adminChangePasswordSchema,
+  categoryNameSchema,
+  changePasswordSchema,
+  createUserSchema,
+  recipientNameSchema,
+} from "@/lib/validation";
 import { slugify } from "@/lib/utils";
 
 type CreatedEntityResult<T> = {
@@ -319,6 +325,61 @@ export async function deleteUser(userId: string) {
     await tx.stockTransaction.updateMany({ where: { createdById: userId }, data: { createdById: null } });
     await tx.finishedGoodActivityLog.updateMany({ where: { performedById: userId }, data: { performedById: null } });
     await tx.user.delete({ where: { id: userId } });
+  });
+
+  revalidatePath("/settings/users");
+}
+
+export async function changeOwnPassword(payload: unknown) {
+  const currentUser = await assertServerPermission();
+  const data = changePasswordSchema.parse(payload);
+
+  const user = await prisma.user.findUnique({
+    where: { id: currentUser.id },
+    select: { passwordHash: true },
+  });
+
+  if (!user) {
+    throw new Error("Account not found.");
+  }
+
+  const isCurrentPasswordValid = await compare(data.currentPassword, user.passwordHash);
+  if (!isCurrentPasswordValid) {
+    throw new Error("Current password is incorrect.");
+  }
+
+  const passwordHash = await hash(data.newPassword, 12);
+
+  await prisma.user.update({
+    where: { id: currentUser.id },
+    data: { passwordHash },
+  });
+
+  revalidatePath("/settings/account");
+}
+
+export async function adminChangeUserPassword(payload: unknown) {
+  const currentUser = await assertServerPermission("users:manage");
+  const data = adminChangePasswordSchema.parse(payload);
+
+  if (currentUser.id === data.userId) {
+    throw new Error("Use My Account to change your own password.");
+  }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: data.userId },
+    select: { id: true },
+  });
+
+  if (!targetUser) {
+    throw new Error("User not found.");
+  }
+
+  const passwordHash = await hash(data.newPassword, 12);
+
+  await prisma.user.update({
+    where: { id: data.userId },
+    data: { passwordHash },
   });
 
   revalidatePath("/settings/users");

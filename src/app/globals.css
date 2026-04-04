@@ -284,6 +284,16 @@
     letter-spacing: -0.02em;
   }
 
+  .numeric-polished.truncate,
+  .numeric-polished-soft.truncate,
+  .numeric-no-ellipsis {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
   .numeric-polished-soft {
     font-variant-numeric: tabular-nums lining-nums;
     font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;

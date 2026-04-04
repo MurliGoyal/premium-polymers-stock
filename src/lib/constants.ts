@@ -4,6 +4,19 @@ export const APP_DESCRIPTION =
 export const APP_LOCALE = process.env.NEXT_PUBLIC_APP_LOCALE || "en-IN";
 export const APP_TIME_ZONE = process.env.NEXT_PUBLIC_APP_TIME_ZONE || "Asia/Kolkata";
 
+export const COMPANY_LETTERHEAD = {
+  address:
+    process.env.NEXT_PUBLIC_COMPANY_ADDRESS ||
+    "Industrial Estate, Gujarat, India",
+  email: process.env.NEXT_PUBLIC_COMPANY_EMAIL || "info@premiumpolymers.in",
+  gstin: process.env.NEXT_PUBLIC_COMPANY_GSTIN || "GSTIN: N/A",
+  phone: process.env.NEXT_PUBLIC_COMPANY_PHONE || "+91 00000 00000",
+  tagline:
+    process.env.NEXT_PUBLIC_COMPANY_TAGLINE ||
+    "Specialists in Polymer Packaging Solutions",
+  website: process.env.NEXT_PUBLIC_COMPANY_WEBSITE || "www.premiumpolymers.in",
+} as const;
+
 export const WAREHOUSE_CATALOG = [
   {
     code: "E-219",
